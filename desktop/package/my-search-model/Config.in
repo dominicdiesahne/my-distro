@@ -1,0 +1,4 @@
+config BR2_PACKAGE_MY_SEARCH_MODEL
+	bool "my-search-model"
+	help
+	  The all-MiniLM-L6-v2 embedding model used by my-search.

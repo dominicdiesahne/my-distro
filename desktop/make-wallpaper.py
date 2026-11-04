@@ -1,4 +1,4 @@
-﻿"""Draws the my-distro wallpaper (1920x1080 PNG) in the desktop's teal colours.
+"""Draws the my-distro wallpaper (1920x1080 PNG) in the desktop's teal colours.
 
 Run on any machine with Pillow:  python make-wallpaper.py <output.png>
 The result is checked in as overlay/usr/share/backgrounds/my-distro.png.

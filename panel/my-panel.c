@@ -1,4 +1,4 @@
-﻿/*
+/*
  * my-panel: the taskbar of my-distro, written with Xlib, Xft (text) and
  * Imlib2 (icons).
  *

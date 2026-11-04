@@ -96,6 +96,26 @@ Log out (Start menu) ends the session and the login screen comes back.
   Undoing is a change too, so it is saved as well: undo twice = redo.
 - Like everything on the live system, the history is in RAM and gone after a reboot.
 
+**Semantic file search:** finds files by what they are about, not just by name.
+"customer agreement for training subscription" finds a note about a client
+signing up for a gym membership, without one word in common.
+
+- An AI embedding model, **all-MiniLM-L6-v2** (25 MB, English), run by
+  **llama.cpp**, turns text into 384 numbers that describe its meaning.
+  Similar meaning = similar numbers (cosine similarity).
+- `my-indexd` (`search/my-indexd.c`, started with every desktop session) indexes
+  your home folder: text files are cut into ~700-character sections, one vector
+  each; other files are indexed by their name. Every 5 seconds it picks up new,
+  changed and deleted files. Hidden files are skipped. The index is per user
+  (`~/.cache/my-search/`), so you only ever find your own files.
+- **Search files** (Start menu or **Super+S**): results while you type, best
+  first, with the matching part of the file. Open / Open folder / History.
+- Command line: `my-search what you are looking for`, `my-search --status`.
+- The model comes from Hugging Face during the build
+  (`desktop/package/my-search-model/`, checked against its SHA-256).
+  `MY_SEARCH_MODEL=/path/model.gguf` uses a different model file.
+- English works best; it runs on the CPU (no GPU needed).
+
 - Users are defined in `desktop/users.table`; the root password is
   `BR2_TARGET_GENERIC_ROOT_PASSWD` in `desktop/buildroot.fragment`.
 
@@ -122,6 +142,7 @@ What's on the desktop:
 | Super+Space or Alt+F1 | Open the Start menu |
 | Super+T or Ctrl+Alt+T | Terminal |
 | Super+E | File manager |
+| Super+S | Search files |
 | Super+Up / Super+Down | Maximise / minimise the window |
 | Alt+Tab | Switch windows |
 | Alt+F4 | Close the window |

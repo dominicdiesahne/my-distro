@@ -21,6 +21,7 @@ sed -e 's|<name>Clearlooks</name>|<name>Onyx-Citrus</name>|' \
     -e 's|<chainQuitKey>C-g</chainQuitKey>|&\
   <keybind key="W-space"><action name="Execute"><command>killall -USR1 my-panel</command></action></keybind>\
   <keybind key="A-F1"><action name="Execute"><command>killall -USR1 my-panel</command></action></keybind>\
+  <keybind key="W-s"><action name="Execute"><command>my-search-gui</command></action></keybind>\
   <keybind key="W-t"><action name="Execute"><command>xterm</command></action></keybind>\
   <keybind key="C-A-t"><action name="Execute"><command>xterm</command></action></keybind>\
   <keybind key="W-Up"><action name="ToggleMaximize"/></keybind>\

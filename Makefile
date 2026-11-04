@@ -127,14 +127,14 @@ $(BR_DIR)/Makefile: $(BR_TAR)
 desktop: $(BR_DIR)/Makefile
 > rm -rf $(BR_SRC)
 > mkdir -p $(BR_SRC)
-> cp -r desktop init panel login history $(BR_SRC)/
+> cp -r desktop init panel login history search $(BR_SRC)/
 > chmod -R u=rwX,go=rX $(BR_SRC)
 > chmod 755 $(BR_SRC)/desktop/overlay/etc/init.d/S90desktop $(BR_SRC)/desktop/overlay/etc/init.d/S50history $(BR_SRC)/desktop/overlay/root/.xinitrc \
 >   $(BR_SRC)/desktop/post-build.sh
 > $(BR_MAKE) qemu_x86_64_defconfig
 > cd $(BR_OUT) && $(BR_DIR)/support/kconfig/merge_config.sh -m .config $(BR_SRC)/desktop/buildroot.fragment
 > $(BR_MAKE) olddefconfig
-> $(BR_MAKE) my-init-dirclean my-panel-dirclean my-login-dirclean my-history-dirclean
+> $(BR_MAKE) my-init-dirclean my-panel-dirclean my-login-dirclean my-history-dirclean my-search-dirclean
 > # Buildroot doesn't notice changes to the kernel fragment by itself.
 > if ls -d $(BR_OUT)/build/linux-[0-9]* >/dev/null 2>&1 && \
 >    ! cmp -s desktop/linux-gui.fragment $(BR_OUT)/.linux-gui.fragment; then \

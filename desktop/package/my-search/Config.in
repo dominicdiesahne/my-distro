@@ -1,0 +1,11 @@
+config BR2_PACKAGE_MY_SEARCH
+	bool "my-search"
+	depends on BR2_PACKAGE_XORG7
+	depends on BR2_PACKAGE_LLAMA_CPP
+	select BR2_PACKAGE_MY_SEARCH_MODEL
+	select BR2_PACKAGE_XLIB_LIBX11
+	select BR2_PACKAGE_XLIB_LIBXFT
+	help
+	  Semantic file search: my-indexd indexes your files by meaning
+	  with the all-MiniLM-L6-v2 embedding model, my-search and
+	  my-search-gui search them.

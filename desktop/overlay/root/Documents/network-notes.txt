@@ -1,0 +1,7 @@
+Notes from class: computer networks
+
+An IP address identifies a device in a network. A subnet mask such as
+255.255.255.0 (/24) says which part is the network and which part the host.
+DHCP hands out addresses automatically, DNS turns names like example.com
+into addresses. A router connects different networks and forwards packets
+between them; a switch connects devices inside one network.

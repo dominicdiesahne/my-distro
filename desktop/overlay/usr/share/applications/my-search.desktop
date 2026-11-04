@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Search files
+Comment=Find files by what they are about
+Icon=system-search
+Exec=my-search-gui
+Terminal=false
+Categories=Utility;

@@ -24,6 +24,11 @@ BR2_PACKAGE_LIBXCRYPT=y
 
 # File history: every changed file is versioned (history/, kernel: fanotify)
 BR2_PACKAGE_MY_HISTORY=y
+
+# Semantic file search: llama.cpp runs the embedding model all-MiniLM-L6-v2
+BR2_PACKAGE_LLAMA_CPP=y
+BR2_PACKAGE_MY_SEARCH=y
+BR2_PACKAGE_MY_SEARCH_MODEL=y
 BR2_TARGET_TZ_INFO=y
 BR2_TARGET_LOCALTIME="Europe/Vienna"
 
