@@ -8,6 +8,7 @@ Text editor|xterm -name editor -T "Text editor" -e nano|accessories-text-editor
 System monitor|xterm -name monitor -T "System monitor" -e htop|computer
 Calculator|xcalc|accessories-calculator
 Clock|xclock|x-office-calendar
+File history|my-history|document-open-recent
 -
 Log out|openbox --exit|system-log-out
 Reboot|my-power reboot|view-refresh

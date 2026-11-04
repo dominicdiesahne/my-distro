@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=File history
+Comment=Undo file changes
+Icon=document-open-recent
+Exec=my-history
+Terminal=false
+Categories=System;Utility;

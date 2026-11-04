@@ -1,0 +1,16 @@
+# Files my-historyd does NOT version.
+# A line starting with "/" skips every path that starts with it;
+# any other line skips paths that contain it anywhere.
+
+# logs, runtime and program state
+/var/
+/run/
+/etc/resolv.conf
+/etc/random-seed
+# caches and app state that change all the time
+.cache/
+.local/share/
+.ash_history
+.Xauthority
+.ICEauthority
+.swp

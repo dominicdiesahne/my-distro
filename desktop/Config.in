@@ -1,3 +1,4 @@
 source "$BR2_EXTERNAL_MY_DISTRO_PATH/package/my-init/Config.in"
 source "$BR2_EXTERNAL_MY_DISTRO_PATH/package/my-panel/Config.in"
 source "$BR2_EXTERNAL_MY_DISTRO_PATH/package/my-login/Config.in"
+source "$BR2_EXTERNAL_MY_DISTRO_PATH/package/my-history/Config.in"

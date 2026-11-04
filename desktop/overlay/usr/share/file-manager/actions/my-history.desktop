@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Action
+Name=File history
+Tooltip=Show and restore older versions of this file
+Icon=document-open-recent
+Profiles=file;
+
+[X-Action-Profile file]
+Name=File history
+MimeTypes=all/allfiles;
+SelectionCount==1
+Exec=my-history %f

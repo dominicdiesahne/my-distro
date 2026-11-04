@@ -67,3 +67,6 @@ CONFIG_DEVTMPFS_MOUNT=y
 CONFIG_INOTIFY_USER=y
 CONFIG_SIGNALFD=y
 CONFIG_SERIAL_8250_CONSOLE=y
+
+# File history (my-historyd) watches all file writes with fanotify
+CONFIG_FANOTIFY=y

@@ -21,6 +21,9 @@ BR2_TARGET_GENERIC_ROOT_PASSWD="root"
 BR2_ROOTFS_USERS_TABLES="$(BR2_EXTERNAL_MY_DISTRO_PATH)/users.table"
 BR2_PACKAGE_MY_LOGIN=y
 BR2_PACKAGE_LIBXCRYPT=y
+
+# File history: every changed file is versioned (history/, kernel: fanotify)
+BR2_PACKAGE_MY_HISTORY=y
 BR2_TARGET_TZ_INFO=y
 BR2_TARGET_LOCALTIME="Europe/Vienna"
 

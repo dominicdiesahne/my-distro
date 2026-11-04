@@ -1,0 +1,8 @@
+config BR2_PACKAGE_MY_HISTORY
+	bool "my-history"
+	depends on BR2_PACKAGE_XORG7
+	select BR2_PACKAGE_XLIB_LIBX11
+	select BR2_PACKAGE_XLIB_LIBXFT
+	help
+	  System-wide file history: my-historyd saves a version of every
+	  changed file, my-undo and my-history restore them.

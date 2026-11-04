@@ -71,6 +71,31 @@ Log out (Start menu) ends the session and the login screen comes back.
   can `my-power reboot` / `my-power poweroff` (only root may signal init).
 - **Text console** (Ctrl+Alt+F1): `init` now starts `login` instead of a root
   shell when the system has passwords (`/etc/shadow`).
+**File history (system-wide undo):** every change to a file is saved as a version.
+
+- `my-historyd` (`history/my-historyd.c`, started by `/etc/init.d/S50history`)
+  uses the kernel's **fanotify** to get an event whenever any program closes a
+  file it wrote, anywhere on the root filesystem, and copies the file into
+  `/var/lib/my-history/store/`. At boot it saves the original state of `/etc`,
+  `/root` and `/home` as version 0, so even the first change can be undone.
+  Skipped: `/etc/my-history/exclude` (logs, caches). Up to 50 versions per file.
+- Versions belong to the file's owner: users see and restore only their own
+  files, root sees everything.
+- **File history** app (Start menu, or right-click a file in the file manager):
+  live list of changes, *Undo this change*, *Undo last change*, *View*.
+- Command line:
+
+  | Command | Does |
+  |---|---|
+  | `my-undo` | undo your most recent change |
+  | `my-undo list` | recent changes |
+  | `my-undo history FILE` | all versions of FILE |
+  | `my-undo restore FILE N` | put version N back |
+  | `my-undo show FILE N` | print version N |
+
+  Undoing is a change too, so it is saved as well: undo twice = redo.
+- Like everything on the live system, the history is in RAM and gone after a reboot.
+
 - Users are defined in `desktop/users.table`; the root password is
   `BR2_TARGET_GENERIC_ROOT_PASSWD` in `desktop/buildroot.fragment`.
 
