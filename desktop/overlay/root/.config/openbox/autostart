@@ -1,0 +1,5 @@
+# Started by Openbox once it is running (see /root/.xinitrc).
+
+my-panel &                  # taskbar: Start menu, open windows, clock
+pcmanfm --desktop &         # wallpaper colour and the icons on the desktop
+xterm -geometry 90x24+150+50 &   # right of the desktop icons

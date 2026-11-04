@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Web browser
+Icon=web-browser
+Exec=netsurf-gtk3 %u
+Terminal=false
+Categories=Network;WebBrowser;
+MimeType=text/html;application/xhtml+xml;x-scheme-handler/http;x-scheme-handler/https;

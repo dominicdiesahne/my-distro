@@ -1,0 +1,6 @@
+[Desktop Entry]
+Type=Application
+Name=Files
+Icon=system-file-manager
+Exec=pcmanfm ~
+Terminal=false

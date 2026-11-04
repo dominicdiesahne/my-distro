@@ -1,0 +1,13 @@
+[Default Applications]
+text/plain=my-editor.desktop
+text/x-csrc=my-editor.desktop
+text/x-chdr=my-editor.desktop
+text/x-shellscript=my-editor.desktop
+application/x-shellscript=my-editor.desktop
+text/x-makefile=my-editor.desktop
+text/markdown=my-editor.desktop
+inode/directory=pcmanfm.desktop
+text/html=my-browser.desktop
+application/xhtml+xml=my-browser.desktop
+x-scheme-handler/http=my-browser.desktop
+x-scheme-handler/https=my-browser.desktop

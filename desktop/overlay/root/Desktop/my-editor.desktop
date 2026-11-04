@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Text editor
+Icon=accessories-text-editor
+Exec=xterm -name editor -T "Text editor" -e nano %f
+Terminal=false
+Categories=Utility;TextEditor;
+MimeType=text/plain;text/x-csrc;text/x-chdr;text/x-shellscript;text/x-makefile;application/x-shellscript;text/markdown;application/xml;
