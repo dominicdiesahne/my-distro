@@ -1,0 +1,97 @@
+# Our changes on top of Buildroot's qemu_x86_64_defconfig.
+
+# Prebuilt glibc cross-compiler from Bootlin (saves building GCC ourselves)
+BR2_TOOLCHAIN_EXTERNAL=y
+BR2_TOOLCHAIN_EXTERNAL_BOOTLIN=y
+BR2_TOOLCHAIN_EXTERNAL_BOOTLIN_X86_64_GLIBC_STABLE=y
+
+# System
+BR2_TARGET_GENERIC_HOSTNAME="my-distro"
+BR2_TARGET_GENERIC_ISSUE="Welcome to my-distro"
+BR2_ROOTFS_DEVICE_CREATION_DYNAMIC_EUDEV=y
+BR2_ROOTFS_OVERLAY="$(BR2_EXTERNAL_MY_DISTRO_PATH)/overlay"
+BR2_ROOTFS_POST_BUILD_SCRIPT="board/qemu/x86_64/post-build.sh $(BR2_EXTERNAL_MY_DISTRO_PATH)/post-build.sh"
+BR2_TARGET_ROOTFS_EXT2_SIZE="1G"
+BR2_PACKAGE_MY_INIT=y
+
+# Users and passwords: root (password "root") and dominic (see users.table).
+# The graphical login screen is our own program (login/my-login.c); it
+# checks passwords with libxcrypt.
+BR2_TARGET_GENERIC_ROOT_PASSWD="root"
+BR2_ROOTFS_USERS_TABLES="$(BR2_EXTERNAL_MY_DISTRO_PATH)/users.table"
+BR2_PACKAGE_MY_LOGIN=y
+BR2_PACKAGE_LIBXCRYPT=y
+BR2_TARGET_TZ_INFO=y
+BR2_TARGET_LOCALTIME="Europe/Vienna"
+
+# UTF-8 locale and glibc's character converters. Without them Openbox can't
+# decode window titles and shows every window as "Unnamed Window".
+BR2_GENERATE_LOCALE="en_US.UTF-8"
+BR2_TOOLCHAIN_GLIBC_GCONV_LIBS_COPY=y
+
+# Bootable ISO (images/rootfs.iso9660): GRUB for BIOS and UEFI, the whole
+# root filesystem is loaded into RAM as an initrd (a live system)
+BR2_TARGET_GRUB2=y
+BR2_TARGET_GRUB2_I386_PC=y
+BR2_TARGET_GRUB2_X86_64_EFI=y
+BR2_TARGET_GRUB2_BOOT_PARTITION="cd"
+BR2_TARGET_GRUB2_BUILTIN_MODULES_PC="boot linux normal iso9660 biosdisk part_msdos part_gpt all_video"
+BR2_TARGET_GRUB2_BUILTIN_MODULES_EFI="boot linux normal iso9660 fat part_msdos part_gpt efi_gop all_video search search_fs_file"
+BR2_TARGET_GRUB2_BUILTIN_CONFIG_EFI="$(BR2_EXTERNAL_MY_DISTRO_PATH)/grub-efi-embedded.cfg"
+BR2_TARGET_ROOTFS_ISO9660=y
+BR2_TARGET_ROOTFS_ISO9660_GRUB2=y
+BR2_TARGET_ROOTFS_ISO9660_BOOT_MENU="$(BR2_EXTERNAL_MY_DISTRO_PATH)/grub.cfg"
+BR2_TARGET_ROOTFS_ISO9660_INITRD=y
+BR2_TARGET_ROOTFS_CPIO=y
+BR2_TARGET_ROOTFS_CPIO_GZIP=y
+
+# Kernel: add graphics, mouse and USB on top of the QEMU kernel config
+BR2_LINUX_KERNEL_CONFIG_FRAGMENT_FILES="$(BR2_EXTERNAL_MY_DISTRO_PATH)/linux-gui.fragment"
+
+# X11 display server
+BR2_PACKAGE_XORG7=y
+BR2_PACKAGE_XSERVER_XORG_SERVER=y
+BR2_PACKAGE_XSERVER_XORG_SERVER_MODULAR=y
+BR2_PACKAGE_XDRIVER_XF86_INPUT_LIBINPUT=y
+BR2_PACKAGE_XDRIVER_XF86_VIDEO_FBDEV=y
+BR2_PACKAGE_XAPP_XINIT=y
+BR2_PACKAGE_XAPP_XRDB=y
+BR2_PACKAGE_XAPP_XSETROOT=y
+
+# Desktop: window manager, terminal, small apps, fonts
+BR2_PACKAGE_OPENBOX=y
+BR2_PACKAGE_XTERM=y
+BR2_PACKAGE_XAPP_XCLOCK=y
+BR2_PACKAGE_XAPP_XEYES=y
+BR2_PACKAGE_XAPP_XCALC=y
+BR2_PACKAGE_DEJAVU=y
+BR2_PACKAGE_XFONT_FONT_MISC_MISC=y
+BR2_PACKAGE_XFONT_FONT_CURSOR_MISC=y
+
+# Taskbar: our own program (panel/my-panel.c), drawn with Xft for smooth text
+BR2_PACKAGE_MY_PANEL=y
+BR2_PACKAGE_XLIB_LIBXFT=y
+BR2_PACKAGE_IMLIB2=y
+BR2_PACKAGE_IMLIB2_X=y
+BR2_PACKAGE_IMLIB2_PNG=y
+
+# File manager with desktop icons (PCManFM, a GTK 3 app). GTK on X11 needs
+# an OpenGL library; Mesa's software renderer is enough for a file manager.
+BR2_PACKAGE_MESA3D=y
+BR2_PACKAGE_MESA3D_GALLIUM_DRIVER_SOFTPIPE=y
+BR2_PACKAGE_MESA3D_OPENGL_GLX=y
+BR2_PACKAGE_PCMANFM=y
+BR2_PACKAGE_ADWAITA_ICON_THEME=y
+BR2_PACKAGE_HICOLOR_ICON_THEME=y
+BR2_PACKAGE_SHARED_MIME_INFO=y
+
+# Web browser: NetSurf with its GTK 3 window, curl + OpenSSL for HTTPS,
+# and the root certificates that HTTPS needs to trust websites
+BR2_PACKAGE_NETSURF=y
+BR2_PACKAGE_NETSURF_GTK3=y
+BR2_PACKAGE_LIBCURL=y
+BR2_PACKAGE_CA_CERTIFICATES=y
+
+# Terminal tools: text editor and system monitor
+BR2_PACKAGE_NANO=y
+BR2_PACKAGE_HTOP=y

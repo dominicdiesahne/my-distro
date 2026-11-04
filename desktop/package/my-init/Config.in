@@ -1,0 +1,5 @@
+config BR2_PACKAGE_MY_INIT
+	bool "my-init"
+	help
+	  my-distro's own PID 1, written in C (init/init.c).
+	  Installed as /sbin/my-init and started with init=/sbin/my-init.

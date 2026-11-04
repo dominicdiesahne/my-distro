@@ -1,0 +1,9 @@
+﻿
+  Welcome to my-distro 0.2 (desktop)
+  Linux kernel + Xorg + Openbox, started by a hand-written init in C.
+
+  Start menu: Start button, Super+Space or Alt+F1
+  Terminal: Super+T    Files: Super+E    Close window: Alt+F4
+  Text shell: Ctrl+Alt+F1, back to the desktop: Ctrl+Alt+F7
+  Desktop log: /var/log/desktop.log    Stop: my-power poweroff
+

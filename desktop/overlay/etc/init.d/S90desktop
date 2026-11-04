@@ -1,0 +1,24 @@
+#!/bin/sh
+# Starts the graphical login screen (my-login) on virtual terminal 7.
+# After logging in, my-login starts the desktop as that user.
+# The text console stays on terminal 1: Ctrl+Alt+F1 to get there, Ctrl+Alt+F7 back.
+# Log: /var/log/desktop.log
+
+case "$1" in
+start)
+	printf "Starting login screen: "
+	PATH=/sbin:/bin:/usr/sbin:/usr/bin LANG=en_US.UTF-8 \
+		xinit /usr/bin/my-login -- /usr/bin/Xorg :0 vt7 \
+		</dev/null >/var/log/desktop.log 2>&1 &
+	echo "OK"
+	;;
+stop)
+	printf "Stopping desktop: "
+	killall xinit 2>/dev/null
+	echo "OK"
+	;;
+*)
+	echo "Usage: $0 {start|stop}"
+	exit 1
+	;;
+esac

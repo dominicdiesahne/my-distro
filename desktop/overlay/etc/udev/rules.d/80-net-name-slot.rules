@@ -1,0 +1,2 @@
+# Empty on purpose: replaces udev's rule that renames eth0 to names like
+# enp0s3. The network script (/etc/network/interfaces) expects eth0.

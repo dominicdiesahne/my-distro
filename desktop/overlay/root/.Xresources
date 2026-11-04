@@ -1,0 +1,7 @@
+XTerm*faceName: DejaVu Sans Mono
+XTerm*faceSize: 11
+XTerm*background: #0b2a2b
+XTerm*foreground: #d8f3f0
+XTerm*cursorColor: #4fd1c5
+XTerm*loginShell: true
+XTerm*title: Terminal

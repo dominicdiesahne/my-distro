@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Right-click the desktop to open this menu. -->
+<openbox_menu xmlns="http://openbox.org/3.4/menu">
+  <menu id="root-menu" label="my-distro">
+    <item label="Terminal"><action name="Execute"><command>xterm</command></action></item>
+    <item label="Calculator"><action name="Execute"><command>xcalc</command></action></item>
+    <item label="Clock"><action name="Execute"><command>xclock</command></action></item>
+    <item label="Eyes"><action name="Execute"><command>xeyes</command></action></item>
+    <separator />
+    <item label="Reload Openbox"><action name="Reconfigure" /></item>
+    <item label="Log out"><action name="Exit"><prompt>no</prompt></action></item>
+    <item label="Reboot"><action name="Execute"><command>my-power reboot</command></action></item>
+    <item label="Power off"><action name="Execute"><command>my-power poweroff</command></action></item>
+  </menu>
+</openbox_menu>
