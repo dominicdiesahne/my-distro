@@ -1,0 +1,5 @@
+# Read by every login shell.
+export PATH=/sbin:/bin:/usr/sbin:/usr/bin
+export HOME=/root
+PS1='\u@\h:\w\$ '
+cat /etc/motd

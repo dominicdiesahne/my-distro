@@ -1,0 +1,11 @@
+# Our changes on top of the kernel's x86_64 defconfig.
+# Shows up in `uname -r`, e.g. 6.18.60-my-distro
+CONFIG_LOCALVERSION="-my-distro"
+# CONFIG_LOCALVERSION_AUTO is not set
+CONFIG_DEFAULT_HOSTNAME="my-distro"
+# Needed to boot from an initramfs and give init a /dev
+CONFIG_BLK_DEV_INITRD=y
+CONFIG_DEVTMPFS=y
+# Serial console, used by `make run`
+CONFIG_SERIAL_8250=y
+CONFIG_SERIAL_8250_CONSOLE=y

@@ -1,0 +1,4 @@
+NAME="my-distro"
+PRETTY_NAME="my-distro 0.1"
+ID=my-distro
+VERSION_ID=0.1

@@ -1,0 +1,3 @@
+# Everything here runs on Linux: keep LF line endings, also on Windows.
+* text=auto eol=lf
+*.png binary

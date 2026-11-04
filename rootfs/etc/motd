@@ -1,0 +1,7 @@
+
+  Welcome to my-distro 0.1
+  Linux kernel + BusyBox + a hand-written init in C.
+
+  Try:  uname -a   ps   ls /proc   cat /etc/os-release
+  Stop: poweroff
+

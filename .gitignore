@@ -1,0 +1,2 @@
+# Build output: the ISO and test screenshots. Rebuild with `make desktop`.
+out/
