@@ -1,0 +1,9 @@
+# Taskbar icons for apps that don't provide their own (_NET_WM_ICON).
+# window name or class = icon name from the Adwaita theme.
+# See a window's name/class with: xprop WM_CLASS (then click the window)
+editor=accessories-text-editor
+monitor=computer
+xterm=utilities-terminal
+xcalc=accessories-calculator
+xclock=x-office-calendar
+xeyes=face-smile

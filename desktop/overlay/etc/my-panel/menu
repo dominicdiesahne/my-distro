@@ -1,0 +1,14 @@
+# The Start menu of my-panel. One entry per line: Label|command|icon
+# The icon is a name from the Adwaita icon theme (/usr/share/icons/Adwaita)
+# or a full path to a PNG. A line with only "-" draws a separator.
+Terminal|xterm|utilities-terminal
+Files|pcmanfm ~|system-file-manager
+Web browser|netsurf-gtk3|web-browser
+Text editor|xterm -name editor -T "Text editor" -e nano|accessories-text-editor
+System monitor|xterm -name monitor -T "System monitor" -e htop|computer
+Calculator|xcalc|accessories-calculator
+Clock|xclock|x-office-calendar
+-
+Log out|openbox --exit|system-log-out
+Reboot|my-power reboot|view-refresh
+Power off|my-power poweroff|system-shutdown
