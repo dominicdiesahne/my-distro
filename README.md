@@ -27,6 +27,12 @@ the taskbar, the login screen, the file history daemon and the search indexer.
 
 - **Own init in C** (`init/init.c`) as PID 1: mounts filesystems, runs the boot
   scripts, starts a login on the console, reaps zombies, reboots/powers off.
+- **First-boot setup** (`settings/my-setup.c`): before the first login it
+  asks for the keyboard layout, your name, user name and password, the
+  computer's name and a color theme, and creates your account.
+- **Users and system** (same program, Start menu or Settings): add and
+  remove users, change passwords, the computer name and the keyboard layout.
+  It asks for the root password; `login/my-admin.c` checks it.
 - **Graphical login** (`login/my-login.c`): checks passwords against
   `/etc/shadow`, drops root rights and starts your desktop as you.
 - **Taskbar** (`panel/my-panel.c`): Start menu with icons, a button per window
@@ -105,16 +111,24 @@ the optical drive. Display: graphics controller *VMSVGA*. Start.
 
 In the boot menu, *safe graphics* helps if the screen stays black.
 
-### 3. Log in
+### 3. Set it up and log in
+
+The **setup** comes first: keyboard layout, your account (name, user name,
+password), a name for the computer and a color theme. Your password is also
+the administrator (root) password, unless you untick that and choose another.
+Then log in with your new account.
+
+On the live system you can **skip** the setup and use the demo account:
 
 | User | Password | |
 |---|---|---|
 | `dominic` | `dominic` | normal user, pre-filled on the login screen |
 | `root` | `root` | administrator |
 
-These are default passwords of a **live system for testing**: everything runs
-in RAM and is gone after a reboot, unless you [install it](#4-install-to-a-disk-optional).
-The installer asks for new passwords; or change them with `passwd`.
+The live system runs in RAM and forgets everything (also the account from the
+setup) when it shuts down, unless you [install it](#4-install-to-a-disk-optional).
+Change users and passwords later in **Users and system** (Start menu), or your
+own password with `passwd`.
 
 ### 4. Install to a disk (optional)
 
@@ -125,10 +139,12 @@ install it onto a hard disk:
    (8 GB is plenty, dynamically allocated). In QEMU: `make run-install`.
 2. Boot the ISO and log in, then double-click **Install to disk** on the
    desktop (or Start menu, *Install to disk*; or `my-install` as root).
-   It asks for the root password (`root`).
+   It asks for the root password (yours from the setup, or `root` if you
+   skipped it).
 3. Pick the disk, type `yes`. **Everything on that disk is deleted.**
-   It copies the system (a minute or two) and installs GRUB, then asks
-   for new passwords for `root` and `dominic`.
+   It copies the system (a minute or two) and installs GRUB. If you did the
+   setup, your account is copied too; if you skipped it, the installed system
+   starts with the setup.
 4. Power off, remove the ISO from the optical drive (VirtualBox: Storage,
    click the CD, *Remove disk from virtual drive*), start the VM again.
    QEMU: `make run-disk`.
@@ -217,12 +233,14 @@ How it gets there: Buildroot has no Neovim, so `desktop/package/my-ide`
 takes the official prebuilt one (x86-64, glibc, like my-distro). During the
 build, that same Neovim runs on the build machine, installs LazyVim's
 plugins at the versions in `desktop/lazyvim/lazy-lock.json`, and compiles
-the tree-sitter parsers with my-distro's cross-compiler. The result is put
-into dominic's home. The config is `desktop/lazyvim` (= `~/.config/nvim`).
+the tree-sitter parsers with my-distro's cross-compiler. The plugins and
+parsers go to `/usr/share/my-ide` once, read-only, for all users; every new
+user's home gets the config (`desktop/lazyvim` = `~/.config/nvim`) and links
+to them from `/etc/skel`.
 
 my-distro has no C compiler, so `:TSInstall` for more languages doesn't
-work on the running system; add them to `desktop/package/my-ide/parsers.lua`
-and rebuild. The IDE is set up for the user `dominic` only.
+work on the running system, and `:Lazy update` can't change the shared
+plugins; add languages to `desktop/package/my-ide/parsers.lua` and rebuild.
 
 ## Project layout
 
@@ -230,11 +248,11 @@ and rebuild. The IDE is set up for the user `dominic` only.
 |---|---|
 | `Makefile` | `make desktop` (ISO), `make run-iso`; `make` / `make run` for the minimal version |
 | `init/init.c` | PID 1 |
-| `login/` | Login screen `my-login`, `my-power` (reboot/power off for normal users) |
+| `login/` | Login screen `my-login`, `my-power` (reboot/power off for normal users), `my-admin` (root password check for Users and system) |
 | `desktop/overlay/usr/sbin/my-install` | Installer (shell script) |
 | `panel/` | Taskbar `my-panel` |
 | `desktop/lazyvim/`, `desktop/package/my-ide/` | The IDE: LazyVim config, and how Neovim and the plugins get into the image |
-| `settings/` | Settings app, Clock app, and `settings.c` / `dial.c` that the taskbar and login screen share with them |
+| `settings/` | Settings app, Clock app, setup / Users and system (`my-setup`), and `settings.c` / `dial.c` that the taskbar and login screen share with them |
 | `history/` | `my-historyd`, `my-undo`, the File history window |
 | `search/` | `my-indexd`, `my-search`, the Search files window |
 | `desktop/buildroot.fragment` | Packages and settings on top of Buildroot's `qemu_x86_64_defconfig` |
@@ -275,14 +293,17 @@ change the next time they start.
 
 ### In the build
 
-- **Users and passwords:** `desktop/users.table` (format: Buildroot manual,
-  "Users table"), root password `BR2_TARGET_GENERIC_ROOT_PASSWD` in
-  `desktop/buildroot.fragment`. The user's home is set up in `desktop/post-build.sh`.
+- **Users and passwords:** the demo account is in `desktop/users.table`
+  (format: Buildroot manual, "Users table"), the live root password is
+  `BR2_TARGET_GENERIC_ROOT_PASSWD` in `desktop/buildroot.fragment`. A new
+  user's home is a copy of `/etc/skel`, made in `desktop/post-build.sh`.
+  The setup runs while `/etc/my-distro/setup-done` is missing.
 - **Add a program:** find it in Buildroot
   (`make -C ~/my-distro-build/buildroot-* O=~/my-distro-build/desktop-out menuconfig`),
   add its `BR2_PACKAGE_...=y` line to `desktop/buildroot.fragment`, run `make desktop`.
 - **Start menu:** `desktop/overlay/etc/my-panel/menu` (`Label|command|icon`).
-- **Keyboard layout:** `desktop/overlay/etc/X11/xorg.conf.d/00-keyboard.conf`.
+- **Keyboard layout:** `desktop/overlay/etc/X11/xorg.conf.d/00-keyboard.conf`
+  (the default; the setup changes it), the list offered in `settings/my-setup.c`.
 - **Wallpapers:** edit `desktop/make-wallpaper.py` and run it.
 - **Color themes:** the list in `settings/settings.c`; add a matching entry
   to `THEMES` in `desktop/make-wallpaper.py` for its wallpaper.

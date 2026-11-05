@@ -78,6 +78,8 @@ BR2_PACKAGE_XDRIVER_XF86_INPUT_LIBINPUT=y
 BR2_PACKAGE_XDRIVER_XF86_VIDEO_FBDEV=y
 BR2_PACKAGE_XAPP_XINIT=y
 BR2_PACKAGE_XAPP_XRDB=y
+# setxkbmap: the setup changes the keyboard layout of the running X server
+BR2_PACKAGE_XAPP_SETXKBMAP=y
 BR2_PACKAGE_XAPP_XSETROOT=y
 
 # Desktop: window manager, terminal, small apps, fonts

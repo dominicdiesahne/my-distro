@@ -340,6 +340,13 @@ static void on_reset(GtkButton *b, gpointer d)
 	update_widgets();
 }
 
+/* Users, passwords, computer name, keyboard: my-setup (asks for root). */
+static void on_users(GtkButton *b, gpointer d)
+{
+	(void)b; (void)d;
+	g_spawn_command_line_async("my-setup", NULL);
+}
+
 /* A small preview of a theme: its background with a taskbar and accent. */
 static gboolean draw_swatch(GtkWidget *w, cairo_t *cr, gpointer data)
 {
@@ -628,7 +635,7 @@ static void update_widgets(void)
 
 int main(int argc, char **argv)
 {
-	GtkWidget *win, *box, *side, *stack, *vbox, *bottom, *reset;
+	GtkWidget *win, *box, *side, *stack, *vbox, *bottom, *reset, *users;
 
 	if (argc > 1 && strcmp(argv[1], "--apply") == 0) {
 		/* at login: no window, so GTK is only needed for the pictures */
@@ -663,6 +670,9 @@ int main(int argc, char **argv)
 	bottom = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
 	gtk_container_set_border_width(GTK_CONTAINER(bottom), 12);
 	gtk_box_pack_end(GTK_BOX(bottom), reset, FALSE, FALSE, 0);
+	users = gtk_button_new_with_label("Users and system…");
+	g_signal_connect(users, "clicked", G_CALLBACK(on_users), NULL);
+	gtk_box_pack_start(GTK_BOX(bottom), users, FALSE, FALSE, 0);
 
 	vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
 	gtk_box_pack_start(GTK_BOX(vbox), stack, TRUE, TRUE, 0);

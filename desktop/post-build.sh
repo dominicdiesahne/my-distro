@@ -35,8 +35,17 @@ sed -e 's|<name>Clearlooks</name>|<name>my-distro</name>|' \
   <keybind key="W-Down"><action name="Iconify"/></keybind>|' \
     "$T/etc/xdg/openbox/rc.xml" > "$T/root/.config/openbox/rc.xml"
 
-# The normal user (users.table) gets the same desktop setup as root: copy
-# root's home over. Buildroot makes the files theirs when it builds the image.
+# Every new user's home folder starts as a copy of /etc/skel (my-setup makes
+# it): the same desktop setup as root's.
+mkdir -p "$T/etc/skel"
+cp -a "$T/root/." "$T/etc/skel/"
+rm -f "$T/etc/skel/.ash_history"
+
+# The demo user of the live system (users.table) gets it too. Buildroot makes
+# the files theirs when it builds the image. The first-boot setup replaces
+# this account with your own.
 mkdir -p "$T/home/dominic"
-cp -a "$T/root/." "$T/home/dominic/"
-rm -f "$T/home/dominic/.ash_history"
+cp -a "$T/etc/skel/." "$T/home/dominic/"
+
+# The live system starts without /etc/my-distro/setup-done, so the setup runs.
+rm -f "$T/etc/my-distro/setup-done"

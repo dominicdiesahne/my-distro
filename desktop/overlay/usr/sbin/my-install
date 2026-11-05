@@ -9,14 +9,14 @@
 #   3. copies the root filesystem (everything that runs from RAM now) and the
 #      kernel onto the ext4 partition
 #   4. installs GRUB for BIOS and UEFI and writes its boot menu
-#   5. lets you set new passwords for root and dominic
+#   5. the installed system starts with the setup (your own user and
+#      passwords), unless you already did the setup on the live system
 #
 # Run it as root, or from the "Install to disk" icon (asks for the root
 # password). Log of the last run: /tmp/my-install.log
 
 T=/mnt/target                  # where the new system is mounted
 LOG=/tmp/my-install.log
-DESKTOP_USER=dominic
 
 pause() {
 	printf "\nPress Enter to close this window. "
@@ -48,7 +48,7 @@ run() {
 
 if [ "$(id -u)" != 0 ]; then
 	echo "Installing needs administrator rights."
-	echo "Enter the root password (on the live system: root)."
+	echo "Enter the root password (the one from the setup; skipped the setup: root)."
 	su root -c "$0"
 	rc=$?
 	if [ "$rc" != 0 ] && [ "$rc" != 3 ]; then
@@ -206,31 +206,20 @@ menuentry "my-distro (show boot messages)" {
 }
 EOF
 
-# --- 5. Passwords --------------------------------------------------------------------
+# --- 5. Your account -----------------------------------------------------------------
 
-echo "[4/5] Passwords"
-echo "The installed system still has the live passwords (root/root, $DESKTOP_USER/$DESKTOP_USER)."
-printf "Set new passwords now? [Y/n] "
-read -r answer
-case "$answer" in
-n*|N*) echo "Kept. Change them later with: passwd" ;;
-*)
-	mount -o bind /dev "$T/dev"
-	for u in root "$DESKTOP_USER"; do
-		echo "New password for $u:"
-		tries=0
-		until chroot "$T" /usr/bin/env PATH=/usr/bin:/bin passwd "$u"; do
-			tries=$((tries + 1))
-			if [ "$tries" -ge 3 ]; then
-				echo "Password of $u not changed. Change it later with: passwd $u"
-				break
-			fi
-			echo "Try again."
-		done
-	done
-	umount "$T/dev"
-	;;
-esac
+# /etc/my-distro/setup-done says "done" when the setup made your account on
+# this live system; then the installed system keeps it. Otherwise ("skipped"
+# or missing: still the demo account with known passwords) the installed
+# system starts with the setup.
+echo "[4/5] Your account"
+if [ "$(cat /etc/my-distro/setup-done 2>/dev/null)" = done ]; then
+	echo "Keeping the account and passwords you chose in the setup."
+else
+	rm -f "$T/etc/my-distro/setup-done"
+	echo "At the first start from the disk, the setup asks for your own user"
+	echo "name and passwords."
+fi
 
 # --- Done ------------------------------------------------------------------------------
 

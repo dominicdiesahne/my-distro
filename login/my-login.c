@@ -5,7 +5,8 @@
  *
  *     xinit /usr/bin/my-login -- /usr/bin/Xorg :0 vt7
  *
- * It runs as root and loops forever:
+ * It runs as root. On the first start it runs the setup (my-setup
+ * --first-boot), then it loops forever:
  *   1. show the login screen (wallpaper, clock, user name + password),
  *   2. check the password against /etc/shadow with crypt(),
  *   3. start the desktop as that user: fork, setgid/initgroups/setuid,
@@ -285,6 +286,34 @@ static void load_theme(void)
 	update_clock();
 }
 
+/*
+ * First start: before the first login screen, my-setup asks for the keyboard,
+ * your own account and the computer's name. It writes /etc/my-distro/setup-done
+ * at the end, so it runs only once (on the live ISO: once per boot).
+ */
+static void first_boot_setup(void)
+{
+	pid_t pid;
+
+	if (access("/etc/my-distro/setup-done", F_OK) == 0)
+		return;
+	XSetInputFocus(dpy, PointerRoot, RevertToPointerRoot, CurrentTime);
+	XSync(dpy, False);
+	pid = fork();
+	if (pid == 0) {
+		clearenv();
+		setenv("HOME", "/root", 1);
+		setenv("DISPLAY", ":0", 1);
+		setenv("PATH", "/sbin:/bin:/usr/sbin:/usr/bin", 1);
+		setenv("LANG", "en_US.UTF-8", 1);
+		setenv("NO_AT_BRIDGE", "1", 1);
+		execl("/usr/bin/my-setup", "my-setup", "--first-boot", (char *)NULL);
+		_exit(127);
+	}
+	if (pid > 0)
+		waitpid(pid, NULL, 0);
+}
+
 /* The first normal user (uid 1000 and up) is filled in for convenience. */
 static void default_user(void)
 {
@@ -545,6 +574,7 @@ int main(void)
 	XDefineCursor(dpy, win, XCreateFontCursor(dpy, XC_left_ptr));
 	XDefineCursor(dpy, root, XCreateFontCursor(dpy, XC_left_ptr));
 
+	first_boot_setup();
 	default_user();
 	load_theme();
 	show();

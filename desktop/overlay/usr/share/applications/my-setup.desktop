@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Users and system
+Comment=Users, passwords, computer name and keyboard layout
+Icon=system-users
+Exec=my-setup
+Terminal=false
+Categories=Settings;System;

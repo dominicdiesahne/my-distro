@@ -12,6 +12,7 @@ Clock|my-clock|my-clock
 Search files|my-search-gui|system-search
 File history|my-history|document-open-recent
 Settings|my-settings|preferences-desktop
+Users and system|my-setup|system-users
 Install to disk|xterm -name my-install -T "Install my-distro" -e /usr/sbin/my-install|drive-harddisk
 -
 Log out|openbox --exit|system-log-out
