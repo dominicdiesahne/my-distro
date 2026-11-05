@@ -3,7 +3,7 @@
  *
  * The kernel starts this program first, and it must never exit
  * (if PID 1 exits, the kernel panics). Its jobs:
- *   1. mount the virtual filesystems (/proc, /sys, /dev, /tmp)
+ *   1. mount the virtual filesystems (/proc, /sys, /dev, /tmp, /run)
  *   2. set the hostname from /etc/hostname
  *   3. run the startup scripts in /etc/init.d, if the system has them
  *      (on the desktop build they start udev and the graphical desktop)
@@ -183,6 +183,15 @@ int main(void)
 	mount_fs("devtmpfs", "/dev", "devtmpfs");
 	mount_fs("devpts", "/dev/pts", "devpts");
 	mount_fs("tmpfs", "/tmp", "tmpfs");
+	/* /run holds what is only true until the next boot: PID files, and the
+	 * list of network interfaces that are up (ifup's /run/ifstate). On a
+	 * disk it would survive a reboot, and ifup would then skip eth0 because
+	 * the old list says it is up already. In RAM it starts empty. */
+	mkdir("/run", 0755);
+	if (mount("tmpfs", "/run", "tmpfs", MS_NOSUID | MS_NODEV, "mode=0755") < 0 &&
+	    errno != EBUSY)
+		fprintf(stderr, "init: mount /run: %s\n", strerror(errno));
+	mkdir("/run/lock", 0755);                 /* /var/lock points here */
 	set_hostname();
 
 	/* No SA_RESTART: a signal interrupts wait() so we notice it right away. */

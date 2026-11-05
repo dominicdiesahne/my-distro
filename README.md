@@ -35,6 +35,10 @@ the taskbar, the login screen, the file history daemon and the search indexer.
 - **Users and system** (same program, Start menu or Settings): add and
   remove users, change passwords, the computer name and the keyboard layout.
   It asks for the root password; `login/my-admin.c` checks it.
+- **System updates** (`my-update`): every new release on GitHub shows up as
+  an *Update to …* button in the taskbar of installed systems. One click (and
+  the root password) downloads it, checks its signature and installs it;
+  your files, users and settings stay. See [System updates](#system-updates).
 - **Graphical login** (`login/my-login.c`): checks passwords against
   `/etc/shadow`, drops root rights and starts your desktop as you.
 - **Taskbar** (`panel/my-panel.c`): Start menu with icons, a button per window
@@ -92,7 +96,7 @@ cd my-distro
 make desktop
 ```
 
-The result is **`out/my-distro.iso`** (~230 MB). Build files go to
+The result is **`out/my-distro.iso`** (~240 MB). Build files go to
 `~/my-distro-build` (change with `make desktop BUILD=/some/path`), not into
 the repository. Kali on WSL: `setup-kali.sh` fixes the usual Kali/WSL update
 problems and installs the tools.
@@ -244,14 +248,70 @@ my-distro has no C compiler, so `:TSInstall` for more languages doesn't
 work on the running system, and `:Lazy update` can't change the shared
 plugins; add languages to `desktop/package/my-ide/parsers.lua` and rebuild.
 
+## System updates
+
+An installed my-distro looks for a new release at every login and every
+6 hours. When there is one, the taskbar shows **Update to 0.9** next to the
+clock; it opens *System update* (also in the Start menu, and a page of
+*Users and system*) with the release notes and an **Install update** button.
+
+What happens (`/usr/bin/my-update`, a Python script):
+
+1. It asks GitHub for the latest release
+   (`https://api.github.com/repos/dominicdiesahne/my-distro/releases/latest`,
+   set in `/etc/my-distro/update.conf`) and compares its version with
+   `/etc/my-distro/version`.
+2. It downloads the release's **update package** `my-distro-update.tar.xz`
+   (the whole root filesystem), its SHA-256 sum and a **signature** of that
+   sum, to `/.my-update` on the system disk.
+3. It checks the signature with the public key `/etc/my-distro/update-key.pem`
+   (Ed25519, `openssl pkeyutl -verify`), then the sum. A package that was not
+   signed with the maintainer's private key is refused, even if someone
+   tampers with the download.
+4. It unpacks the package and moves the new files into place (renames on the
+   same disk, so each file is either the old or the new one, never half).
+   It **keeps** `/home`, `/root`, `/var`, users and passwords
+   (`/etc/passwd`, `shadow`, `group`), the computer name, the keyboard layout,
+   the boot loader and `update.conf`.
+5. It runs `/usr/lib/my-distro/installed-fixups` (same as the installer:
+   no "Install to disk" icon), and you restart.
+
+The **live ISO** can't keep an update (it runs from RAM), so there it only
+says that a new ISO is out. Systems before 0.8 have no updater: install the
+0.8 ISO once, updates come by themselves after that.
+
+From a terminal: `my-update check --notes`, and as root `my-update install`.
+
+### Making a release
+
+```bash
+# 1. Raise the version (the only place it is written down)
+echo 0.9 > desktop/overlay/etc/my-distro/version
+# 2. Build: out/my-distro.iso and out/my-distro-update.tar.xz
+make desktop
+# 3. Sum and signature of the update package
+make release-files
+# 4. Publish all four files
+gh release create v0.9 out/my-distro.iso out/my-distro-update.tar.xz* --title "my-distro 0.9" --notes "..."
+```
+
+The tag must be the version with a `v` (`v0.9`). The **private signing
+key** is `~/.config/my-distro/update-signing-key.pem` on the build machine,
+never in the repository. **Back it up**: without it, installed systems can't
+get updates any more (a new key needs a new ISO, because the public key is
+built into the system). How to make a key is in the `Makefile` at
+`release-files`.
+
 ## Project layout
 
 | Path | What it is |
 |---|---|
-| `Makefile` | `make desktop` (ISO), `make run-iso`; `make` / `make run` for the minimal version |
+| `Makefile` | `make desktop` (ISO and update package), `make release-files` (signature), `make run-iso`; `make` / `make run` for the minimal version |
 | `init/init.c` | PID 1 |
 | `login/` | Login screen `my-login`, `my-power` (reboot/power off for normal users), `my-admin` (root password check for Users and system) |
 | `desktop/overlay/usr/sbin/my-install` | Installer (shell script) |
+| `desktop/overlay/usr/bin/my-update` | System updates (Python), settings in `desktop/overlay/etc/my-distro/update.conf`, public key `update-key.pem` |
+| `desktop/overlay/etc/my-distro/version` | The version number (the welcome text and `my-update` read it) |
 | `panel/` | Taskbar `my-panel` |
 | `desktop/lazyvim/`, `desktop/package/my-ide/` | The IDE: LazyVim config, and how Neovim and the plugins get into the image |
 | `settings/` | Settings app, Clock app, setup / Users and system (`my-setup`), and `settings.c` / `dial.c` that the taskbar and login screen share with them |

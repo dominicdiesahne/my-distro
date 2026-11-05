@@ -1,0 +1,21 @@
+#!/bin/sh
+# installed-fixups ROOT: turns a copy of the live system into an installed
+# system. my-install runs it on the new disk; my-update runs it on / after
+# every update, because the update brings the live system's files again.
+R="${1:?usage: installed-fixups ROOT}"
+
+# The installer is not needed on an installed system.
+rm -f "$R/usr/share/applications/my-install.desktop" \
+      "$R/root/Desktop/my-install.desktop" \
+      "$R/etc/skel/Desktop/my-install.desktop" \
+      "$R"/home/*/Desktop/my-install.desktop
+sed -i '/my-install/d' "$R/etc/my-panel/menu"
+
+# The welcome text talks about the live system.
+for f in "$R/root/Documents/welcome.txt" "$R/etc/skel/Documents/welcome.txt" \
+         "$R"/home/*/Documents/welcome.txt; do
+	[ -f "$f" ] || continue
+	sed -i -e 's/^Everything runs from RAM.*/This system is installed on a disk: your changes are kept./' \
+	       -e '/Install to disk/d' "$f"
+done
+exit 0

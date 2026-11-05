@@ -8,7 +8,8 @@
  * way the login screen does (crypt() with the stored salt).
  *
  * It can only start that one program, with a clean environment, so the root
- * rights can't be used for anything else.
+ * rights can't be used for anything else. The only argument it passes on is
+ * "--update" (open the window on its System update page).
  *
  * Exit codes: 2 = wrong password, 1 = other error; otherwise my-setup's.
  */
@@ -49,10 +50,11 @@ static int valid_display(const char *d)
 	return 1;
 }
 
-int main(void)
+int main(int argc, char **argv)
 {
 	char pass[256] = "", display[16] = ":0", user[64] = "";
 	struct passwd *me = getpwuid(getuid());
+	int update = argc > 1 && strcmp(argv[1], "--update") == 0;
 
 	if (!fgets(pass, sizeof pass, stdin))
 		pass[0] = '\0';
@@ -79,6 +81,9 @@ int main(void)
 	setenv("LANG", "en_US.UTF-8", 1);
 	setenv("NO_AT_BRIDGE", "1", 1);
 	setenv("MY_SETUP_USER", user, 1);   /* who asked: can't remove themselves */
-	execl(PROGRAM, "my-setup", "--manage", (char *)NULL);
+	if (update)
+		execl(PROGRAM, "my-setup", "--manage", "--update", (char *)NULL);
+	else
+		execl(PROGRAM, "my-setup", "--manage", (char *)NULL);
 	return 1;
 }

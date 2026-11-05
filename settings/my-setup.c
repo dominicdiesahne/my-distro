@@ -8,10 +8,13 @@
  *                           keyboard, your account, computer name and theme.
  *                           Then it writes /etc/my-distro/setup-done.
  *   my-setup --manage       users (add, remove, passwords), computer name,
- *                           keyboard and the administrator password. Started
- *                           by my-admin after it checked the root password.
- *   my-setup                (as a normal user) asks for the root password and
- *                           starts my-admin, which starts my-setup --manage.
+ *                           keyboard, the administrator password and System
+ *                           update (runs my-update). Started by my-admin
+ *                           after it checked the root password.
+ *   my-setup [--update]     (as a normal user) asks for the root password and
+ *                           starts my-admin, which starts my-setup --manage
+ *                           (--update: on the System update page; the
+ *                           taskbar's "Update" button does that).
  *
  * How the system is changed:
  *   - users: busybox adduser / deluser, the home folder is a copy of
@@ -26,6 +29,7 @@
 #include <ctype.h>
 #include <gtk/gtk.h>
 #include <pwd.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1003,6 +1007,160 @@ static void on_save_root(GtkButton *b, gpointer d)
 	}
 }
 
+/* --- System update page: runs my-update and shows what it says ----------------- */
+
+static GtkWidget *up_status, *up_view, *up_check, *up_install, *up_restart;
+static GtkTextBuffer *up_buf;
+static char up_latest[32];
+
+static void up_append(const char *text)
+{
+	GtkTextIter end;
+
+	gtk_text_buffer_get_end_iter(up_buf, &end);
+	gtk_text_buffer_insert(up_buf, &end, text, -1);
+	gtk_text_buffer_get_end_iter(up_buf, &end);
+	gtk_text_view_scroll_to_iter(GTK_TEXT_VIEW(up_view), &end, 0, FALSE, 0, 0);
+}
+
+/* "key=value" from my-update's --porcelain output */
+static void porcelain(const char *out, const char *key, char *val, size_t len)
+{
+	char pat[32];
+	const char *p;
+
+	snprintf(pat, sizeof pat, "%s=", key);
+	val[0] = '\0';
+	for (p = out; p && *p; p = strchr(p, '\n') ? strchr(p, '\n') + 1 : NULL)
+		if (strncmp(p, pat, strlen(pat)) == 0) {
+			size_t n = strcspn(p + strlen(pat), "\n");
+
+			snprintf(val, len, "%.*s", (int)(n < len ? n : len - 1), p + strlen(pat));
+			return;
+		}
+}
+
+static void on_check(GtkButton *b, gpointer d)
+{
+	const char *argv[] = { "/usr/bin/my-update", "check", "--porcelain", NULL };
+	char *out = NULL, *msg, installed[32], available[4], installable[4], live[4], err[200];
+	const char *notes;
+	int st;
+
+	(void)b; (void)d;
+	gtk_label_set_text(GTK_LABEL(up_status), "Looking for updates…");
+	gtk_widget_set_sensitive(up_install, FALSE);
+	while (gtk_events_pending())
+		gtk_main_iteration();
+	if (!g_spawn_sync(NULL, (char **)argv, NULL, G_SPAWN_STDERR_TO_DEV_NULL,
+	                  NULL, NULL, &out, NULL, &st, NULL) || !out) {
+		gtk_label_set_text(GTK_LABEL(up_status), "my-update is missing.");
+		return;
+	}
+	porcelain(out, "installed", installed, sizeof installed);
+	porcelain(out, "latest", up_latest, sizeof up_latest);
+	porcelain(out, "available", available, sizeof available);
+	porcelain(out, "installable", installable, sizeof installable);
+	porcelain(out, "live", live, sizeof live);
+	porcelain(out, "error", err, sizeof err);
+	notes = strstr(out, "notes:\n");
+	gtk_text_buffer_set_text(up_buf, notes ? notes + 7 : "", -1);
+
+	if (err[0])
+		msg = g_strdup_printf("Could not look for updates (no internet?): %s", err);
+	else if (strcmp(available, "1") != 0)
+		msg = g_strdup_printf("my-distro %s is up to date.", installed);
+	else if (strcmp(live, "1") == 0)
+		msg = g_strdup_printf("my-distro %s is out. This is the live system, which "
+			"forgets updates: download the new ISO from GitHub.", up_latest);
+	else if (strcmp(installable, "1") != 0)
+		msg = g_strdup_printf("my-distro %s is out, but without an update package: "
+			"download its ISO from GitHub.", up_latest);
+	else
+		msg = g_strdup_printf("my-distro %s is ready to install (you have %s). "
+			"What's new:", up_latest, installed);
+	gtk_label_set_text(GTK_LABEL(up_status), msg);
+	gtk_widget_set_sensitive(up_install, strcmp(installable, "1") == 0);
+	g_free(msg);
+	g_free(out);
+}
+
+static gboolean on_install_output(GIOChannel *ch, GIOCondition cond, gpointer d)
+{
+	char *line;
+	gsize n;
+
+	(void)d;
+	if (cond & G_IO_IN)
+		while (g_io_channel_read_line(ch, &line, &n, NULL, NULL) == G_IO_STATUS_NORMAL) {
+			up_append(line);
+			g_free(line);
+		}
+	return !(cond & (G_IO_HUP | G_IO_ERR));
+}
+
+static void on_install_done(GPid pid, gint st, gpointer d)
+{
+	(void)d;
+	g_spawn_close_pid(pid);
+	gtk_widget_set_sensitive(up_check, TRUE);
+	if (g_spawn_check_wait_status(st, NULL)) {
+		gtk_label_set_text(GTK_LABEL(up_status),
+			"The update is installed. Restart the computer to finish.");
+		gtk_widget_show(up_restart);
+	} else {
+		gtk_label_set_text(GTK_LABEL(up_status),
+			"The update did not work: see the messages below.");
+		gtk_widget_set_sensitive(up_install, TRUE);
+	}
+}
+
+static void on_install(GtkButton *b, gpointer d)
+{
+	const char *argv[] = { "/usr/bin/my-update", "install", NULL };
+	GtkWidget *ask;
+	GPid pid;
+	int out, answer;
+	GIOChannel *ch;
+
+	(void)b; (void)d;
+	ask = gtk_message_dialog_new(GTK_WINDOW(mg_win), GTK_DIALOG_MODAL,
+		GTK_MESSAGE_QUESTION, GTK_BUTTONS_NONE, "Install my-distro %s?", up_latest);
+	gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(ask),
+		"Your files, users and settings stay. Don't switch the computer off "
+		"while it installs; restart it afterwards.");
+	gtk_dialog_add_buttons(GTK_DIALOG(ask), "Cancel", GTK_RESPONSE_CANCEL,
+	                       "Install", GTK_RESPONSE_ACCEPT, NULL);
+	answer = gtk_dialog_run(GTK_DIALOG(ask));
+	gtk_widget_destroy(ask);
+	if (answer != GTK_RESPONSE_ACCEPT)
+		return;
+
+	if (!g_spawn_async_with_pipes(NULL, (char **)argv, NULL,
+	                              G_SPAWN_DO_NOT_REAP_CHILD | G_SPAWN_STDERR_TO_DEV_NULL,
+	                              NULL, NULL, &pid, NULL, &out, NULL, NULL)) {
+		gtk_label_set_text(GTK_LABEL(up_status), "Could not start my-update.");
+		return;
+	}
+	gtk_widget_set_sensitive(up_install, FALSE);
+	gtk_widget_set_sensitive(up_check, FALSE);
+	gtk_label_set_text(GTK_LABEL(up_status),
+		"Installing… don't switch the computer off.");
+	gtk_text_buffer_set_text(up_buf, "", -1);
+	ch = g_io_channel_unix_new(out);
+	g_io_channel_set_flags(ch, G_IO_FLAG_NONBLOCK, NULL);
+	g_io_channel_set_close_on_unref(ch, TRUE);
+	g_io_add_watch(ch, G_IO_IN | G_IO_HUP | G_IO_ERR, on_install_output, NULL);
+	g_io_channel_unref(ch);
+	g_child_watch_add(pid, on_install_done, NULL);
+}
+
+static void on_restart(GtkButton *b, gpointer d)
+{
+	(void)b; (void)d;
+	kill(1, SIGTERM);                 /* our init: TERM = reboot */
+}
+
 static GtkWidget *mg_page(GtkWidget *stack, const char *name, const char *title)
 {
 	GtkWidget *box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
@@ -1020,10 +1178,10 @@ static GtkWidget *button(const char *text, GCallback cb)
 	return b;
 }
 
-static int manage(void)
+static int manage(int open_update)
 {
 	GtkWidget *stack, *side, *box, *p, *row, *scroll, *combo, *vbox;
-	char host[64] = "";
+	char host[64] = "", *version = NULL, *text;
 
 	mg_me = getenv("MY_SETUP_USER");
 	if (!mg_me)
@@ -1083,6 +1241,38 @@ static int manage(void)
 	gtk_widget_set_halign(row, GTK_ALIGN_START);
 	gtk_box_pack_start(GTK_BOX(p), row, FALSE, FALSE, 0);
 
+	/* System update */
+	p = mg_page(stack, "update", "System update");
+	g_file_get_contents("/etc/my-distro/version", &version, NULL, NULL);
+	text = g_strdup_printf("Installed: my-distro %s", version ? g_strstrip(version) : "?");
+	gtk_box_pack_start(GTK_BOX(p), label(text, NULL), FALSE, FALSE, 0);
+	g_free(text);
+	g_free(version);
+	up_status = label("Look for a new version of my-distro. Updates are checked "
+		"automatically too: the taskbar shows a button when one is out.", "dim");
+	gtk_box_pack_start(GTK_BOX(p), up_status, FALSE, FALSE, 0);
+	up_view = gtk_text_view_new();
+	gtk_text_view_set_editable(GTK_TEXT_VIEW(up_view), FALSE);
+	gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(up_view), GTK_WRAP_WORD_CHAR);
+	gtk_text_view_set_left_margin(GTK_TEXT_VIEW(up_view), 8);
+	gtk_text_view_set_top_margin(GTK_TEXT_VIEW(up_view), 6);
+	up_buf = gtk_text_view_get_buffer(GTK_TEXT_VIEW(up_view));
+	scroll = gtk_scrolled_window_new(NULL, NULL);
+	gtk_scrolled_window_set_shadow_type(GTK_SCROLLED_WINDOW(scroll), GTK_SHADOW_IN);
+	gtk_container_add(GTK_CONTAINER(scroll), up_view);
+	gtk_box_pack_start(GTK_BOX(p), scroll, TRUE, TRUE, 0);
+	row = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+	up_check = button("Look for updates", G_CALLBACK(on_check));
+	up_install = button("Install update", G_CALLBACK(on_install));
+	gtk_style_context_add_class(gtk_widget_get_style_context(up_install), "suggested-action");
+	gtk_widget_set_sensitive(up_install, FALSE);
+	up_restart = button("Restart now", G_CALLBACK(on_restart));
+	gtk_widget_set_no_show_all(up_restart, TRUE);
+	gtk_box_pack_start(GTK_BOX(row), up_check, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(row), up_install, FALSE, FALSE, 0);
+	gtk_box_pack_end(GTK_BOX(row), up_restart, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(p), row, FALSE, FALSE, 0);
+
 	side = gtk_stack_sidebar_new();
 	gtk_stack_sidebar_set_stack(GTK_STACK_SIDEBAR(side), GTK_STACK(stack));
 	gtk_widget_set_size_request(side, 150, -1);
@@ -1101,6 +1291,10 @@ static int manage(void)
 
 	fill_users();
 	gtk_widget_show_all(mg_win);
+	if (open_update) {
+		gtk_stack_set_visible_child_name(GTK_STACK(stack), "update");
+		on_check(NULL, NULL);
+	}
 	gtk_main();
 	return 0;
 }
@@ -1108,6 +1302,7 @@ static int manage(void)
 /* --- Started by a normal user: ask for the root password ---------------------- */
 
 static GtkWidget *auth_dlg, *auth_err;
+static int want_update;           /* --update: open on the System update page */
 
 static void ask_root_password(void);
 
@@ -1127,7 +1322,7 @@ static void on_admin_done(GPid pid, gint st, gpointer d)
 
 static void on_auth(GtkDialog *d, gint response, gpointer pass)
 {
-	const char *argv[] = { "/usr/bin/my-admin", NULL };
+	const char *argv[] = { "/usr/bin/my-admin", want_update ? "--update" : NULL, NULL };
 	GPid pid;
 	int in;
 	char *pw;
@@ -1176,9 +1371,13 @@ static void ask_root_password(void)
 
 int main(int argc, char **argv)
 {
-	int first = argc > 1 && strcmp(argv[1], "--first-boot") == 0;
-	int manage_mode = argc > 1 && strcmp(argv[1], "--manage") == 0;
+	int first = 0, manage_mode = 0;
 
+	for (int i = 1; i < argc; i++) {
+		first |= strcmp(argv[i], "--first-boot") == 0;
+		manage_mode |= strcmp(argv[i], "--manage") == 0;
+		want_update |= strcmp(argv[i], "--update") == 0;
+	}
 	gtk_init(&argc, &argv);
 	if (geteuid() != 0) {
 		if (first || manage_mode) {
@@ -1191,5 +1390,5 @@ int main(int argc, char **argv)
 	}
 	if (first)
 		return first_boot();
-	return manage();
+	return manage(want_update);
 }

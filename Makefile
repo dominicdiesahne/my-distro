@@ -3,8 +3,9 @@
 # Run inside WSL (Kali):
 #   make               build the minimal system: kernel, BusyBox, init, initramfs
 #   make run           boot it in QEMU in this terminal (quit: Ctrl-A, then X)
-#   make desktop       build the desktop system with Buildroot (Xorg + Openbox)
-#                      and the bootable ISO out/my-distro.iso
+#   make desktop       build the desktop system with Buildroot (Xorg + Openbox),
+#                      the bootable ISO out/my-distro.iso and the update package
+#   make release-files sign the update package for a GitHub release
 #   make run-desktop   boot the desktop in a QEMU window
 #   make run-iso       boot the ISO in a QEMU window
 #   make run-install   boot the ISO with an empty disk, to test the installer
@@ -47,7 +48,10 @@ BR_MAKE := env PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 # Use hardware acceleration if this user can open /dev/kvm.
 KVM := $(shell [ -w /dev/kvm ] && echo -enable-kvm)
 
-.PHONY: all run desktop run-desktop run-iso run-install run-disk clean distclean
+.PHONY: all run desktop release-files run-desktop run-iso run-install run-disk clean distclean
+
+UPDATE      := out/my-distro-update.tar.xz
+SIGNING_KEY ?= $(HOME)/.config/my-distro/update-signing-key.pem
 
 all: $(BZIMAGE) $(INITRAMFS)
 
@@ -133,6 +137,7 @@ desktop: $(BR_DIR)/Makefile
 > chmod -R u=rwX,go=rX $(BR_SRC)
 > chmod 755 $(BR_SRC)/desktop/overlay/etc/init.d/S90desktop $(BR_SRC)/desktop/overlay/etc/init.d/S50history $(BR_SRC)/desktop/overlay/root/.xinitrc \
 >   $(BR_SRC)/desktop/overlay/usr/sbin/my-install $(BR_SRC)/desktop/overlay/usr/bin/my-ide \
+>   $(BR_SRC)/desktop/overlay/usr/bin/my-update $(BR_SRC)/desktop/overlay/usr/lib/my-distro/installed-fixups \
 >   $(BR_SRC)/desktop/post-build.sh
 > $(BR_MAKE) qemu_x86_64_defconfig
 > cd $(BR_OUT) && $(BR_DIR)/support/kconfig/merge_config.sh -m .config $(BR_SRC)/desktop/buildroot.fragment
@@ -146,7 +151,25 @@ desktop: $(BR_DIR)/Makefile
 > cp desktop/linux-gui.fragment $(BR_OUT)/.linux-gui.fragment
 > mkdir -p out
 > cp $(BR_OUT)/images/rootfs.iso9660 out/my-distro.iso
+> cp $(BR_OUT)/images/rootfs.tar.xz $(UPDATE)
 > @echo "ISO: out/my-distro.iso ($$(du -h out/my-distro.iso | cut -f1))"
+> @echo "Update package: $(UPDATE) ($$(du -h $(UPDATE) | cut -f1)); sign it with: make release-files"
+
+# The files of a release besides the ISO: the update package that installed
+# systems download (System update), its SHA-256 sum, and a signature of that
+# sum. The signing key stays on this machine, outside the repository; its
+# public half is desktop/overlay/etc/my-distro/update-key.pem. Make a key
+# once with:
+#   openssl genpkey -algorithm ed25519 -out ~/.config/my-distro/update-signing-key.pem
+#   openssl pkey -in ~/.config/my-distro/update-signing-key.pem -pubout \
+#     -out desktop/overlay/etc/my-distro/update-key.pem
+release-files:
+> [ -f $(UPDATE) ] || { echo "No $(UPDATE): run make desktop first"; exit 1; }
+> cd out && sha256sum my-distro-update.tar.xz > my-distro-update.tar.xz.sha256
+> openssl pkeyutl -sign -rawin -inkey $(SIGNING_KEY) -in $(UPDATE).sha256 -out $(UPDATE).sha256.sig
+> openssl pkeyutl -verify -pubin -inkey desktop/overlay/etc/my-distro/update-key.pem \
+>   -rawin -in $(UPDATE).sha256 -sigfile $(UPDATE).sha256.sig
+> @echo "Upload to the release: out/my-distro.iso $(UPDATE) $(UPDATE).sha256 $(UPDATE).sha256.sig"
 
 # Boot the ISO like a VM would (BIOS, 2 GB RAM).
 run-iso:

@@ -47,5 +47,9 @@ rm -f "$T/etc/skel/.ash_history"
 mkdir -p "$T/home/dominic"
 cp -a "$T/etc/skel/." "$T/home/dominic/"
 
+# The version is written in one place, /etc/my-distro/version (my-update
+# compares it with the newest release); the welcome message shows it.
+sed -i "s/@VERSION@/$(cat "$T/etc/my-distro/version")/" "$T/etc/motd"
+
 # The live system starts without /etc/my-distro/setup-done, so the setup runs.
 rm -f "$T/etc/my-distro/setup-done"

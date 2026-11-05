@@ -3,5 +3,6 @@
 my-settings --apply        # colors, wallpaper, window theme from the Settings app
 my-panel &                  # taskbar: Start menu, open windows, clock
 my-indexd &                 # keeps the search index of your files up to date
+my-update watch &           # looks for system updates (the taskbar shows them)
 pcmanfm --desktop &         # wallpaper colour and the icons on the desktop
 xterm -geometry 90x24+150+50 &   # right of the desktop icons

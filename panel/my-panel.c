@@ -15,6 +15,9 @@
  *   icon name in the Adwaita icon theme).
  * - Clock on the right: time and date, or a small analog clock. Click it
  *   for a calendar.
+ * - "Update to 0.9" next to the clock when a new version of my-distro is out.
+ *   my-update watch writes that into ~/.cache/my-distro/update; a click
+ *   opens System update (my-setup --update).
  *
  * Colors, size, position and the clock's style come from the settings file
  * (settings/settings.h). When it changes, the panel restarts itself.
@@ -42,6 +45,7 @@
 #include <string.h>
 #include <strings.h>
 #include <sys/select.h>
+#include <sys/stat.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -68,7 +72,9 @@
 #define MENU_FILE  "/etc/my-panel/menu"
 #define ICONS_FILE "/etc/my-panel/icons"
 
-enum { HOVER_CLOCK = -3, HOVER_NONE = -2, HOVER_START = -1 };
+enum { HOVER_UPDATE = -4, HOVER_CLOCK = -3, HOVER_NONE = -2, HOVER_START = -1 };
+
+#define UPDATE_FILE ".cache/my-distro/update"   /* in the home folder */
 
 struct task {
 	Window win;
@@ -115,6 +121,9 @@ static XftDraw *menu_draw;
 
 static char clock_text[64], date_text[64];
 static int clock_x, clock_w;  /* clock area on the panel */
+static char update_version[32];   /* "" = no update; else the new version */
+static int update_x, update_w;    /* its button (update_w = 0: not shown) */
+static time_t update_mtime;
 static time_t clock_now;
 
 /* Calendar popup */
@@ -564,6 +573,51 @@ static void draw_clock(void)
 	}
 }
 
+/* Reads ~/.cache/my-distro/update when it changed ("available = 0.9").
+ * Returns 1 if the button has to be drawn again. */
+static int read_update_status(void)
+{
+	char path[512], line[128], found[32] = "";
+	const char *home = getenv("HOME");
+	struct stat st;
+	FILE *f;
+
+	snprintf(path, sizeof path, "%s/%s", home ? home : "/", UPDATE_FILE);
+	if (stat(path, &st) != 0)
+		st.st_mtime = 0;
+	if (st.st_mtime == update_mtime)
+		return 0;
+	update_mtime = st.st_mtime;
+	if ((f = fopen(path, "r"))) {
+		while (fgets(line, sizeof line, f))
+			if (sscanf(line, " available = %31s", found) == 1)
+				break;
+		fclose(f);
+	}
+	if (strcmp(found, update_version) == 0)
+		return 0;
+	snprintf(update_version, sizeof update_version, "%s", found);
+	return 1;
+}
+
+/* The "Update to X" button, left of the clock. Sets update_x / update_w. */
+static void draw_update(void)
+{
+	char label[64];
+	int bh = panel_h - 2 * PAD;
+
+	update_w = 0;
+	if (!update_version[0])
+		return;
+	snprintf(label, sizeof label, "\xe2\x86\x91  Update to %s", update_version);  /* ↑ */
+	update_w = text_width(bold, label) + 24;
+	update_x = clock_x - PAD - update_w;
+	XftDrawRect(draw, hover == HOVER_UPDATE ? &c_active : &c_accent,
+	            update_x, PAD, update_w, bh);
+	text(draw, bold, hover == HOVER_UPDATE ? &c_text : &c_on_accent,
+	     update_x + 12, PAD, bh, label);
+}
+
 static void draw_panel(void)
 {
 	char label[TITLE_MAX + 8];
@@ -577,7 +631,8 @@ static void draw_panel(void)
 	            sw, 1);
 
 	draw_clock();
-	avail = clock_x - PAD - left;
+	draw_update();
+	avail = (update_w ? update_x : clock_x) - PAD - left;
 
 	/* Start button */
 	XftDrawRect(draw, menu_open ? &c_active : hover == HOVER_START ? &c_hover
@@ -949,6 +1004,8 @@ static int panel_hit(int x)
 {
 	if (x >= clock_x && x < clock_x + clock_w)
 		return HOVER_CLOCK;
+	if (update_w && x >= update_x && x < update_x + update_w)
+		return HOVER_UPDATE;
 	if (x >= PAD && x < PAD + START_W)
 		return HOVER_START;
 	for (int i = 0; i < ntasks; i++)
@@ -1148,6 +1205,8 @@ static void handle(XEvent *e)
 		i = panel_hit(e->xbutton.x);
 		if (i == HOVER_CLOCK) {
 			open_calendar();
+		} else if (i == HOVER_UPDATE) {
+			run("my-setup --update");
 		} else if (i == HOVER_START) {
 			open_menu();
 			redraw_menu();
@@ -1349,7 +1408,7 @@ int main(int argc, char **argv)
 			draw_panel();
 		}
 
-		if (update_clock() || cfg.clock_seconds)
+		if (update_clock() | read_update_status() || cfg.clock_seconds)
 			draw_panel();
 		if (cal_open)
 			draw_calendar();     /* its big clock */

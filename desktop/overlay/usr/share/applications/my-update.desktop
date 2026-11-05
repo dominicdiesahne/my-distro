@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=System update
+Comment=Install the newest version of my-distro
+Icon=software-update-available
+Exec=my-setup --update
+Terminal=false
+Categories=Settings;System;

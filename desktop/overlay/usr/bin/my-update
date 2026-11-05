@@ -1,0 +1,381 @@
+#!/usr/bin/env python3
+"""my-update: system updates for my-distro.
+
+Every release of my-distro on GitHub carries an update package next to the
+ISO: my-distro-update.tar.xz (the whole root filesystem), its SHA-256 sum
+(.sha256) and a signature of that sum (.sha256.sig). The signature is made
+with a private key that only the maintainer has; the system checks it with
+the public key /etc/my-distro/update-key.pem. So only packages that really
+come from the maintainer get installed, even if a download is tampered with.
+
+    my-update check [--notes]   is there a newer release? (any user)
+    my-update check --porcelain the same as key=value lines, for programs
+    my-update watch             check now and every few hours; the taskbar
+                                shows an "Update" button when there is one
+    my-update install           download, verify and install it (root)
+
+Installing replaces the system's programs, libraries, kernel and default
+settings with the new version's. It keeps what belongs to you and this
+computer: home folders, users and passwords, the computer name, the keyboard
+layout, /var (logs, search index, file history) and the boot loader. Restart
+afterwards so everything runs the new version.
+
+On the live system nothing survives a reboot, so it only tells you that a new
+ISO is out.
+
+Settings: /etc/my-distro/update.conf
+"""
+import hashlib
+import json
+import os
+import shutil
+import subprocess
+import sys
+import tarfile
+import time
+import urllib.request
+
+VERSION_FILE = "/etc/my-distro/version"
+CONF_FILE = "/etc/my-distro/update.conf"
+PUBLIC_KEY = "/etc/my-distro/update-key.pem"
+FIXUPS = "/usr/lib/my-distro/installed-fixups"
+# Downloads and the unpacked new system. It must be on the same filesystem as
+# / (moving files into place is then a rename, never a copy); /var/cache
+# would not do, Buildroot links it to /tmp, which is in RAM.
+CACHE = "/.my-update"
+NEEDED_SPACE = 1500 << 20          # package + unpacked system, with room to spare
+PACKAGE = "my-distro-update.tar.xz"
+
+DEFAULTS = {
+    "url": "https://api.github.com/repos/dominicdiesahne/my-distro/releases/latest",
+    "check_every_hours": "6",
+}
+
+# Never overwritten by an update (paths relative to /, with what's below them)
+KEEP = [
+    "home", "root", "var", "tmp", "run", "proc", "sys", "dev", "mnt", "media",
+    "lost+found", "boot/grub", "boot/efi", ".my-update",
+    "etc/passwd", "etc/shadow", "etc/group", "etc/gshadow",
+    "etc/hostname", "etc/hosts", "etc/fstab",
+    "etc/X11/xorg.conf.d/00-keyboard.conf",
+    "etc/my-distro/setup-done", "etc/my-distro/update.conf",
+]
+
+
+def say(*args):
+    print(*args, flush=True)
+
+
+def read_conf():
+    conf = dict(DEFAULTS)
+    try:
+        with open(CONF_FILE) as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    key, value = line.split("=", 1)
+                    conf[key.strip()] = value.strip()
+    except OSError:
+        pass
+    return conf
+
+
+def installed_version():
+    try:
+        with open(VERSION_FILE) as f:
+            return f.read().strip()
+    except OSError:
+        return "0"
+
+
+def version_tuple(v):
+    """'v0.7.1' -> (0, 7, 1), to compare versions."""
+    parts = []
+    for p in v.strip().lstrip("vV").split("."):
+        digits = "".join(c for c in p if c.isdigit())
+        parts.append(int(digits) if digits else 0)
+    return tuple(parts)
+
+
+def is_live():
+    try:
+        with open("/proc/cmdline") as f:
+            return "rdinit=" in f.read()
+    except OSError:
+        return False
+
+
+def fetch(url, timeout=30):
+    req = urllib.request.Request(url, headers={
+        "User-Agent": "my-distro-updater",
+        "Accept": "application/vnd.github+json",
+    })
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        return r.read()
+
+
+def latest_release(conf):
+    """The newest release: version, notes and download links of its files."""
+    data = json.loads(fetch(conf["url"]))
+    return {
+        "version": data.get("tag_name", "").lstrip("vV"),
+        "name": data.get("name") or data.get("tag_name", ""),
+        "notes": data.get("body") or "",
+        "assets": {a["name"]: a["browser_download_url"] for a in data.get("assets", [])},
+    }
+
+
+def has_package(rel):
+    return all(n in rel["assets"] for n in (PACKAGE, PACKAGE + ".sha256", PACKAGE + ".sha256.sig"))
+
+
+# --- check / watch ---------------------------------------------------------------
+
+def status_file():
+    return os.path.join(os.path.expanduser("~"), ".cache", "my-distro", "update")
+
+
+def write_status(newer):
+    """What the taskbar reads: "available = 0.8" or nothing."""
+    path = status_file()
+    try:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path + ".new", "w") as f:
+            if newer:
+                f.write("available = %s\n" % newer)
+        os.replace(path + ".new", path)
+    except OSError:
+        pass
+
+
+def clear_old_status(mine):
+    """After an update the note may name the version that is now installed:
+    remove it, even when we can't go online to check."""
+    try:
+        with open(status_file()) as f:
+            for line in f:
+                key, _, value = line.partition("=")
+                if key.strip() == "available" and \
+                        version_tuple(value) <= version_tuple(mine):
+                    write_status(None)
+    except OSError:
+        pass
+
+
+def cmd_check(args, quiet=False):
+    conf = read_conf()
+    mine = installed_version()
+    clear_old_status(mine)
+    try:
+        rel = latest_release(conf)
+    except Exception as e:                       # offline, GitHub down, ...
+        if "--porcelain" in args:
+            say("installed=%s\nerror=%s" % (mine, e))
+        elif not quiet:
+            say("Could not check for updates: %s" % e)
+        return 1
+    newer = version_tuple(rel["version"]) > version_tuple(mine)
+    write_status(rel["version"] if newer else None)
+
+    if "--porcelain" in args:
+        say("installed=%s" % mine)
+        say("latest=%s" % rel["version"])
+        say("available=%d" % newer)
+        say("installable=%d" % (newer and has_package(rel) and not is_live()))
+        say("live=%d" % is_live())
+        say("notes:")
+        say(rel["notes"])
+    elif not quiet:
+        if newer:
+            say("Update available: my-distro %s (installed: %s)" % (rel["version"], mine))
+            if is_live():
+                say("This is the live system: download the new ISO to use it.")
+            if "--notes" in args and rel["notes"]:
+                say("\n" + rel["notes"])
+        else:
+            say("my-distro %s is up to date." % mine)
+    return 10 if newer else 0
+
+
+def cmd_watch(args):
+    hours = float(read_conf().get("check_every_hours", "6") or 6)
+    clear_old_status(installed_version())        # right after an update
+    time.sleep(60)                               # let the network come up first
+    while True:
+        cmd_check([], quiet=True)
+        time.sleep(max(hours, 0.25) * 3600)
+
+
+# --- install ---------------------------------------------------------------------
+
+def download(url, path):
+    req = urllib.request.Request(url, headers={"User-Agent": "my-distro-updater"})
+    with urllib.request.urlopen(req, timeout=60) as r, open(path + ".part", "wb") as f:
+        total = int(r.headers.get("Content-Length") or 0)
+        done, shown = 0, -10
+        while True:
+            chunk = r.read(1 << 16)
+            if not chunk:
+                break
+            f.write(chunk)
+            done += len(chunk)
+            if total > 1 << 20:                  # progress only for big files
+                pct = done * 100 // total
+                if pct >= shown + 10:
+                    say("  %3d %%  (%d of %d MB)" % (pct, done >> 20, total >> 20))
+                    shown = pct
+    os.replace(path + ".part", path)
+
+
+def sha256_of(path):
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def verify(package, sumfile, sigfile):
+    """The signature of the sum file, then the package's sum. Raises if wrong."""
+    r = subprocess.run(["openssl", "pkeyutl", "-verify", "-pubin", "-inkey", PUBLIC_KEY,
+                        "-rawin", "-in", sumfile, "-sigfile", sigfile],
+                       stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    if r.returncode != 0:
+        raise RuntimeError("the signature is not valid: this update was not made by "
+                           "the maintainer of my-distro, or it was changed")
+    with open(sumfile) as f:
+        expected = f.read().split()[0].lower()
+    if sha256_of(package) != expected:
+        raise RuntimeError("the download is damaged (SHA-256 sum does not match)")
+
+
+def kept(rel):
+    return any(rel == k or rel.startswith(k + "/") for k in KEEP)
+
+
+def members(tar):
+    """Everything from the package except kept paths and device files."""
+    for m in tar:
+        rel = os.path.normpath(m.name).lstrip("/")
+        if rel in ("", ".") or rel == ".." or rel.startswith("../"):
+            continue
+        if kept(rel) or m.ischr() or m.isblk() or m.isfifo():
+            continue
+        yield m
+
+
+def apply(staging):
+    """Moves the new files from staging into place, folders first."""
+    for top, dirs, files in os.walk(staging):
+        rel_top = os.path.relpath(top, staging)
+        for d in dirs:
+            src = os.path.join(top, d)
+            dst = os.path.normpath(os.path.join("/", rel_top, d))
+            st = os.lstat(src)
+            if os.path.islink(src):
+                if not os.path.isdir(dst) or os.path.islink(dst):
+                    try:
+                        os.replace(src, dst)    # a link to a folder: like a file
+                    except OSError as e:
+                        say("  skipped %s (%s)" % (dst, e.strerror))
+                continue
+            if not os.path.lexists(dst):
+                os.mkdir(dst)
+            elif not os.path.isdir(dst) or os.path.islink(dst):
+                say("  skipped %s (a folder now, not on this system)" % dst)
+                continue
+            os.chmod(dst, st.st_mode & 0o7777)
+            os.chown(dst, st.st_uid, st.st_gid)
+        for name in files:
+            src = os.path.join(top, name)
+            dst = os.path.normpath(os.path.join("/", rel_top, name))
+            if os.path.isdir(dst) and not os.path.islink(dst):
+                say("  skipped %s (a folder on this system)" % dst)
+                continue
+            try:
+                os.replace(src, dst)            # atomic: programs see old or new
+            except OSError as e:
+                say("  skipped %s (%s)" % (dst, e.strerror))
+
+
+def cmd_install(args):
+    if os.geteuid() != 0:
+        say("Installing updates needs root: run it as root, or use System update "
+            "in \"Users and system\".")
+        return 1
+    if is_live() and "--force-live" not in args:
+        say("This is the live system: it runs from RAM and forgets an update at the "
+            "next start. Download the new ISO instead.")
+        return 1
+
+    conf = read_conf()
+    mine = installed_version()
+    say("Looking for the newest version...")
+    rel = latest_release(conf)
+    if version_tuple(rel["version"]) <= version_tuple(mine) and "--reinstall" not in args:
+        say("my-distro %s is up to date." % mine)
+        return 0
+    if not has_package(rel):
+        say("Release %s has no update package. Download its ISO instead." % rel["version"])
+        return 1
+
+    os.makedirs(CACHE, mode=0o700, exist_ok=True)
+    if os.stat(CACHE).st_dev != os.stat("/").st_dev:
+        say("%s is not on the system disk, so the update can't be installed." % CACHE)
+        return 1
+    if shutil.disk_usage("/").free < NEEDED_SPACE:
+        say("Not enough free space: the update needs about %d MB on the system disk."
+            % (NEEDED_SPACE >> 20))
+        return 1
+    package = os.path.join(CACHE, PACKAGE)
+    sumfile, sigfile = package + ".sha256", package + ".sha256.sig"
+    staging = os.path.join(CACHE, "new")
+
+    say("Downloading my-distro %s..." % rel["version"])
+    download(rel["assets"][PACKAGE + ".sha256"], sumfile)
+    download(rel["assets"][PACKAGE + ".sha256.sig"], sigfile)
+    download(rel["assets"][PACKAGE], package)
+
+    say("Checking the signature...")
+    verify(package, sumfile, sigfile)
+    say("  OK: signed by the maintainer of my-distro.")
+
+    say("Unpacking...")
+    shutil.rmtree(staging, ignore_errors=True)
+    os.makedirs(staging)
+    with tarfile.open(package, "r:xz") as tar:
+        # The package is signed, so trust its contents: keep owners and the
+        # setuid bit (my-power, my-admin, busybox). members() still drops
+        # paths that would leave the staging folder.
+        tar.extractall(staging, members=members(tar), numeric_owner=True,
+                       filter="fully_trusted")
+
+    say("Installing...")
+    apply(staging)
+    if os.access(FIXUPS, os.X_OK):
+        subprocess.run([FIXUPS, "/"])
+    shutil.rmtree(staging, ignore_errors=True)
+    os.remove(package)
+    os.sync()
+    write_status(None)
+    say("Done: my-distro %s is installed. Restart the computer to finish." % rel["version"])
+    return 0
+
+
+def main():
+    args = sys.argv[1:]
+    cmds = {"check": cmd_check, "watch": cmd_watch, "install": cmd_install}
+    if not args or args[0] not in cmds:
+        say("usage: my-update check [--notes] | watch | install")
+        return 2
+    try:
+        return cmds[args[0]](args[1:])
+    except KeyboardInterrupt:
+        return 130
+    except Exception as e:
+        say("Update failed: %s" % e)
+        return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -55,6 +55,12 @@ BR2_TARGET_ROOTFS_ISO9660_BOOT_MENU="$(BR2_EXTERNAL_MY_DISTRO_PATH)/grub.cfg"
 BR2_TARGET_ROOTFS_ISO9660_INITRD=y
 BR2_TARGET_ROOTFS_CPIO=y
 BR2_TARGET_ROOTFS_CPIO_GZIP=y
+# The update package for installed systems (my-update): the root filesystem
+# as a tar.xz, next to the ISO in every release
+BR2_TARGET_ROOTFS_TAR=y
+BR2_TARGET_ROOTFS_TAR_XZ=y
+# The openssl command: my-update checks the update's signature with it
+BR2_PACKAGE_LIBOPENSSL_BIN=y
 
 # Installer (desktop/overlay/usr/sbin/my-install): copies the live system onto
 # a disk. It needs the kernel inside the root filesystem (/boot/bzImage),

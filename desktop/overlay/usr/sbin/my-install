@@ -153,14 +153,9 @@ done
 mkdir -p "$T/proc" "$T/sys" "$T/dev" "$T/run" "$T/mnt" "$T/media"
 mkdir -p -m 1777 "$T/tmp"
 
-# The installer is not needed on the installed system.
-rm -f "$T/usr/share/applications/my-install.desktop" \
-      "$T/root/Desktop/my-install.desktop" \
-      "$T"/home/*/Desktop/my-install.desktop
-sed -i '/my-install/d' "$T/etc/my-panel/menu"
-sed -i -e 's/^Everything runs from RAM.*/This system is installed on a disk: your changes are kept./' \
-	-e '/Install to disk/d' \
-	"$T/root/Documents/welcome.txt" "$T"/home/*/Documents/welcome.txt 2>/dev/null
+# No installer icon, a welcome text for an installed system (the same
+# script runs after every system update)
+run /usr/lib/my-distro/installed-fixups "$T"
 
 [ -f "$T/boot/bzImage" ] || die "the kernel /boot/bzImage is missing in the live system"
 
