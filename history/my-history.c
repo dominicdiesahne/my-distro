@@ -10,6 +10,7 @@
  * "View" opens the selected version in a terminal (less).
  */
 #include "history.h"
+#include "settings.h"
 
 #include <X11/Xatom.h>
 #include <X11/Xlib.h>
@@ -64,6 +65,8 @@ static char status[PATH_MAX + 128];
 static int status_ok = 1;
 static struct button buttons[4];
 static int nbuttons;
+
+static struct settings cfg;
 
 static void color(XftColor *c, const char *name)
 {
@@ -391,17 +394,19 @@ int main(int argc, char **argv)
 	font = XftFontOpenName(dpy, scr, "DejaVu Sans:size=10");
 	bold = XftFontOpenName(dpy, scr, "DejaVu Sans:bold:size=11");
 	small = XftFontOpenName(dpy, scr, "DejaVu Sans:size=8");
-	color(&c_bg, "#0b2a2b");
-	color(&c_row, "#0f3233");
-	color(&c_head, "#071f20");
-	color(&c_sel, "#1d6466");
-	color(&c_text, "#d8f3f0");
-	color(&c_dim, "#7fa9a6");
-	color(&c_accent, "#4fd1c5");
-	color(&c_btn, "#4fd1c5");
-	color(&c_btn_text, "#062022");
-	color(&c_ok, "#9be7c4");
-	color(&c_err, "#ff9a8f");
+	/* colors of the theme chosen in the Settings app (settings/settings.h) */
+	settings_load(&cfg, NULL);
+	color(&c_bg, cfg.pal.bg);
+	color(&c_row, cfg.pal.button);
+	color(&c_head, cfg.pal.sep);
+	color(&c_sel, cfg.pal.active);
+	color(&c_text, cfg.pal.text);
+	color(&c_dim, cfg.pal.dim);
+	color(&c_accent, cfg.pal.accent);
+	color(&c_btn, cfg.pal.accent);
+	color(&c_btn_text, cfg.pal.on_accent);
+	color(&c_ok, cfg.pal.dark ? "#9be7c4" : "#1e7a4f");
+	color(&c_err, cfg.pal.dark ? "#ff9a8f" : "#b3261e");
 
 	if (file_mode[0]) {
 		add_button("Restore this version", act_restore_selected);

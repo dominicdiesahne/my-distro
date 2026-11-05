@@ -1,0 +1,8 @@
+config BR2_PACKAGE_MY_SETTINGS
+	bool "my-settings"
+	depends on BR2_PACKAGE_XORG7
+	select BR2_PACKAGE_LIBGTK3
+	select BR2_PACKAGE_CAIRO
+	help
+	  The Settings app (colors, wallpaper, clock, taskbar) and the
+	  Clock app of my-distro (settings/).

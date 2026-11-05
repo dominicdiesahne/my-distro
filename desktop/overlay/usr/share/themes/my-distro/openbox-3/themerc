@@ -1,0 +1,53 @@
+# Openbox theme of my-distro in the default colors (teal). The Settings app
+# writes the user's own copy in the chosen colors to ~/.themes/my-distro.
+border.width: 1
+padding.width: 8
+padding.height: 5
+window.handle.width: 0
+window.client.padding.width: 0
+window.client.padding.height: 0
+window.label.text.justify: left
+window.active.border.color: #4fd1c5
+window.inactive.border.color: #2c5a5b
+window.active.title.bg: flat solid
+window.active.title.bg.color: #0b2a2b
+window.inactive.title.bg: flat solid
+window.inactive.title.bg.color: #0b2a2b
+window.active.title.separator.color: #4fd1c5
+window.inactive.title.separator.color: #2c5a5b
+window.*.label.bg: parentrelative
+window.active.label.text.color: #d8f3f0
+window.inactive.label.text.color: #7fa9a6
+window.*.button.*.bg: parentrelative
+window.active.button.*.image.color: #d8f3f0
+window.inactive.button.*.image.color: #7fa9a6
+window.*.button.hover.bg: flat solid
+window.*.button.hover.bg.color: #1d6466
+window.*.button.pressed.bg: flat solid
+window.*.button.pressed.bg.color: #2c7a7b
+window.*.handle.bg: flat solid
+window.*.handle.bg.color: #0b2a2b
+window.*.grip.bg: flat solid
+window.*.grip.bg.color: #0b2a2b
+menu.border.color: #4fd1c5
+menu.separator.color: #2c5a5b
+menu.title.bg: flat solid
+menu.title.bg.color: #134e4f
+menu.title.text.color: #4fd1c5
+menu.title.text.justify: left
+menu.items.bg: flat solid
+menu.items.bg.color: #0b2a2b
+menu.items.text.color: #d8f3f0
+menu.items.disabled.text.color: #7fa9a6
+menu.items.active.bg: flat solid
+menu.items.active.bg.color: #1d6466
+menu.items.active.text.color: #d8f3f0
+osd.border.color: #4fd1c5
+osd.bg: flat solid
+osd.bg.color: #0b2a2b
+osd.label.bg: parentrelative
+osd.label.text.color: #d8f3f0
+osd.hilight.bg: flat solid
+osd.hilight.bg.color: #4fd1c5
+osd.unhilight.bg: flat solid
+osd.unhilight.bg.color: #134e4f

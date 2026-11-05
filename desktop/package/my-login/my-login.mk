@@ -10,9 +10,13 @@ MY_LOGIN_SITE_METHOD = local
 MY_LOGIN_DEPENDENCIES = xlib_libX11 xlib_libXft xlib_libXrender imlib2 \
 	libxcrypt host-pkgconf
 
+# settings.c: the colors and wallpaper chosen in the Settings app
+MY_LOGIN_SHARED = $(BR2_EXTERNAL_MY_DISTRO_PATH)/../settings
+
 define MY_LOGIN_BUILD_CMDS
 	$(TARGET_CC) $(TARGET_CFLAGS) $(TARGET_LDFLAGS) -Wall -Wextra \
-		-o $(@D)/my-login $(@D)/my-login.c \
+		-I$(MY_LOGIN_SHARED) -o $(@D)/my-login $(@D)/my-login.c \
+		$(MY_LOGIN_SHARED)/settings.c \
 		$$($(PKG_CONFIG_HOST_BINARY) --cflags --libs x11 xft xrender imlib2 libxcrypt)
 	$(TARGET_CC) $(TARGET_CFLAGS) $(TARGET_LDFLAGS) -Wall -Wextra \
 		-o $(@D)/my-power $(@D)/my-power.c

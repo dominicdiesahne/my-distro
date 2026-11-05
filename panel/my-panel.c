@@ -12,7 +12,11 @@
  *   The icon comes from the window itself (_NET_WM_ICON, GTK apps set it) or,
  *   for apps that don't have one, from /etc/my-panel/icons (window class ->
  *   icon name in the Adwaita icon theme).
- * - Clock on the right.
+ * - Clock on the right: time and date, or a small analog clock. Click it
+ *   for a calendar.
+ *
+ * Colors, size, position and the clock's style come from the settings file
+ * (settings/settings.h). When it changes, the panel restarts itself.
  *
  * The window manager (Openbox) tells us about windows through properties on
  * the root window (the EWMH standard): _NET_CLIENT_LIST lists all windows,
@@ -26,6 +30,9 @@
 #include <X11/keysym.h>
 #include <X11/Xft/Xft.h>
 #include <Imlib2.h>
+#include <cairo.h>
+#include <cairo-xlib.h>
+#include <math.h>
 #include <fcntl.h>
 #include <glob.h>
 #include <signal.h>
@@ -37,7 +44,9 @@
 #include <time.h>
 #include <unistd.h>
 
-#define PANEL_H     36
+#include "dial.h"
+#include "settings.h"
+
 #define PAD         4
 #define START_W     100
 #define TASK_MAX_W  220
@@ -50,11 +59,14 @@
 #define TITLE_MAX   200
 #define ICON_SIZE   20
 #define MAX_CACHE   64
+#define CAL_W       296      /* calendar popup */
+#define CAL_TOP     92       /* height of the big time + date at its top */
+#define CAL_CELL    38
 
 #define MENU_FILE  "/etc/my-panel/menu"
 #define ICONS_FILE "/etc/my-panel/icons"
 
-enum { HOVER_NONE = -2, HOVER_START = -1 };
+enum { HOVER_CLOCK = -3, HOVER_NONE = -2, HOVER_START = -1 };
 
 struct task {
 	Window win;
@@ -74,15 +86,20 @@ struct item {
 
 static Display *dpy;
 static int scr;
-static Window root, panel, menu;
-static Pixmap buf, menu_buf;
+static Window root, panel, menu, cal;
+static Pixmap buf, menu_buf, cal_buf;
 static XftDraw *draw;
 static Visual *vis;
 static Colormap cmap;
-static XftFont *font, *bold;
+static XftFont *font, *bold, *small, *big;
 static int sw, sh;          /* screen size */
 
-static XftColor c_bg, c_button, c_hover, c_active, c_text, c_dim, c_accent, c_sep;
+static struct settings cfg;
+static int panel_h, panel_y;  /* height and top edge of the panel */
+static char **self_argv;     /* to restart ourselves when settings change */
+
+static XftColor c_bg, c_button, c_hover, c_active, c_text, c_dim, c_accent, c_sep,
+	c_on_accent;
 
 static struct task tasks[MAX_TASKS];
 static int ntasks;
@@ -90,10 +107,17 @@ static Window active;
 static int hover = HOVER_NONE;
 
 static struct item items[MAX_ITEMS];
-static int nitems, menu_h, menu_open, menu_hover = -1;
+static int nitems, menu_h, menu_open, menu_hover = -1, item_h = ITEM_H;
 static XftDraw *menu_draw;
 
-static char clock_text[64];
+static char clock_text[64], date_text[64];
+static int clock_x, clock_w;  /* clock area on the panel */
+static time_t clock_now;
+
+/* Calendar popup */
+static XftDraw *cal_draw;
+static int cal_h, cal_open, cal_year, cal_month;   /* month shown, 0-11 */
+static int cal_hover = -1;    /* -1 none, 0 "<", 1 ">" */
 
 /* Icons loaded from the theme, by name (NULL = not found, don't search again) */
 static struct { char name[64]; Imlib_Image img; } icon_cache[MAX_CACHE];
@@ -402,24 +426,106 @@ static void text(XftDraw *d, XftFont *f, XftColor *c, int x, int top, int h,
 	XftDrawStringUtf8(d, c, f, x, y, (const FcChar8 *)s, strlen(s));
 }
 
-static void update_clock(void)
+/* Recomputes the clock's text. Returns 1 if what the panel shows changed. */
+static int update_clock(void)
 {
-	time_t now = time(NULL);
+	char old_time[sizeof clock_text], old_date[sizeof date_text];
+	struct tm tm;
 
-	strftime(clock_text, sizeof clock_text, "%a %d.%m.   %H:%M",
-	         localtime(&now));
+	strcpy(old_time, clock_text);
+	strcpy(old_date, date_text);
+	clock_now = time(NULL);
+	localtime_r(&clock_now, &tm);
+	settings_format_time(&cfg, &tm, clock_text, sizeof clock_text);
+	settings_format_date(&cfg, &tm, date_text, sizeof date_text);
+	if (!cfg.clock_date)
+		date_text[0] = '\0';
+	return strcmp(old_time, clock_text) != 0 || strcmp(old_date, date_text) != 0;
+}
+
+/* Draws the analog clock face (settings/dial.c) into a pixmap. */
+static void draw_dial(Drawable d, int w, int h, double cx, double cy, double r,
+                      time_t now, int seconds)
+{
+	cairo_surface_t *surf = cairo_xlib_surface_create(dpy, d, vis, w, h);
+	cairo_t *cr = cairo_create(surf);
+	struct tm tm;
+
+	localtime_r(&now, &tm);
+	dial_draw(cr, &cfg.pal, cx, cy, r, &tm, seconds);
+	cairo_destroy(cr);
+	cairo_surface_destroy(surf);
+}
+
+/*
+ * The clock area at the right end of the panel. Digital: time in bold with
+ * the date small underneath (or the time alone). Analog: a small dial, with
+ * the date next to it. Sets clock_x / clock_w.
+ */
+static void draw_clock(void)
+{
+	int bh = panel_h - 2 * PAD;
+	int two_lines = date_text[0] && bold->ascent + bold->descent +
+	                small->ascent + small->descent <= panel_h - 2;
+	int tw = text_width(bold, clock_text), dw = text_width(small, date_text);
+	int dial = bh - 4;
+
+	if (cfg.panel_clock == CLOCK_ANALOG)
+		clock_w = dial + (date_text[0] ? text_width(font, date_text) + 12 : 0) + 24;
+	else if (two_lines)
+		clock_w = (tw > dw ? tw : dw) + 28;
+	else
+		clock_w = tw + (date_text[0] ? text_width(font, date_text) + 14 : 0) + 28;
+	clock_x = sw - PAD - clock_w;
+
+	XftDrawRect(draw, cal_open ? &c_active : hover == HOVER_CLOCK ? &c_hover
+	            : &c_bg, clock_x, PAD, clock_w, bh);
+	if (cal_open)
+		XftDrawRect(draw, &c_accent, clock_x, cfg.panel_position == PANEL_TOP
+		            ? PAD : PAD + bh - 2, clock_w, 2);
+
+	if (cfg.panel_clock == CLOCK_ANALOG) {
+		int x = clock_x + 12;
+
+		if (date_text[0]) {
+			text(draw, font, &c_text, x, PAD, bh, date_text);
+			x += text_width(font, date_text) + 12;
+		}
+		XFlush(dpy);    /* Xft's drawing first, then cairo's on top */
+		draw_dial(buf, sw, panel_h, x + dial / 2.0, panel_h / 2.0, dial / 2.0 - 1,
+		          clock_now, cfg.clock_seconds);
+	} else if (two_lines) {
+		int th = bold->ascent + bold->descent, dh = small->ascent + small->descent;
+		int top = (panel_h - th - dh) / 2;
+		int cx = clock_x + clock_w / 2;
+
+		text(draw, bold, &c_text, cx - tw / 2, top, th, clock_text);
+		text(draw, small, &c_dim, cx - dw / 2, top + th, dh, date_text);
+	} else {
+		int x = clock_x + 14;
+
+		if (date_text[0]) {
+			text(draw, font, &c_dim, x, PAD, bh, date_text);
+			x += text_width(font, date_text) + 14;
+		}
+		text(draw, bold, &c_text, x, PAD, bh, clock_text);
+	}
 }
 
 static void draw_panel(void)
 {
 	char label[TITLE_MAX + 8];
-	int bh = PANEL_H - 2 * PAD;
-	int clock_w = text_width(font, clock_text) + 24;
+	int bh = panel_h - 2 * PAD;
 	int left = PAD + START_W + 2 * PAD;
-	int avail = sw - left - clock_w - PAD;
+	int avail;
 
-	XftDrawRect(draw, &c_bg, 0, 0, sw, PANEL_H);
-	XftDrawRect(draw, &c_accent, 0, 0, sw, 1);
+	XftDrawRect(draw, &c_bg, 0, 0, sw, panel_h);
+	/* thin accent line on the edge towards the screen */
+	XftDrawRect(draw, &c_accent, 0, cfg.panel_position == PANEL_TOP ? panel_h - 1 : 0,
+	            sw, 1);
+
+	draw_clock();
+	avail = clock_x - PAD - left;
 
 	/* Start button */
 	XftDrawRect(draw, menu_open ? &c_active : hover == HOVER_START ? &c_hover
@@ -433,6 +539,8 @@ static void draw_panel(void)
 
 		if (w > TASK_MAX_W)
 			w = TASK_MAX_W;
+		if (w < ICON_SIZE + 16)
+			w = ICON_SIZE + 16;
 		for (int i = 0; i < ntasks; i++) {
 			struct task *t = &tasks[i];
 			int is_active = t->win == active && !t->hidden;
@@ -450,10 +558,7 @@ static void draw_panel(void)
 		}
 	}
 
-	/* Clock */
-	text(draw, font, &c_text, sw - clock_w + 12 - PAD, 0, PANEL_H, clock_text);
-
-	XCopyArea(dpy, buf, panel, DefaultGC(dpy, scr), 0, 0, sw, PANEL_H, 0, 0);
+	XCopyArea(dpy, buf, panel, DefaultGC(dpy, scr), 0, 0, sw, panel_h, 0, 0);
 }
 
 static void draw_menu(void)
@@ -528,7 +633,7 @@ static void load_menu(void)
 
 	for (int i = 0; i < nitems; i++) {
 		items[i].y = y;
-		items[i].h = items[i].cmd[0] ? ITEM_H : SEP_H;
+		items[i].h = items[i].cmd[0] ? item_h : SEP_H;
 		y += items[i].h;
 	}
 	menu_h = y + 6;
@@ -545,7 +650,8 @@ static void run(const char *cmd)
 
 static void open_menu(void)
 {
-	XMoveWindow(dpy, menu, PAD, sh - PANEL_H - menu_h);
+	XMoveWindow(dpy, menu, PAD, cfg.panel_position == PANEL_TOP ? panel_h
+	            : sh - panel_h - menu_h);
 	XMapRaised(dpy, menu);
 	/* Grab mouse and keyboard so a click anywhere else closes the menu.
 	 * Right after a keyboard shortcut Openbox may still hold the keyboard,
@@ -611,8 +717,167 @@ static void activate(Window w)
 	           SubstructureRedirectMask | SubstructureNotifyMask, &e);
 }
 
+/* --- Calendar popup (click the clock) ------------------------------------- */
+
+static void fill_circle(Drawable d, int w, int h, double cx, double cy, double r,
+                        const char *hex)
+{
+	cairo_surface_t *surf = cairo_xlib_surface_create(dpy, d, vis, w, h);
+	cairo_t *cr = cairo_create(surf);
+
+	cairo_arc(cr, cx, cy, r, 0, 2 * M_PI);
+	dial_color(cr, hex, 1);
+	cairo_fill(cr);
+	cairo_destroy(cr);
+	cairo_surface_destroy(surf);
+}
+
+/* Draws s centred on x */
+static void text_c(XftDraw *d, XftFont *f, XftColor *c, int x, int top, int h,
+                   const char *s)
+{
+	text(d, f, c, x - text_width(f, s) / 2, top, h, s);
+}
+
+/* The "<" and ">" buttons next to the month name */
+static int cal_arrow_x(int which)
+{
+	return CAL_W - 84 + which * 38;
+}
+
+#define CAL_MONTH_Y  (CAL_TOP + 10)
+#define CAL_GRID_Y   (CAL_MONTH_Y + 36 + 26)
+#define CAL_CELL_W   ((CAL_W - 24) / 7)
+
+static void draw_calendar(void)
+{
+	char s[96];
+	time_t t = time(NULL);
+	struct tm now, first = { 0 }, last = { 0 };
+	int off, days;
+
+	localtime_r(&t, &now);
+	XftDrawRect(cal_draw, &c_bg, 0, 0, CAL_W, cal_h);
+
+	/* big time and the full date */
+	settings_format_time(&cfg, &now, s, sizeof s);
+	text(cal_draw, big, &c_text, 18, 10, 50, s);
+	strftime(s, sizeof s, "%A, %d %B %Y", &now);
+	text(cal_draw, font, &c_accent, 20, 58, 24, s);
+	XftDrawRect(cal_draw, &c_sep, 12, CAL_TOP - 1, CAL_W - 24, 1);
+
+	/* month name and the arrows */
+	first.tm_year = cal_year - 1900;
+	first.tm_mon = cal_month;
+	first.tm_mday = 1;
+	first.tm_hour = 12;
+	mktime(&first);                       /* fills in tm_wday */
+	last = first;
+	last.tm_mon++;
+	last.tm_mday = 0;                     /* day 0 of next month = last day */
+	mktime(&last);
+	days = last.tm_mday;
+	off = (first.tm_wday + 6) % 7;        /* weeks start on Monday */
+
+	strftime(s, sizeof s, "%B %Y", &first);
+	text(cal_draw, bold, &c_text, 20, CAL_MONTH_Y, 32, s);
+	for (int i = 0; i < 2; i++) {
+		if (cal_hover == i)
+			XftDrawRect(cal_draw, &c_hover, cal_arrow_x(i), CAL_MONTH_Y, 32, 32);
+		text_c(cal_draw, bold, &c_accent, cal_arrow_x(i) + 16, CAL_MONTH_Y, 32,
+		       i == 0 ? "\xe2\x80\xb9" : "\xe2\x80\xba");      /* "<" ">" */
+	}
+
+	/* weekday names, Monday first: 5 Jan 1970 was a Monday */
+	for (int i = 0; i < 7; i++) {
+		struct tm wd = { .tm_wday = (i + 1) % 7 };
+		char name[16];
+
+		strftime(name, sizeof name, "%a", &wd);
+		name[2] = '\0';
+		text_c(cal_draw, small, i >= 5 ? &c_accent : &c_dim,
+		       12 + i * CAL_CELL_W + CAL_CELL_W / 2, CAL_GRID_Y - 26, 22, name);
+	}
+
+	/* the days */
+	XFlush(dpy);
+	for (int d = 1; d <= days; d++) {
+		int col = (off + d - 1) % 7, row = (off + d - 1) / 7;
+		int cx = 12 + col * CAL_CELL_W + CAL_CELL_W / 2;
+		int top = CAL_GRID_Y + row * CAL_CELL;
+		int today = d == now.tm_mday && cal_month == now.tm_mon &&
+		            cal_year == now.tm_year + 1900;
+
+		snprintf(s, sizeof s, "%d", d);
+		if (today)
+			fill_circle(cal_buf, CAL_W, cal_h, cx, top + CAL_CELL / 2.0,
+			            CAL_CELL / 2.0 - 3, cfg.pal.accent);
+		text_c(cal_draw, today ? bold : font,
+		       today ? &c_on_accent : col >= 5 ? &c_dim : &c_text,
+		       cx, top, CAL_CELL, s);
+	}
+
+	/* 1-pixel border */
+	XftDrawRect(cal_draw, &c_accent, 0, 0, CAL_W, 1);
+	XftDrawRect(cal_draw, &c_accent, 0, cal_h - 1, CAL_W, 1);
+	XftDrawRect(cal_draw, &c_accent, 0, 0, 1, cal_h);
+	XftDrawRect(cal_draw, &c_accent, CAL_W - 1, 0, 1, cal_h);
+	XClearWindow(dpy, cal);   /* the window's background is cal_buf */
+}
+
+static void cal_step(int months)
+{
+	cal_month += months;
+	while (cal_month < 0) { cal_month += 12; cal_year--; }
+	while (cal_month > 11) { cal_month -= 12; cal_year++; }
+	draw_calendar();
+}
+
+static void open_calendar(void)
+{
+	time_t t = time(NULL);
+	struct tm now;
+
+	localtime_r(&t, &now);
+	cal_year = now.tm_year + 1900;
+	cal_month = now.tm_mon;
+	XMoveWindow(dpy, cal, sw - CAL_W - PAD, cfg.panel_position == PANEL_TOP
+	            ? panel_h : sh - panel_h - cal_h);
+	XMapRaised(dpy, cal);
+	for (int i = 0; i < 20; i++) {
+		if (XGrabKeyboard(dpy, cal, False, GrabModeAsync, GrabModeAsync,
+		                  CurrentTime) == GrabSuccess)
+			break;
+		usleep(10000);
+	}
+	XGrabPointer(dpy, cal, False, ButtonPressMask | PointerMotionMask,
+	             GrabModeAsync, GrabModeAsync, None, None, CurrentTime);
+	cal_open = 1;
+	cal_hover = -1;
+	draw_calendar();
+}
+
+static void close_calendar(void)
+{
+	XUngrabPointer(dpy, CurrentTime);
+	XUngrabKeyboard(dpy, CurrentTime);
+	XUnmapWindow(dpy, cal);
+	cal_open = 0;
+}
+
+static int cal_arrow_at(int x, int y)
+{
+	for (int i = 0; i < 2; i++)
+		if (x >= cal_arrow_x(i) && x < cal_arrow_x(i) + 32 &&
+		    y >= CAL_MONTH_Y && y < CAL_MONTH_Y + 32)
+			return i;
+	return -1;
+}
+
 static int panel_hit(int x)
 {
+	if (x >= clock_x && x < clock_x + clock_w)
+		return HOVER_CLOCK;
 	if (x >= PAD && x < PAD + START_W)
 		return HOVER_START;
 	for (int i = 0; i < ntasks; i++)
@@ -627,11 +892,18 @@ static void place_panel(void)
 	long strut[12] = { 0 };
 	XSizeHints hints = { 0 };
 
-	XMoveResizeWindow(dpy, panel, 0, sh - PANEL_H, sw, PANEL_H);
+	panel_y = cfg.panel_position == PANEL_TOP ? 0 : sh - panel_h;
+	XMoveResizeWindow(dpy, panel, 0, panel_y, sw, panel_h);
 
-	strut[3] = PANEL_H;          /* bottom */
-	strut[10] = 0;               /* bottom_start_x */
-	strut[11] = sw - 1;          /* bottom_end_x */
+	if (cfg.panel_position == PANEL_TOP) {
+		strut[2] = panel_h;      /* top */
+		strut[8] = 0;            /* top_start_x */
+		strut[9] = sw - 1;       /* top_end_x */
+	} else {
+		strut[3] = panel_h;      /* bottom */
+		strut[10] = 0;           /* bottom_start_x */
+		strut[11] = sw - 1;      /* bottom_end_x */
+	}
 	XChangeProperty(dpy, panel, A_STRUT_PARTIAL, XA_CARDINAL, 32,
 	                PropModeReplace, (unsigned char *)strut, 12);
 	XChangeProperty(dpy, panel, A_STRUT, XA_CARDINAL, 32, PropModeReplace,
@@ -639,16 +911,16 @@ static void place_panel(void)
 
 	hints.flags = PPosition | PSize | PMinSize | PMaxSize;
 	hints.x = 0;
-	hints.y = sh - PANEL_H;
+	hints.y = panel_y;
 	hints.width = hints.min_width = hints.max_width = sw;
-	hints.height = hints.min_height = hints.max_height = PANEL_H;
+	hints.height = hints.min_height = hints.max_height = panel_h;
 	XSetWMNormalHints(dpy, panel, &hints);
 
 	if (draw)
 		XftDrawDestroy(draw);
 	if (buf)
 		XFreePixmap(dpy, buf);
-	buf = XCreatePixmap(dpy, panel, sw, PANEL_H, DefaultDepth(dpy, scr));
+	buf = XCreatePixmap(dpy, panel, sw, panel_h, DefaultDepth(dpy, scr));
 	draw = XftDrawCreate(dpy, buf, vis, cmap);
 }
 
@@ -662,7 +934,7 @@ static void create_windows(void)
 	a.background_pixel = c_bg.pixel;
 	a.event_mask = ExposureMask | ButtonPressMask | PointerMotionMask |
 	               LeaveWindowMask;
-	panel = XCreateWindow(dpy, root, 0, sh - PANEL_H, sw, PANEL_H, 0,
+	panel = XCreateWindow(dpy, root, 0, 0, sw, panel_h, 0,
 	                      CopyFromParent, InputOutput, CopyFromParent,
 	                      CWBackPixel | CWEventMask, &a);
 	XStoreName(dpy, panel, "my-panel");
@@ -687,6 +959,18 @@ static void create_windows(void)
 	menu_buf = XCreatePixmap(dpy, menu, MENU_W, menu_h, DefaultDepth(dpy, scr));
 	menu_draw = XftDrawCreate(dpy, menu_buf, vis, cmap);
 	XSetWindowBackgroundPixmap(dpy, menu, menu_buf);
+
+	/* The calendar popup, made the same way */
+	cal_h = CAL_GRID_Y + 6 * CAL_CELL + 10;
+	a.event_mask = ExposureMask | ButtonPressMask | PointerMotionMask |
+	               KeyPressMask;
+	cal = XCreateWindow(dpy, root, 0, 0, CAL_W, cal_h, 0, CopyFromParent,
+	                    InputOutput, CopyFromParent,
+	                    CWBackPixel | CWOverrideRedirect | CWSaveUnder |
+	                    CWEventMask, &a);
+	cal_buf = XCreatePixmap(dpy, cal, CAL_W, cal_h, DefaultDepth(dpy, scr));
+	cal_draw = XftDrawCreate(dpy, cal_buf, vis, cmap);
+	XSetWindowBackgroundPixmap(dpy, cal, cal_buf);
 
 	XMapWindow(dpy, panel);
 }
@@ -739,6 +1023,12 @@ static void handle(XEvent *e)
 				hover = i;
 				draw_panel();
 			}
+		} else if (e->xmotion.window == cal) {
+			i = cal_arrow_at(e->xmotion.x, e->xmotion.y);
+			if (i != cal_hover) {
+				cal_hover = i;
+				draw_calendar();
+			}
 		} else if (e->xmotion.window == menu) {
 			i = menu_item_at(e->xmotion.x, e->xmotion.y);
 			if (i != menu_hover) {
@@ -756,6 +1046,20 @@ static void handle(XEvent *e)
 		break;
 
 	case ButtonPress:
+		if (e->xbutton.window == cal) {
+			int x = e->xbutton.x, y = e->xbutton.y;
+
+			/* wheel: change month; click outside: close */
+			if (e->xbutton.button == Button4 || e->xbutton.button == Button5)
+				cal_step(e->xbutton.button == Button4 ? -1 : 1);
+			else if ((i = cal_arrow_at(x, y)) >= 0)
+				cal_step(i == 0 ? -1 : 1);
+			else if (x < 0 || y < 0 || x >= CAL_W || y >= cal_h) {
+				close_calendar();
+				draw_panel();
+			}
+			break;
+		}
 		if (e->xbutton.window == menu) {
 			/* With the grab, every click lands here; outside means "close". */
 			if (menu_item_at(e->xbutton.x, e->xbutton.y) < 0) {
@@ -767,7 +1071,9 @@ static void handle(XEvent *e)
 		if (e->xbutton.button != Button1)
 			break;
 		i = panel_hit(e->xbutton.x);
-		if (i == HOVER_START) {
+		if (i == HOVER_CLOCK) {
+			open_calendar();
+		} else if (i == HOVER_START) {
 			open_menu();
 			redraw_menu();
 		} else if (i >= 0) {
@@ -794,6 +1100,15 @@ static void handle(XEvent *e)
 
 	case KeyPress:
 		key = XLookupKeysym(&e->xkey, 0);
+		if (cal_open) {
+			if (key == XK_Escape) {
+				close_calendar();
+				draw_panel();
+			} else if (key == XK_Left || key == XK_Right) {
+				cal_step(key == XK_Left ? -1 : 1);
+			}
+			break;
+		}
 		if (!menu_open)
 			break;
 		if (key == XK_Escape) {
@@ -823,10 +1138,33 @@ static Atom atom(const char *name)
 	return XInternAtom(dpy, name, False);
 }
 
-int main(void)
+/* Settings changed: start again from the beginning with the new ones. The
+ * X connection is closed on exec (FD_CLOEXEC), which removes our windows. */
+static void restart(void)
 {
-	char old_clock[64];
+	execv("/proc/self/exe", self_argv);
+	execvp("my-panel", self_argv);
+	perror("my-panel: restart");
+}
+
+static XftFont *open_font(const char *style, int size)
+{
+	char name[96];
+
+	snprintf(name, sizeof name, "DejaVu Sans%s:size=%d", style, size);
+	return XftFontOpenName(dpy, scr, name);
+}
+
+int main(int argc, char **argv)
+{
+	time_t settings_time;
 	int fd;
+
+	(void)argc;
+	self_argv = argv;
+	settings_load(&cfg, NULL);
+	settings_time = settings_mtime(NULL);
+	panel_h = cfg.panel_height;
 
 	struct sigaction sa = { 0 };
 
@@ -867,20 +1205,27 @@ int main(void)
 	A_ABOVE         = atom("_NET_WM_STATE_ABOVE");
 	A_DESKTOP       = atom("_NET_WM_DESKTOP");
 
-	font = XftFontOpenName(dpy, scr, "DejaVu Sans:size=10");
-	bold = XftFontOpenName(dpy, scr, "DejaVu Sans:bold:size=10");
-	if (!font || !bold) {
+	font  = open_font("", cfg.font_size);
+	bold  = open_font(":bold", cfg.font_size);
+	small = open_font("", cfg.font_size > 9 ? cfg.font_size - 2 : 7);
+	big   = open_font(":style=ExtraLight", 30);
+	if (!font || !bold || !small || !big) {
 		fprintf(stderr, "my-panel: can't load font\n");
 		return 1;
 	}
-	color(&c_bg,     "#0b2a2b");
-	color(&c_button, "#134e4f");
-	color(&c_hover,  "#1d6466");
-	color(&c_active, "#2c7a7b");
-	color(&c_text,   "#d8f3f0");
-	color(&c_dim,    "#7fa9a6");
-	color(&c_accent, "#4fd1c5");
-	color(&c_sep,    "#2c5a5b");
+	item_h = font->ascent + font->descent + 12;
+	if (item_h < ITEM_H)
+		item_h = ITEM_H;
+
+	color(&c_bg,        cfg.pal.bg);
+	color(&c_button,    cfg.pal.button);
+	color(&c_hover,     cfg.pal.hover);
+	color(&c_active,    cfg.pal.active);
+	color(&c_text,      cfg.pal.text);
+	color(&c_dim,       cfg.pal.dim);
+	color(&c_accent,    cfg.pal.accent);
+	color(&c_sep,       cfg.pal.sep);
+	color(&c_on_accent, cfg.pal.on_accent);
 
 	imlib_context_set_display(dpy);
 	imlib_context_set_visual(vis);
@@ -926,9 +1271,15 @@ int main(void)
 			draw_panel();
 		}
 
-		strcpy(old_clock, clock_text);
-		update_clock();
-		if (strcmp(old_clock, clock_text) != 0)
+		if (update_clock() || cfg.clock_seconds)
 			draw_panel();
+		if (cal_open)
+			draw_calendar();     /* its big clock */
+
+		/* The Settings app (or you) changed the settings file */
+		if (settings_mtime(NULL) != settings_time && !menu_open && !cal_open) {
+			restart();
+			settings_time = settings_mtime(NULL);   /* only if it failed */
+		}
 	}
 }

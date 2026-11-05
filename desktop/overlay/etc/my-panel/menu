@@ -7,9 +7,10 @@ Web browser|netsurf-gtk3|web-browser
 Text editor|xterm -name editor -T "Text editor" -e nano|accessories-text-editor
 System monitor|xterm -name monitor -T "System monitor" -e htop|computer
 Calculator|xcalc|accessories-calculator
-Clock|xclock|x-office-calendar
+Clock|my-clock|my-clock
 Search files|my-search-gui|system-search
 File history|my-history|document-open-recent
+Settings|my-settings|preferences-desktop
 Install to disk|xterm -name my-install -T "Install my-distro" -e /usr/sbin/my-install|drive-harddisk
 -
 Log out|openbox --exit|system-log-out

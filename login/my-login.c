@@ -38,7 +38,8 @@
 #include <time.h>
 #include <unistd.h>
 
-#define WALLPAPER "/usr/share/backgrounds/my-distro.png"
+#include "settings.h"
+
 #define CARD_W    380
 #define CARD_H    400
 #define FIELD_H   38
@@ -64,7 +65,12 @@ static Imlib_Image avatar, icon_reboot, icon_power;
 static char user[USER_MAX + 1], pass[PASS_MAX + 1], error[128];
 static int focus = F_USER;
 static struct rect r_user, r_pass, r_login, r_reboot, r_power;
-static char clock_text[16], date_text[64];
+static char clock_text[32], date_text[64];
+
+/* Colors and wallpaper: the settings of the user shown on the screen (the
+ * Settings app writes them), so the login screen matches their desktop. */
+static struct settings cfg;
+static unsigned short bg_r, bg_g, bg_b;   /* cfg.pal.bg as numbers, for shade() */
 
 static int ignore_x_errors(Display *d, XErrorEvent *e)
 {
@@ -136,14 +142,19 @@ static int inside(struct rect *r, int x, int y)
 /* The wallpaper, scaled to cover the whole screen, drawn once into "wall". */
 static void make_wallpaper(void)
 {
-	Imlib_Image img = imlib_load_image(WALLPAPER);
+	char file[512];
+	Imlib_Image img;
 
+	settings_wallpaper_file(&cfg, file, sizeof file);
+	img = file[0] ? imlib_load_image(file) : NULL;
+	if (wall)
+		XFreePixmap(dpy, wall);
 	wall = XCreatePixmap(dpy, root, sw, sh, DefaultDepth(dpy, scr));
 	if (!img) {
 		XftDraw *d = XftDrawCreate(dpy, wall, vis, cmap);
 		XftColor bg;
 
-		color(&bg, "#0f3d3e");
+		color(&bg, cfg.pal.bg);
 		XftDrawRect(d, &bg, 0, 0, sw, sh);
 		XftDrawDestroy(d);
 		return;
@@ -202,7 +213,7 @@ static void redraw(void)
 	text(font, &c_dim, -cx, y - 80, 30, date_text);
 
 	/* The card */
-	shade(x, y, CARD_W, CARD_H, 4, 24, 26, 215);
+	shade(x, y, CARD_W, CARD_H, bg_r, bg_g, bg_b, 220);
 	XftDrawRect(draw, &c_accent, x, y, CARD_W, 2);
 
 	icon(avatar, cx - 32, y + 26, 64);
@@ -221,7 +232,7 @@ static void redraw(void)
 		text(small, &c_error, -cx, y + 352, 30, error);
 
 	/* Bottom bar: host name left, reboot / power off right */
-	shade(0, sh - 48, sw, 48, 4, 24, 26, 170);
+	shade(0, sh - 48, sw, 48, bg_r, bg_g, bg_b, 180);
 	gethostname(host, sizeof host - 1);
 	text(font, &c_dim, 20, sh - 48, 48, host);
 
@@ -238,14 +249,40 @@ static void redraw(void)
 
 static int update_clock(void)
 {
-	char old[16];
+	char old[32];
 	time_t now = time(NULL);
 	struct tm *tm = localtime(&now);
 
 	strcpy(old, clock_text);
-	strftime(clock_text, sizeof clock_text, "%H:%M", tm);
+	struct settings c = cfg;
+
+	c.clock_seconds = 0;
+	settings_format_time(&c, tm, clock_text, sizeof clock_text);
 	strftime(date_text, sizeof date_text, "%A, %d %B %Y", tm);
 	return strcmp(old, clock_text) != 0;
+}
+
+/* Reads the settings of the user in the user field and sets the colors. */
+static void load_theme(void)
+{
+	struct passwd *pw = user[0] ? getpwnam(user) : NULL;
+	unsigned r = 0, g = 0, b = 0;
+
+	settings_load(&cfg, pw ? pw->pw_dir : "/root");
+	sscanf(cfg.pal.bg + 1, "%2x%2x%2x", &r, &g, &b);
+	bg_r = r; bg_g = g; bg_b = b;
+	color(&c_text, cfg.pal.text);
+	color(&c_dim, cfg.pal.dim);
+	color(&c_accent, cfg.pal.accent);
+	color(&c_field, cfg.pal.button);
+	color(&c_field_on, cfg.pal.hover);
+	color(&c_button, cfg.pal.accent);
+	color(&c_button_text, cfg.pal.on_accent);
+	color(&c_error, cfg.pal.dark ? "#ff9a8f" : "#b3261e");
+	make_wallpaper();
+	XSetWindowBackgroundPixmap(dpy, root, wall);   /* also behind the session */
+	XClearWindow(dpy, root);
+	update_clock();
 }
 
 /* The first normal user (uid 1000 and up) is filled in for convenience. */
@@ -393,6 +430,7 @@ static void submit(void)
 	error[0] = '\0';
 	run_session(pw);
 	default_user();
+	load_theme();         /* they may have changed it in the session */
 	show();
 }
 
@@ -488,14 +526,6 @@ int main(void)
 	bold  = XftFontOpenName(dpy, scr, "DejaVu Sans:bold:size=13");
 	small = XftFontOpenName(dpy, scr, "DejaVu Sans:size=9");
 	huge  = XftFontOpenName(dpy, scr, "DejaVu Sans:style=ExtraLight:size=56");
-	color(&c_text, "#e6faf7");
-	color(&c_dim, "#8fb8b4");
-	color(&c_accent, "#4fd1c5");
-	color(&c_field, "#0f3536");
-	color(&c_field_on, "#154647");
-	color(&c_button, "#4fd1c5");
-	color(&c_button_text, "#062022");
-	color(&c_error, "#ff9a8f");
 
 	avatar = theme_icon("avatar-default");
 	if (!avatar)
@@ -503,7 +533,6 @@ int main(void)
 	icon_reboot = theme_icon("view-refresh");
 	icon_power = theme_icon("system-shutdown");
 
-	make_wallpaper();
 	buf = XCreatePixmap(dpy, root, sw, sh, DefaultDepth(dpy, scr));
 	draw = XftDrawCreate(dpy, buf, vis, cmap);
 
@@ -515,11 +544,9 @@ int main(void)
 	                    CWOverrideRedirect | CWEventMask, &a);
 	XDefineCursor(dpy, win, XCreateFontCursor(dpy, XC_left_ptr));
 	XDefineCursor(dpy, root, XCreateFontCursor(dpy, XC_left_ptr));
-	XSetWindowBackgroundPixmap(dpy, root, wall);   /* also behind the session */
-	XClearWindow(dpy, root);
 
-	update_clock();
 	default_user();
+	load_theme();
 	show();
 
 	for (;;) {

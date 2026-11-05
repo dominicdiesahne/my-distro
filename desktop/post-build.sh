@@ -14,7 +14,7 @@ chmod 755 "$T"/root/Desktop/*.desktop
 # Openbox settings for root: the stock rc.xml plus our keyboard shortcuts
 # and a dark window theme.
 mkdir -p "$T/root/.config/openbox"
-sed -e 's|<name>Clearlooks</name>|<name>Onyx-Citrus</name>|' \
+sed -e 's|<name>Clearlooks</name>|<name>my-distro</name>|' \
     -e 's|<number>4</number>|<number>1</number>|' \
     -e 's|kfmclient openProfile filemanagement|pcmanfm ~|' \
     -e 's|<name>Konqueror</name>|<name>Files</name>|' \

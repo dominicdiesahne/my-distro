@@ -11,6 +11,9 @@ MY_SEARCH_SITE_METHOD = local
 MY_SEARCH_DEPENDENCIES = llama-cpp my-search-model xlib_libX11 xlib_libXft \
 	host-pkgconf
 
+# settings.c: the window uses the colors chosen in the Settings app
+MY_SEARCH_SHARED = $(BR2_EXTERNAL_MY_DISTRO_PATH)/../settings
+
 MY_SEARCH_CC = $(TARGET_CC) $(TARGET_CFLAGS) $(TARGET_LDFLAGS) -Wall -Wextra
 MY_SEARCH_LLAMA = $$($(PKG_CONFIG_HOST_BINARY) --cflags --libs llama) -lm
 
@@ -19,7 +22,8 @@ define MY_SEARCH_BUILD_CMDS
 		$(@D)/embed.c $(MY_SEARCH_LLAMA)
 	$(MY_SEARCH_CC) -o $(@D)/my-search $(@D)/my-search.c $(@D)/index.c \
 		$(@D)/embed.c $(MY_SEARCH_LLAMA)
-	$(MY_SEARCH_CC) -o $(@D)/my-search-gui $(@D)/my-search-gui.c $(@D)/index.c \
+	$(MY_SEARCH_CC) -I$(MY_SEARCH_SHARED) -o $(@D)/my-search-gui $(@D)/my-search-gui.c \
+		$(@D)/index.c $(MY_SEARCH_SHARED)/settings.c \
 		$(@D)/embed.c $(MY_SEARCH_LLAMA) \
 		$$($(PKG_CONFIG_HOST_BINARY) --cflags --libs x11 xft)
 endef

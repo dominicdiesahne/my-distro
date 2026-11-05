@@ -16,6 +16,10 @@ the taskbar, the login screen, the file history daemon and the search indexer.
 | ![Login screen](docs/screenshots/login.png) | ![Search files](docs/screenshots/search.png) |
 | **File history (undo)** | **Web browser** |
 | ![File history](docs/screenshots/history.png) | ![NetSurf browser](docs/screenshots/browser.png) |
+| **Settings** | **Clock and calendar** |
+| ![Settings app](docs/screenshots/settings.png) | ![Clock app](docs/screenshots/clock.png) |
+| **Another theme, taskbar on top, analog clock** | **Calendar (click the clock)** |
+| ![Violet theme](docs/screenshots/themes.png) | ![Calendar](docs/screenshots/calendar.png) |
 
 ## Features
 
@@ -24,7 +28,13 @@ the taskbar, the login screen, the file history daemon and the search indexer.
 - **Graphical login** (`login/my-login.c`): checks passwords against
   `/etc/shadow`, drops root rights and starts your desktop as you.
 - **Taskbar** (`panel/my-panel.c`): Start menu with icons, a button per window
-  with the app's icon, clock.
+  with the app's icon, and a clock (digital or a small analog face) that opens
+  a calendar when you click it.
+- **Settings app** (`settings/my-settings.c`): six color themes or your own
+  accent color, wallpaper, clock style and format, taskbar position and size.
+  Changes apply at once to the taskbar, window borders, wallpaper, terminal
+  and the login screen.
+- **Clock app** (`settings/my-clock.c`): a big analog or digital clock.
 - **System-wide undo** (`history/`): every file that any program changes is
   saved as a version (kernel *fanotify*). Undo from a window or with `my-undo`.
 - **Semantic file search** (`search/`): an embedding model (all-MiniLM-L6-v2 via
@@ -32,7 +42,7 @@ the taskbar, the login screen, the file history daemon and the search indexer.
   subscription"* finds a note about a client signing up for a gym membership,
   without a single shared word.
 - **Desktop:** Xorg, Openbox, PCManFM file manager with desktop icons, NetSurf
-  web browser (HTTPS), xterm, nano, htop, calculator, generated wallpaper.
+  web browser (HTTPS), xterm, nano, htop, calculator, generated wallpapers.
 - **Live ISO** for BIOS and UEFI; tested in VirtualBox and QEMU.
 - **Installer** (`my-install`): copies the live system onto a hard disk with
   GRUB for BIOS and UEFI, so your files and settings survive a reboot.
@@ -194,6 +204,7 @@ by name only.
 | `login/` | Login screen `my-login`, `my-power` (reboot/power off for normal users) |
 | `desktop/overlay/usr/sbin/my-install` | Installer (shell script) |
 | `panel/` | Taskbar `my-panel` |
+| `settings/` | Settings app, Clock app, and `settings.c` / `dial.c` that the taskbar and login screen share with them |
 | `history/` | `my-historyd`, `my-undo`, the File history window |
 | `search/` | `my-indexd`, `my-search`, the Search files window |
 | `desktop/buildroot.fragment` | Packages and settings on top of Buildroot's `qemu_x86_64_defconfig` |
@@ -202,10 +213,37 @@ by name only.
 | `desktop/overlay/` | Files copied into the root filesystem (config, Start menu, launchers) |
 | `desktop/post-build.sh` | Last changes to the root filesystem (Openbox shortcuts, user home) |
 | `desktop/users.table` | User accounts |
-| `desktop/make-wallpaper.py` | Draws the wallpaper (Python + Pillow) |
+| `desktop/make-wallpaper.py` | Draws the wallpapers, one per theme, and the clock icon (Python + Pillow) |
 | `config/`, `rootfs/` | The minimal version |
 
 ## Customize
+
+### On the running system
+
+Open **Settings** from the Start menu. Everything is saved to
+`~/.config/my-distro/settings`, a short text file you can also edit by hand
+(run `my-settings --apply` afterwards for the wallpaper and window colors;
+the taskbar and clock notice the change by themselves):
+
+| Setting | Values |
+|---|---|
+| `theme` | `teal`, `ocean`, `violet`, `ember`, `forest`, `light` |
+| `accent` | `#rrggbb`, or empty for the theme's color |
+| `wallpaper` | `theme`, `color` (plain), or the path of a picture |
+| `wallpaper_mode` | `crop`, `fit`, `center`, `tile`, `stretch` |
+| `panel_clock`, `clock_app` | `digital` or `analog` |
+| `clock_24h`, `clock_seconds`, `clock_date` | `yes` or `no` |
+| `date_format` | `strftime` format, e.g. `%a %d.%m.` |
+| `panel_position` | `bottom` or `top` |
+| `panel_height`, `font_size` | 28-56 pixels, 8-16 points |
+
+Defaults for all users are in `/etc/my-distro/settings`
+(`desktop/overlay/etc/my-distro/settings` in this repository). The login
+screen uses the theme and wallpaper of the user it shows. Apps that were
+already open when you changed the theme (and GTK apps' light/dark style)
+change the next time they start.
+
+### In the build
 
 - **Users and passwords:** `desktop/users.table` (format: Buildroot manual,
   "Users table"), root password `BR2_TARGET_GENERIC_ROOT_PASSWD` in
@@ -215,7 +253,9 @@ by name only.
   add its `BR2_PACKAGE_...=y` line to `desktop/buildroot.fragment`, run `make desktop`.
 - **Start menu:** `desktop/overlay/etc/my-panel/menu` (`Label|command|icon`).
 - **Keyboard layout:** `desktop/overlay/etc/X11/xorg.conf.d/00-keyboard.conf`.
-- **Wallpaper:** edit `desktop/make-wallpaper.py` and run it.
+- **Wallpapers:** edit `desktop/make-wallpaper.py` and run it.
+- **Color themes:** the list in `settings/settings.c`; add a matching entry
+  to `THEMES` in `desktop/make-wallpaper.py` for its wallpaper.
 
 ## Minimal version
 

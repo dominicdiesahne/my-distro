@@ -9,12 +9,16 @@ MY_HISTORY_SITE = $(BR2_EXTERNAL_MY_DISTRO_PATH)/../history
 MY_HISTORY_SITE_METHOD = local
 MY_HISTORY_DEPENDENCIES = xlib_libX11 xlib_libXft host-pkgconf
 
+# settings.c: the window uses the colors chosen in the Settings app
+MY_HISTORY_SHARED = $(BR2_EXTERNAL_MY_DISTRO_PATH)/../settings
+
 MY_HISTORY_CC = $(TARGET_CC) $(TARGET_CFLAGS) $(TARGET_LDFLAGS) -Wall -Wextra
 
 define MY_HISTORY_BUILD_CMDS
 	$(MY_HISTORY_CC) -o $(@D)/my-historyd $(@D)/my-historyd.c $(@D)/history.c
 	$(MY_HISTORY_CC) -o $(@D)/my-undo $(@D)/my-undo.c $(@D)/history.c
-	$(MY_HISTORY_CC) -o $(@D)/my-history $(@D)/my-history.c $(@D)/history.c \
+	$(MY_HISTORY_CC) -I$(MY_HISTORY_SHARED) -o $(@D)/my-history $(@D)/my-history.c \
+		$(@D)/history.c $(MY_HISTORY_SHARED)/settings.c \
 		$$($(PKG_CONFIG_HOST_BINARY) --cflags --libs x11 xft)
 endef
 

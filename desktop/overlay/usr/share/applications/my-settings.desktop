@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Settings
+Comment=Colors, wallpaper, clock and taskbar
+Icon=preferences-desktop
+Exec=my-settings
+Terminal=false
+Categories=Settings;DesktopSettings;

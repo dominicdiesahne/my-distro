@@ -8,6 +8,7 @@
  */
 #define _GNU_SOURCE
 #include "search.h"
+#include "settings.h"
 
 #include <X11/Xatom.h>
 #include <X11/Xlib.h>
@@ -68,6 +69,8 @@ static long long now_ms(void)
 	gettimeofday(&tv, NULL);
 	return tv.tv_sec * 1000LL + tv.tv_usec / 1000;
 }
+
+static struct settings cfg;
 
 static void color(XftColor *c, const char *name)
 {
@@ -425,16 +428,18 @@ int main(void)
 	bold = XftFontOpenName(dpy, scr, "DejaVu Sans:bold:size=11");
 	small = XftFontOpenName(dpy, scr, "DejaVu Sans:size=8");
 	big = XftFontOpenName(dpy, scr, "DejaVu Sans:size=14");
-	color(&c_bg, "#0b2a2b");
-	color(&c_head, "#071f20");
-	color(&c_box, "#123f40");
-	color(&c_sel, "#1a5a5b");
-	color(&c_text, "#d8f3f0");
-	color(&c_dim, "#7fa9a6");
-	color(&c_accent, "#4fd1c5");
-	color(&c_btn, "#4fd1c5");
-	color(&c_btn_text, "#062022");
-	color(&c_err, "#ff9a8f");
+	/* colors of the theme chosen in the Settings app (settings/settings.h) */
+	settings_load(&cfg, NULL);
+	color(&c_bg, cfg.pal.bg);
+	color(&c_head, cfg.pal.sep);
+	color(&c_box, cfg.pal.button);
+	color(&c_sel, cfg.pal.active);
+	color(&c_text, cfg.pal.text);
+	color(&c_dim, cfg.pal.dim);
+	color(&c_accent, cfg.pal.accent);
+	color(&c_btn, cfg.pal.accent);
+	color(&c_btn_text, cfg.pal.on_accent);
+	color(&c_err, cfg.pal.dark ? "#ff9a8f" : "#b3261e");
 
 	buttons[0] = (struct button){ "Open", 0, 0, 0, 0, act_open };
 	buttons[1] = (struct button){ "Open folder", 0, 0, 0, 0, act_folder };

@@ -1,0 +1,28 @@
+# Default look of my-distro for every user.
+#
+# Each user's own settings are in ~/.config/my-distro/settings (written by
+# the Settings app) and override these. Same format: key = value.
+
+# Colors: teal, ocean, violet, ember, forest or light.
+# accent = #rrggbb replaces the theme's highlight color (empty = theme's).
+theme = teal
+accent =
+
+# wallpaper = theme (matches the colors), color (plain), or a picture's path
+# wallpaper_mode = crop, fit, center, tile or stretch
+wallpaper = theme
+wallpaper_mode = crop
+
+# Clock: digital or analog, in the taskbar and in the Clock app
+panel_clock = digital
+clock_app = analog
+clock_24h = yes
+clock_seconds = no
+clock_date = yes
+# date_format: see `man strftime`, e.g. %a %d.%m. = Wed 04.11.
+date_format = %a %d.%m.
+
+# Taskbar: bottom or top; height 28-56 pixels; font size 8-16
+panel_position = bottom
+panel_height = 36
+font_size = 10

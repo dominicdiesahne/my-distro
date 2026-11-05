@@ -89,6 +89,9 @@ BR2_PACKAGE_XFONT_FONT_CURSOR_MISC=y
 
 # Taskbar: our own program (panel/my-panel.c), drawn with Xft for smooth text
 BR2_PACKAGE_MY_PANEL=y
+
+# Settings app and Clock app (settings/), drawn with GTK 3 and cairo
+BR2_PACKAGE_MY_SETTINGS=y
 BR2_PACKAGE_XLIB_LIBXFT=y
 BR2_PACKAGE_IMLIB2=y
 BR2_PACKAGE_IMLIB2_X=y
