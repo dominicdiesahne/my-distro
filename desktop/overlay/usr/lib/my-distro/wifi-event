@@ -1,0 +1,17 @@
+#!/bin/sh
+# wifi-event IFACE EVENT: wpa_cli runs this when Wi-Fi connects or
+# disconnects (see wifi-start). On CONNECTED it asks the network for an IP
+# address with DHCP (busybox udhcpc; it also sets the DNS server).
+IF="$1"
+export PATH=/sbin:/bin:/usr/sbin:/usr/bin
+PID="/run/udhcpc.$IF.pid"
+exec >>/tmp/wifi.log 2>&1
+echo "$(date '+%F %T') $IF $2"
+
+case "$2" in
+CONNECTED)
+	# a new network may have another address range: start DHCP again
+	[ -f "$PID" ] && kill "$(cat "$PID")" 2>/dev/null
+	udhcpc -i "$IF" -b -t 5 -T 3 -p "$PID"
+	;;
+esac

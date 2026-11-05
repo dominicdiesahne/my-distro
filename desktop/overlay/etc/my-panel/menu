@@ -11,6 +11,7 @@ Calculator|xcalc|accessories-calculator
 Clock|my-clock|my-clock
 Search files|my-search-gui|system-search
 File history|my-history|document-open-recent
+Wi-Fi|my-wifi|network-wireless
 Settings|my-settings|preferences-desktop
 Users and system|my-setup|system-users
 System update|my-setup --update|software-update-available

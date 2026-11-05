@@ -51,5 +51,27 @@ cp -a "$T/etc/skel/." "$T/home/dominic/"
 # compares it with the newest release); the welcome message shows it.
 sed -i "s/@VERSION@/$(cat "$T/etc/my-distro/version")/" "$T/etc/motd"
 
+# Firmware (graphics, Wi-Fi, network): xz-compress it. The kernel loads
+# NAME.xz when NAME is missing (CONFIG_FW_LOADER_COMPRESS_XZ); its xz decoder
+# needs the CRC32 check. regulatory.db stays as it is (tiny, and signed).
+# Links (linux-firmware has many, e.g. iwlwifi-*.ucode -> intel/iwlwifi/...)
+# then point to the .xz files.
+if [ -d "$T/lib/firmware" ]; then
+	(
+	cd "$T/lib/firmware"
+	find . -type f ! -name '*.xz' ! -name 'regulatory.db*' -exec xz -C crc32 -T0 -f {} +
+	find . -type l ! -name '*.xz' | while read -r link; do
+		target=$(readlink "$link")
+		if [ -e "$(dirname "$link")/$target.xz" ]; then
+			ln -sfn "$target.xz" "$link.xz"
+			rm -f "$link"
+		fi
+	done
+	)
+fi
+
+# Saved Wi-Fi passwords: only root may read them
+chmod 600 "$T/etc/wpa_supplicant.conf"
+
 # The live system starts without /etc/my-distro/setup-done, so the setup runs.
 rm -f "$T/etc/my-distro/setup-done"

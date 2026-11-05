@@ -18,4 +18,18 @@ for f in "$R/root/Documents/welcome.txt" "$R/etc/skel/Documents/welcome.txt" \
 	sed -i -e 's/^Everything runs from RAM.*/This system is installed on a disk: your changes are kept./' \
 	       -e '/Install to disk/d' "$f"
 done
+# Every normal user may choose Wi-Fi networks: members of the group netdev
+# (systems from before 0.9 didn't add them).
+G="$R/etc/group"
+grep -q '^netdev:' "$G" || echo 'netdev:x:82:' >>"$G"
+for u in $(awk -F: '$3 >= 1000 && $3 < 60000 { print $1 }' "$R/etc/passwd"); do
+	awk -F: -v OFS=: -v u="$u" '
+		$1 == "netdev" {
+			n = split($4, m, ","); found = 0
+			for (i = 1; i <= n; i++) if (m[i] == u) found = 1
+			if (!found) $4 = ($4 == "" ? u : $4 "," u)
+		}
+		{ print }' "$G" >"$G.new" && mv "$G.new" "$G"
+done
+chmod 644 "$G"
 exit 0

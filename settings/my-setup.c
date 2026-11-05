@@ -255,6 +255,10 @@ static const char *save_user(const char *name, const char *fullname,
 
 	if (set_password(name, password) != 0)
 		return "Could not set the password.";
+	/* netdev: may choose Wi-Fi networks (wpa_supplicant's control socket) */
+	const char *netdev[] = { "/usr/sbin/addgroup", name, "netdev", NULL };
+
+	run(netdev);
 	if (theme)
 		set_theme(home, theme);
 	give_home(home, uid, gid);

@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Wi-Fi
+Comment=Connect to a wireless network
+Icon=network-wireless
+Exec=my-wifi
+Terminal=false
+Categories=Settings;Network;

@@ -15,6 +15,8 @@
  *   icon name in the Adwaita icon theme).
  * - Clock on the right: time and date, or a small analog clock. Click it
  *   for a calendar.
+ * - Wi-Fi bars (signal strength from /proc/net/wireless) when the computer
+ *   has a Wi-Fi adapter; a click opens the Wi-Fi window (my-wifi).
  * - "Update to 0.9" next to the clock when a new version of my-distro is out.
  *   my-update watch writes that into ~/.cache/my-distro/update; a click
  *   opens System update (my-setup --update).
@@ -36,6 +38,7 @@
 #include <Imlib2.h>
 #include <cairo.h>
 #include <cairo-xlib.h>
+#include <dirent.h>
 #include <math.h>
 #include <fcntl.h>
 #include <glob.h>
@@ -72,7 +75,8 @@
 #define MENU_FILE  "/etc/my-panel/menu"
 #define ICONS_FILE "/etc/my-panel/icons"
 
-enum { HOVER_UPDATE = -4, HOVER_CLOCK = -3, HOVER_NONE = -2, HOVER_START = -1 };
+enum { HOVER_WIFI = -5, HOVER_UPDATE = -4, HOVER_CLOCK = -3, HOVER_NONE = -2,
+       HOVER_START = -1 };
 
 #define UPDATE_FILE ".cache/my-distro/update"   /* in the home folder */
 
@@ -124,6 +128,8 @@ static int clock_x, clock_w;  /* clock area on the panel */
 static char update_version[32];   /* "" = no update; else the new version */
 static int update_x, update_w;    /* its button (update_w = 0: not shown) */
 static time_t update_mtime;
+static int wifi_level = -2;       /* -2 no Wi-Fi adapter, -1 not connected, 1-4 bars */
+static int wifi_x, wifi_w;        /* its button (wifi_w = 0: not shown) */
 static time_t clock_now;
 
 /* Calendar popup */
@@ -618,6 +624,64 @@ static void draw_update(void)
 	     update_x + 12, PAD, bh, label);
 }
 
+/*
+ * Wi-Fi: /sys/class/ieee80211 has one entry per Wi-Fi adapter. The signal
+ * comes from /proc/net/wireless, which lists an interface only while it is
+ * connected:
+ *   wlan0: 0000   54.  -56.  -256 ...
+ * the 54 is the link quality out of 70. Returns 1 when the bars have to be
+ * drawn again.
+ */
+static int read_wifi(void)
+{
+	char line[256], name[32];
+	float link;
+	int level = -2, n = 0;
+	DIR *d = opendir("/sys/class/ieee80211");
+	struct dirent *e;
+	FILE *f;
+
+	while (d && level == -2 && (e = readdir(d)))
+		if (e->d_name[0] != '.')
+			level = -1;                  /* an adapter, not connected */
+	if (d)
+		closedir(d);
+	f = level == -2 ? NULL : fopen("/proc/net/wireless", "r");
+
+	while (f && fgets(line, sizeof line, f))
+		if (++n > 2 && sscanf(line, " %31[^:]: %*x %f", name, &link) == 2) {
+			int l = link <= 0 ? -1 : (int)(link * 4 / 70 + 0.99);
+
+			l = l > 4 ? 4 : l;
+			level = l > level ? l : level;
+		}
+	if (f)
+		fclose(f);
+	if (level == wifi_level)
+		return 0;
+	wifi_level = level;
+	return 1;
+}
+
+/* Four bars, left of the update button / clock. Sets wifi_x / wifi_w. */
+static void draw_wifi(int right)
+{
+	int bh = panel_h - 2 * PAD, bw = 4, gap = 2, top = PAD + 7, h = bh - 14;
+
+	wifi_w = 0;
+	if (wifi_level == -2)
+		return;
+	wifi_w = 4 * bw + 3 * gap + 20;
+	wifi_x = right - PAD - wifi_w;
+	XftDrawRect(draw, hover == HOVER_WIFI ? &c_hover : &c_bg, wifi_x, PAD, wifi_w, bh);
+	for (int i = 0; i < 4; i++) {
+		int bar = h * (i + 1) / 4;
+
+		XftDrawRect(draw, i < wifi_level ? &c_text : &c_sep,
+		            wifi_x + 10 + i * (bw + gap), top + h - bar, bw, bar);
+	}
+}
+
 static void draw_panel(void)
 {
 	char label[TITLE_MAX + 8];
@@ -632,7 +696,8 @@ static void draw_panel(void)
 
 	draw_clock();
 	draw_update();
-	avail = (update_w ? update_x : clock_x) - PAD - left;
+	draw_wifi(update_w ? update_x : clock_x);
+	avail = (wifi_w ? wifi_x : update_w ? update_x : clock_x) - PAD - left;
 
 	/* Start button */
 	XftDrawRect(draw, menu_open ? &c_active : hover == HOVER_START ? &c_hover
@@ -1006,6 +1071,8 @@ static int panel_hit(int x)
 		return HOVER_CLOCK;
 	if (update_w && x >= update_x && x < update_x + update_w)
 		return HOVER_UPDATE;
+	if (wifi_w && x >= wifi_x && x < wifi_x + wifi_w)
+		return HOVER_WIFI;
 	if (x >= PAD && x < PAD + START_W)
 		return HOVER_START;
 	for (int i = 0; i < ntasks; i++)
@@ -1207,6 +1274,8 @@ static void handle(XEvent *e)
 			open_calendar();
 		} else if (i == HOVER_UPDATE) {
 			run("my-setup --update");
+		} else if (i == HOVER_WIFI) {
+			run("my-wifi");
 		} else if (i == HOVER_START) {
 			open_menu();
 			redraw_menu();
@@ -1408,7 +1477,7 @@ int main(int argc, char **argv)
 			draw_panel();
 		}
 
-		if (update_clock() | read_update_status() || cfg.clock_seconds)
+		if (update_clock() | read_update_status() | read_wifi() || cfg.clock_seconds)
 			draw_panel();
 		if (cal_open)
 			draw_calendar();     /* its big clock */

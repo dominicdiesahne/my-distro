@@ -1,7 +1,7 @@
 ################################################################################
 #
-# my-settings: the Settings app, the Clock app and the setup / "Users and
-# system" window (my-setup) from settings/. settings.c and
+# my-settings: the Settings app, the Clock app, the setup / "Users and
+# system" window (my-setup) and the Wi-Fi window (my-wifi) from settings/. settings.c and
 # dial.c are also compiled into my-panel and my-login.
 #
 ################################################################################
@@ -21,12 +21,14 @@ define MY_SETTINGS_BUILD_CMDS
 		$(@D)/settings.c $(MY_SETTINGS_GTK) -lm
 	$(MY_SETTINGS_CC) -o $(@D)/my-setup $(@D)/my-setup.c $(@D)/settings.c \
 		$(MY_SETTINGS_GTK) $$($(PKG_CONFIG_HOST_BINARY) --cflags --libs libxcrypt)
+	$(MY_SETTINGS_CC) -o $(@D)/my-wifi $(@D)/my-wifi.c $(MY_SETTINGS_GTK)
 endef
 
 define MY_SETTINGS_INSTALL_TARGET_CMDS
 	$(INSTALL) -D -m 0755 $(@D)/my-settings $(TARGET_DIR)/usr/bin/my-settings
 	$(INSTALL) -D -m 0755 $(@D)/my-clock $(TARGET_DIR)/usr/bin/my-clock
 	$(INSTALL) -D -m 0755 $(@D)/my-setup $(TARGET_DIR)/usr/bin/my-setup
+	$(INSTALL) -D -m 0755 $(@D)/my-wifi $(TARGET_DIR)/usr/bin/my-wifi
 endef
 
 $(eval $(generic-package))

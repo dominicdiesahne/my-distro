@@ -1,0 +1,3 @@
+# A Wi-Fi adapter appeared (its driver loaded at boot, or a USB Wi-Fi stick
+# was plugged in): start wpa_supplicant for it.
+ACTION=="add", SUBSYSTEM=="net", ENV{DEVTYPE}=="wlan", RUN+="/usr/lib/my-distro/wifi-start %k"

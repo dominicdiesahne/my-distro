@@ -67,7 +67,10 @@ the taskbar, the login screen, the file history daemon and the search indexer.
 - **Python 3** with pip, so `.py` scripts run (`python3 file.py`).
 - **Live ISO** for BIOS and UEFI, from a CD or a USB stick; tested in
   VirtualBox and QEMU. Drivers for real PCs: Intel and AMD graphics,
-  Realtek and Intel network cards, laptop touchpads.
+  Realtek and Intel network cards, Wi-Fi, laptop touchpads.
+- **Wi-Fi** (`settings/my-wifi.c`): bars in the taskbar show the signal; a
+  click lists the networks around, asks for the password and connects
+  (wpa_supplicant underneath; started by a udev rule when an adapter appears).
 - **Installer** (`my-install`): copies the live system onto a hard disk with
   GRUB for BIOS and UEFI, so your files and settings survive a reboot.
 
@@ -137,9 +140,17 @@ on the PC's disk unless you run *Install to disk*.
 
 What works: Intel and AMD graphics (the screen's resolution, several
 monitors; no 3D acceleration), wired network with Intel or Realtek cards,
-laptop touchpads (I2C) and USB keyboards and mice, NVMe, SATA and USB disks,
-Intel HD Audio. **No Wi-Fi yet**: use a network cable. NVIDIA graphics only
-get the basic firmware screen.
+Wi-Fi (below), laptop touchpads (I2C) and USB keyboards and mice, NVMe,
+SATA and USB disks, Intel HD Audio. NVIDIA graphics only get the basic
+firmware screen.
+
+**Wi-Fi:** click the Wi-Fi bars in the taskbar (or Start menu, *Wi-Fi*),
+pick a network, type its password. my-distro remembers it
+(`/etc/wpa_supplicant.conf`, kept by system updates) and connects again by
+itself. Drivers and firmware are in for Intel, Qualcomm Atheros, MediaTek,
+Realtek and Broadcom chips, and most USB Wi-Fi sticks. Networks without a
+name (hidden) and enterprise Wi-Fi (eduroam, username + password) can't be
+chosen in the window yet; `wpa_cli` in a terminal can.
 
 If something doesn't work, a terminal shows what the PC has: `lspci -k`
 (each device and the driver that took it), `dmesg | grep -i firmware`.
@@ -299,7 +310,7 @@ What happens (`/usr/bin/my-update`, a Python script):
    same disk, so each file is either the old or the new one, never half).
    It **keeps** `/home`, `/root`, `/var`, users and passwords
    (`/etc/passwd`, `shadow`, `group`), the computer name, the keyboard layout,
-   the boot loader and `update.conf`.
+   the boot loader, the saved Wi-Fi networks and `update.conf`.
 5. It runs `/usr/lib/my-distro/installed-fixups` (same as the installer:
    no "Install to disk" icon), and you restart.
 
@@ -414,7 +425,8 @@ make run    # boots in the terminal; quit with Ctrl-A, then X
 - NetSurf has limited JavaScript; big web apps (YouTube, Google Docs) don't work.
 - Only x86-64. Tested in VirtualBox and QEMU; the drivers for real PCs are
   in, but not yet tried on one (see [On a real PC](#on-a-real-pc)).
-- No Wi-Fi yet: on a real PC only a network cable works.
+- Wi-Fi: no hidden networks and no enterprise Wi-Fi (eduroam) in the
+  Wi-Fi window yet.
 - Graphics drivers set the screen up, but there is no 3D acceleration
   (Mesa's software renderer only).
 

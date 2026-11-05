@@ -59,6 +59,7 @@ KEEP = [
     "etc/hostname", "etc/hosts", "etc/fstab",
     "etc/X11/xorg.conf.d/00-keyboard.conf",
     "etc/my-distro/setup-done", "etc/my-distro/update.conf",
+    "etc/wpa_supplicant.conf",                   # saved Wi-Fi networks
 ]
 
 

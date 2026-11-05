@@ -140,6 +140,7 @@ desktop: $(BR_DIR)/Makefile
 > chmod 755 $(BR_SRC)/desktop/overlay/etc/init.d/S90desktop $(BR_SRC)/desktop/overlay/etc/init.d/S50history $(BR_SRC)/desktop/overlay/root/.xinitrc \
 >   $(BR_SRC)/desktop/overlay/usr/sbin/my-install $(BR_SRC)/desktop/overlay/usr/bin/my-ide \
 >   $(BR_SRC)/desktop/overlay/usr/bin/my-update $(BR_SRC)/desktop/overlay/usr/lib/my-distro/installed-fixups \
+>   $(BR_SRC)/desktop/overlay/usr/lib/my-distro/wifi-start $(BR_SRC)/desktop/overlay/usr/lib/my-distro/wifi-event \
 >   $(BR_SRC)/desktop/post-build.sh
 > $(BR_MAKE) qemu_x86_64_defconfig
 > cd $(BR_OUT) && $(BR_DIR)/support/kconfig/merge_config.sh -m .config $(BR_SRC)/desktop/buildroot.fragment

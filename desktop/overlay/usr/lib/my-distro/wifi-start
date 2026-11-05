@@ -1,0 +1,32 @@
+#!/bin/sh
+# wifi-start IFACE: starts Wi-Fi on a network interface like wlan0.
+# udev runs it when a Wi-Fi adapter appears (/etc/udev/rules.d/70-my-wifi.rules).
+#
+#   wpa_supplicant  finds and joins the networks saved in /etc/wpa_supplicant.conf
+#                   (the Wi-Fi window adds them). Members of the group netdev
+#                   may control it through /run/wpa_supplicant/IFACE.
+#   wpa_cli -a      runs wifi-event when it connects, which gets an IP address
+#
+# Log: /tmp/wifi.log
+IF="$1"
+[ -n "$IF" ] || exit 1
+export PATH=/sbin:/bin:/usr/sbin:/usr/bin
+CONF=/etc/wpa_supplicant.conf
+exec >>/tmp/wifi.log 2>&1
+echo "$(date '+%F %T') wifi-start $IF"
+
+[ -S "/run/wpa_supplicant/$IF" ] && exit 0      # already running
+
+if [ ! -f "$CONF" ]; then
+	printf 'ctrl_interface=DIR=/run/wpa_supplicant GROUP=netdev\nupdate_config=1\n' >"$CONF"
+fi
+chmod 600 "$CONF"                                # it holds the Wi-Fi passwords
+
+# Some laptops start with Wi-Fi switched off in software ("soft blocked")
+for f in /sys/class/rfkill/rfkill*/soft; do
+	[ -w "$f" ] && echo 0 >"$f"
+done
+ip link set "$IF" up
+wpa_supplicant -B -i "$IF" -c "$CONF" -D nl80211,wext -P "/run/wpa_supplicant.$IF.pid" || exit 1
+wpa_cli -B -i "$IF" -p /run/wpa_supplicant -a /usr/lib/my-distro/wifi-event \
+	-P "/run/wpa_cli.$IF.pid"
