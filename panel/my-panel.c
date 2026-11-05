@@ -8,7 +8,8 @@
  *   one "Label|command|icon" per line, "-" for a separator line.
  *   `killall -USR1 my-panel` opens it too (Openbox binds that to Super+Space).
  * - One button per open window, with the app's icon. Click: bring it to the
- *   front; click the window that is already in front: minimise it.
+ *   front; click the window that is already in front: minimise it. The x on
+ *   the button (shown under the mouse and on the active window) closes it.
  *   The icon comes from the window itself (_NET_WM_ICON, GTK apps set it) or,
  *   for apps that don't have one, from /etc/my-panel/icons (window class ->
  *   icon name in the Adwaita icon theme).
@@ -59,6 +60,7 @@
 #define TITLE_MAX   200
 #define ICON_SIZE   20
 #define MAX_CACHE   64
+#define CLOSE_W     22       /* the x on a window button */
 #define CAL_W       296      /* calendar popup */
 #define CAL_TOP     92       /* height of the big time + date at its top */
 #define CAL_CELL    38
@@ -105,6 +107,7 @@ static struct task tasks[MAX_TASKS];
 static int ntasks;
 static Window active;
 static int hover = HOVER_NONE;
+static int hover_close;      /* the mouse is on the x of button `hover` */
 
 static struct item items[MAX_ITEMS];
 static int nitems, menu_h, menu_open, menu_hover = -1, item_h = ITEM_H;
@@ -130,7 +133,7 @@ static volatile sig_atomic_t menu_requested;   /* set by SIGUSR1 */
 
 static Atom A_ICON, A_CLIENT_LIST, A_ACTIVE, A_NAME, A_UTF8, A_STATE, A_HIDDEN,
 	A_SKIP_TASKBAR, A_TYPE, A_TYPE_DOCK, A_TYPE_DESKTOP, A_STRUT,
-	A_STRUT_PARTIAL, A_STICKY, A_ABOVE, A_DESKTOP;
+	A_STRUT_PARTIAL, A_STICKY, A_ABOVE, A_DESKTOP, A_CLOSE;
 
 /* Windows disappear all the time; asking about a closed one is not an error. */
 static int ignore_x_errors(Display *d, XErrorEvent *e)
@@ -462,6 +465,50 @@ static void draw_dial(Drawable d, int w, int h, double cx, double cy, double r,
 	cairo_surface_destroy(surf);
 }
 
+/* Buttons wide enough get an x that closes the window. */
+static int has_close(const struct task *t)
+{
+	return t->w >= ICON_SIZE + 16 + CLOSE_W + 40;
+}
+
+/* Where the x is: a square at the right end of the button */
+static int close_x(const struct task *t)
+{
+	return t->x + t->w - CLOSE_W - 4;
+}
+
+/* The x, with a red circle behind it while the mouse is on it */
+static void draw_close(const struct task *t, int hot)
+{
+	cairo_surface_t *surf = cairo_xlib_surface_create(dpy, buf, vis, sw, panel_h);
+	cairo_t *cr = cairo_create(surf);
+	double cx = close_x(t) + CLOSE_W / 2.0, cy = panel_h / 2.0, r = 4.5;
+
+	XFlush(dpy);                 /* Xft's drawing first, then cairo's on top */
+	if (hot) {
+		cairo_arc(cr, cx, cy, CLOSE_W / 2.0 - 1, 0, 2 * M_PI);
+		dial_color(cr, "#e5484d", 1);
+		cairo_fill(cr);
+	}
+	cairo_move_to(cr, cx - r, cy - r);
+	cairo_line_to(cr, cx + r, cy + r);
+	cairo_move_to(cr, cx + r, cy - r);
+	cairo_line_to(cr, cx - r, cy + r);
+	cairo_set_line_width(cr, 1.6);
+	cairo_set_line_cap(cr, CAIRO_LINE_CAP_ROUND);
+	dial_color(cr, hot ? "#ffffff" : cfg.pal.text, hot ? 1 : 0.8);
+	cairo_stroke(cr);
+	cairo_destroy(cr);
+	cairo_surface_destroy(surf);
+}
+
+/* Is x on the x of task i? */
+static int on_close(int i, int x)
+{
+	return i >= 0 && has_close(&tasks[i]) && x >= close_x(&tasks[i]) &&
+	       x < close_x(&tasks[i]) + CLOSE_W;
+}
+
 /*
  * The clock area at the right end of the panel. Digital: time in bold with
  * the date small underneath (or the time alone). Analog: a small dial, with
@@ -557,9 +604,12 @@ static void draw_panel(void)
 			if (is_active)
 				XftDrawRect(draw, &c_accent, t->x, PAD + bh - 2, w, 2);
 			draw_icon(buf, t->icon, t->x + 8, PAD + (bh - ICON_SIZE) / 2);
-			fit_text(font, t->title, w - ICON_SIZE - 26, label);
+			fit_text(font, t->title, w - ICON_SIZE - 26 - (has_close(t) ? CLOSE_W : 0),
+			         label);
 			text(draw, font, t->hidden ? &c_dim : &c_text,
 			     t->x + ICON_SIZE + 16, PAD, bh, label);
+			if (has_close(t) && (hover == i || is_active))
+				draw_close(t, hover == i && hover_close);
 		}
 	}
 
@@ -879,6 +929,22 @@ static int cal_arrow_at(int x, int y)
 	return -1;
 }
 
+/* Asks Openbox to close the window, like its own x in the title bar: the
+ * app gets WM_DELETE_WINDOW and can still ask "save changes?". */
+static void close_window(Window w)
+{
+	XEvent e = { 0 };
+
+	e.xclient.type = ClientMessage;
+	e.xclient.window = w;
+	e.xclient.message_type = A_CLOSE;
+	e.xclient.format = 32;
+	e.xclient.data.l[0] = CurrentTime;
+	e.xclient.data.l[1] = 2;        /* 2 = request comes from a pager/taskbar */
+	XSendEvent(dpy, root, False,
+	           SubstructureRedirectMask | SubstructureNotifyMask, &e);
+}
+
 static int panel_hit(int x)
 {
 	if (x >= clock_x && x < clock_x + clock_w)
@@ -1023,9 +1089,13 @@ static void handle(XEvent *e)
 
 	case MotionNotify:
 		if (e->xmotion.window == panel) {
+			int c;
+
 			i = panel_hit(e->xmotion.x);
-			if (i != hover) {
+			c = on_close(i, e->xmotion.x);
+			if (i != hover || c != hover_close) {
 				hover = i;
+				hover_close = c;
 				draw_panel();
 			}
 		} else if (e->xmotion.window == cal) {
@@ -1081,6 +1151,8 @@ static void handle(XEvent *e)
 		} else if (i == HOVER_START) {
 			open_menu();
 			redraw_menu();
+		} else if (on_close(i, e->xbutton.x)) {
+			close_window(tasks[i].win);
 		} else if (i >= 0) {
 			struct task *t = &tasks[i];
 
@@ -1209,6 +1281,7 @@ int main(int argc, char **argv)
 	A_STICKY        = atom("_NET_WM_STATE_STICKY");
 	A_ABOVE         = atom("_NET_WM_STATE_ABOVE");
 	A_DESKTOP       = atom("_NET_WM_DESKTOP");
+	A_CLOSE         = atom("_NET_CLOSE_WINDOW");
 
 	font  = open_font("", cfg.font_size);
 	bold  = open_font(":bold", cfg.font_size);
