@@ -10,6 +10,7 @@ Calculator|xcalc|accessories-calculator
 Clock|xclock|x-office-calendar
 Search files|my-search-gui|system-search
 File history|my-history|document-open-recent
+Install to disk|xterm -name my-install -T "Install my-distro" -e /usr/sbin/my-install|drive-harddisk
 -
 Log out|openbox --exit|system-log-out
 Reboot|my-power reboot|view-refresh

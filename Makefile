@@ -7,6 +7,8 @@
 #                      and the bootable ISO out/my-distro.iso
 #   make run-desktop   boot the desktop in a QEMU window
 #   make run-iso       boot the ISO in a QEMU window
+#   make run-install   boot the ISO with an empty disk, to test the installer
+#   make run-disk      boot the system installed on that disk
 #   make clean         rebuild only init + initramfs next time
 #
 # Recipes start with '>' instead of a tab (see .RECIPEPREFIX).
@@ -45,7 +47,7 @@ BR_MAKE := env PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 # Use hardware acceleration if this user can open /dev/kvm.
 KVM := $(shell [ -w /dev/kvm ] && echo -enable-kvm)
 
-.PHONY: all run desktop run-desktop run-iso clean distclean
+.PHONY: all run desktop run-desktop run-iso run-install run-disk clean distclean
 
 all: $(BZIMAGE) $(INITRAMFS)
 
@@ -130,6 +132,7 @@ desktop: $(BR_DIR)/Makefile
 > cp -r desktop init panel login history search $(BR_SRC)/
 > chmod -R u=rwX,go=rX $(BR_SRC)
 > chmod 755 $(BR_SRC)/desktop/overlay/etc/init.d/S90desktop $(BR_SRC)/desktop/overlay/etc/init.d/S50history $(BR_SRC)/desktop/overlay/root/.xinitrc \
+>   $(BR_SRC)/desktop/overlay/usr/sbin/my-install \
 >   $(BR_SRC)/desktop/post-build.sh
 > $(BR_MAKE) qemu_x86_64_defconfig
 > cd $(BR_OUT) && $(BR_DIR)/support/kconfig/merge_config.sh -m .config $(BR_SRC)/desktop/buildroot.fragment
@@ -148,6 +151,21 @@ desktop: $(BR_DIR)/Makefile
 # Boot the ISO like a VM would (BIOS, 2 GB RAM).
 run-iso:
 > qemu-system-x86_64 $(KVM) -m 2048 -smp 2 -cdrom out/my-distro.iso \
+>   -vga std -device qemu-xhci -device usb-tablet -nic user,model=e1000
+
+# Test the installer: boot the ISO with an empty 8 GB disk (virtio), run
+# "Install to disk", power off, then boot the installed system with run-disk.
+DISK_IMG := $(BUILD)/disk.img
+
+run-install:
+> [ -f $(DISK_IMG) ] || truncate -s 8G $(DISK_IMG)
+> qemu-system-x86_64 $(KVM) -m 2048 -smp 2 -cdrom out/my-distro.iso \
+>   -drive file=$(DISK_IMG),if=virtio,format=raw -boot d \
+>   -vga std -device qemu-xhci -device usb-tablet -nic user,model=e1000
+
+run-disk:
+> qemu-system-x86_64 $(KVM) -m 2048 -smp 2 \
+>   -drive file=$(DISK_IMG),if=virtio,format=raw \
 >   -vga std -device qemu-xhci -device usb-tablet -nic user,model=e1000
 
 run-desktop:

@@ -3,7 +3,7 @@
 A small Linux distribution built from source, with its own init system,
 desktop pieces and two features most desktops don't have: **system-wide undo**
 for every file change and **AI semantic file search** that finds files by
-meaning. It boots as a live ISO in a VM.
+meaning. It boots as a live ISO in a VM and can install itself onto a disk.
 
 Most of the parts that make it *this* distro are written in plain C and kept
 short and commented, so you can read how an OS fits together: `init` (PID 1),
@@ -34,8 +34,14 @@ the taskbar, the login screen, the file history daemon and the search indexer.
 - **Desktop:** Xorg, Openbox, PCManFM file manager with desktop icons, NetSurf
   web browser (HTTPS), xterm, nano, htop, calculator, generated wallpaper.
 - **Live ISO** for BIOS and UEFI; tested in VirtualBox and QEMU.
+- **Installer** (`my-install`): copies the live system onto a hard disk with
+  GRUB for BIOS and UEFI, so your files and settings survive a reboot.
 
 ## Try it
+
+**Don't want to build it?** Download a ready ISO from
+[Releases](https://github.com/dominicdiesahne/my-distro/releases/latest)
+and go to step 2.
 
 ### 1. Build the ISO
 
@@ -87,8 +93,29 @@ In the boot menu, *safe graphics* helps if the screen stays black.
 | `root` | `root` | administrator |
 
 These are default passwords of a **live system for testing**: everything runs
-in RAM and is gone after a reboot. Change the users before you use it anywhere
-else (see [Customize](#customize)).
+in RAM and is gone after a reboot, unless you [install it](#4-install-to-a-disk-optional).
+The installer asks for new passwords; or change them with `passwd`.
+
+### 4. Install to a disk (optional)
+
+The live system forgets everything when it shuts down. To keep your files,
+install it onto a hard disk:
+
+1. Give the VM a hard disk: **VirtualBox** Settings, Storage, add a hard disk
+   (8 GB is plenty, dynamically allocated). In QEMU: `make run-install`.
+2. Boot the ISO and log in, then double-click **Install to disk** on the
+   desktop (or Start menu, *Install to disk*; or `my-install` as root).
+   It asks for the root password (`root`).
+3. Pick the disk, type `yes`. **Everything on that disk is deleted.**
+   It copies the system (a minute or two) and installs GRUB, then asks
+   for new passwords for `root` and `dominic`.
+4. Power off, remove the ISO from the optical drive (VirtualBox: Storage,
+   click the CD, *Remove disk from virtual drive*), start the VM again.
+   QEMU: `make run-disk`.
+
+It now boots from the disk, and changes stay. The disk gets three
+partitions: 1 MB for GRUB on BIOS PCs, 256 MB EFI system partition for UEFI,
+the rest is the system (ext4). It boots with BIOS and UEFI alike.
 
 ### Keyboard shortcuts
 
@@ -117,7 +144,12 @@ The keyboard layout is German (`desktop/overlay/etc/X11/xorg.conf.d/00-keyboard.
    which starts Openbox; Openbox's autostart starts the taskbar, the search
    indexer, the desktop icons and a terminal.
 6. *Log out* ends the session and the login screen comes back.
-   *Power off* sends init `SIGUSR2`: it stops all processes and powers off.
+   *Power off* sends init `SIGUSR2`: it stops all processes, makes the root
+   filesystem read-only (installed system) and powers off.
+
+On an installed system GRUB starts the kernel from `/boot/bzImage` on the
+ext4 partition with `root=PARTUUID=... init=/sbin/my-init`, so step 1 loads
+no initrd: the kernel mounts the disk itself and the rest is the same.
 
 ### System-wide undo
 
@@ -160,6 +192,7 @@ by name only.
 | `Makefile` | `make desktop` (ISO), `make run-iso`; `make` / `make run` for the minimal version |
 | `init/init.c` | PID 1 |
 | `login/` | Login screen `my-login`, `my-power` (reboot/power off for normal users) |
+| `desktop/overlay/usr/sbin/my-install` | Installer (shell script) |
 | `panel/` | Taskbar `my-panel` |
 | `history/` | `my-historyd`, `my-undo`, the File history window |
 | `search/` | `my-indexd`, `my-search`, the Search files window |
@@ -196,7 +229,8 @@ make run    # boots in the terminal; quit with Ctrl-A, then X
 
 ## Limitations
 
-- Live system only: no installer, everything is lost on reboot.
+- The installer wipes the whole disk: no dual boot next to Windows or
+  another Linux, and no updates of an installed system (reinstall instead).
 - NetSurf has limited JavaScript; big web apps (YouTube, Google Docs) don't work.
 - Only x86-64; tested in VirtualBox and QEMU, not on real hardware.
 

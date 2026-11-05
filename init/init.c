@@ -153,6 +153,14 @@ static void shut_down(enum shutdown_kind kind)
 		;
 	sync();
 
+	/* On a system installed to disk (my-install), make the root filesystem
+	 * read-only now that nothing writes to it any more: the disk is then
+	 * clean at the next boot. The live system's root is in RAM and can't be
+	 * remounted, which is fine. */
+	if (mount(NULL, "/", NULL, MS_REMOUNT | MS_RDONLY, NULL) == 0)
+		printf("init: root filesystem is read-only\n");
+	sync();
+
 	switch (kind) {
 	case HALT:     printf("init: halting\n");     reboot(RB_HALT_SYSTEM); break;
 	case POWEROFF: printf("init: powering off\n"); reboot(RB_POWER_OFF);  break;

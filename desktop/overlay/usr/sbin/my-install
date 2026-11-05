@@ -1,0 +1,246 @@
+#!/bin/sh
+# my-install: installs the running live system onto a hard disk, so it boots
+# from the disk and keeps your files and settings after a reboot.
+#
+# What it does:
+#   1. you pick a disk; it is wiped completely
+#   2. GPT partitions: 1 MiB "BIOS boot" (GRUB for BIOS PCs), 256 MiB EFI
+#      system partition (GRUB for UEFI PCs), the rest ext4 for the system
+#   3. copies the root filesystem (everything that runs from RAM now) and the
+#      kernel onto the ext4 partition
+#   4. installs GRUB for BIOS and UEFI and writes its boot menu
+#   5. lets you set new passwords for root and dominic
+#
+# Run it as root, or from the "Install to disk" icon (asks for the root
+# password). Log of the last run: /tmp/my-install.log
+
+T=/mnt/target                  # where the new system is mounted
+LOG=/tmp/my-install.log
+DESKTOP_USER=dominic
+
+pause() {
+	printf "\nPress Enter to close this window. "
+	read -r _
+}
+
+# Stop after showing a message. Exit code 3 tells the non-root copy of this
+# script (see step 0) that the message was already shown.
+quit() {
+	pause
+	exit 3
+}
+
+die() {
+	echo
+	echo "Installation failed: $*"
+	echo "Details: $LOG"
+	umount "$T/boot/efi" "$T/dev" "$T" 2>/dev/null
+	quit
+}
+
+# Run a command, keep its output in the log, stop the installer if it fails.
+run() {
+	echo "+ $*" >>"$LOG"
+	"$@" >>"$LOG" 2>&1 || die "$1 did not work"
+}
+
+# --- 0. Root rights and live system ------------------------------------------
+
+if [ "$(id -u)" != 0 ]; then
+	echo "Installing needs administrator rights."
+	echo "Enter the root password (on the live system: root)."
+	su root -c "$0"
+	rc=$?
+	if [ "$rc" != 0 ] && [ "$rc" != 3 ]; then
+		echo "That did not work (wrong password?)."
+		pause
+	fi
+	exit "$rc"
+fi
+
+# The live system is started with rdinit= (root filesystem in RAM).
+if ! grep -q "rdinit=" /proc/cmdline; then
+	echo "This system already runs from a disk, there is nothing to install."
+	quit
+fi
+
+echo "=== Install my-distro to a disk ==="
+echo
+: >"$LOG"
+
+# --- 1. Pick a disk ------------------------------------------------------------
+
+# Every block device in /sys/block is a candidate, except RAM disks, loop
+# devices, CD/DVD drives and floppies.
+n=0
+DISKS=""
+for d in /sys/block/*; do
+	name=${d##*/}
+	case "$name" in loop*|ram*|zram*|sr*|fd*) continue ;; esac
+	[ "$(cat "$d/ro" 2>/dev/null)" = 1 ] && continue
+	sectors=$(cat "$d/size")
+	gb=$((sectors / 2097152))        # 512-byte sectors -> GiB
+	[ "$gb" -lt 2 ] && continue
+	model=$(cat "$d/device/model" 2>/dev/null | sed 's/ *$//')
+	n=$((n + 1))
+	DISKS="$DISKS $name"
+	printf "  %d) /dev/%-10s %5d GB  %s\n" "$n" "$name" "$gb" "$model"
+done
+
+if [ "$n" = 0 ]; then
+	echo "No hard disk found (it needs at least 2 GB)."
+	echo "In a VM: shut down, add a virtual hard disk (8 GB is plenty), start again."
+	quit
+fi
+
+echo
+printf "Install onto which disk? Number (1-%d): " "$n"
+read -r choice
+i=0
+NAME=""
+for d in $DISKS; do
+	i=$((i + 1))
+	[ "$i" = "$choice" ] && NAME=$d
+done
+[ -n "$NAME" ] || { echo "No such disk."; quit; }
+DISK=/dev/$NAME
+
+# Partition names: sda -> sda1, nvme0n1 -> nvme0n1p1 (name ends in a digit)
+case "$NAME" in *[0-9]) P=${DISK}p ;; *) P=$DISK ;; esac
+ESP=${P}2
+ROOT=${P}3
+
+echo
+echo "ALL DATA ON $DISK WILL BE DELETED."
+printf "Type yes to continue: "
+read -r answer
+[ "$answer" = yes ] || { echo "Cancelled, nothing was changed."; quit; }
+
+# --- 2. Partitions and filesystems ----------------------------------------------
+
+echo
+echo "[1/5] Partitioning $DISK"
+run sfdisk --wipe always --wipe-partitions always "$DISK" <<EOF
+label: gpt
+size=1MiB, type=21686148-6449-6E6F-744E-656564454649, name="bios-boot"
+size=256MiB, type=C12A7328-F81F-11D2-BA4B-00A0C93EC93B, name="efi"
+type=0FC63DAF-8483-4772-8E79-3D69D8477DE4, name="my-distro"
+EOF
+
+# udev needs a moment to create the device files for the new partitions
+for _ in 1 2 3 4 5 6 7 8 9 10; do
+	[ -b "$ROOT" ] && break
+	sleep 1
+done
+[ -b "$ROOT" ] || die "$ROOT did not appear"
+
+run mkfs.fat -F 32 -n EFI "$ESP"
+run mkfs.ext4 -F -q -L my-distro "$ROOT"
+
+# --- 3. Copy the system ------------------------------------------------------------
+
+echo "[2/5] Copying the system (a minute or two)"
+mkdir -p "$T"
+run mount -t ext4 "$ROOT" "$T"
+
+# Everything at the top level except the virtual filesystems the kernel and
+# init create at every boot, and the mount points.
+for f in /* /.[!.]*; do
+	[ -e "$f" ] || continue
+	case "$f" in /proc|/sys|/dev|/tmp|/run|/mnt|/media|/lost+found) continue ;; esac
+	run cp -a "$f" "$T/"
+done
+mkdir -p "$T/proc" "$T/sys" "$T/dev" "$T/run" "$T/mnt" "$T/media"
+mkdir -p -m 1777 "$T/tmp"
+
+# The installer is not needed on the installed system.
+rm -f "$T/usr/share/applications/my-install.desktop" \
+      "$T/root/Desktop/my-install.desktop" \
+      "$T"/home/*/Desktop/my-install.desktop
+sed -i '/my-install/d' "$T/etc/my-panel/menu"
+sed -i -e 's/^Everything runs from RAM.*/This system is installed on a disk: your changes are kept./' \
+	-e '/Install to disk/d' \
+	"$T/root/Documents/welcome.txt" "$T"/home/*/Documents/welcome.txt 2>/dev/null
+
+[ -f "$T/boot/bzImage" ] || die "the kernel /boot/bzImage is missing in the live system"
+
+# --- 4. Boot loader ---------------------------------------------------------------
+
+echo "[3/5] Installing the boot loader (BIOS and UEFI)"
+mkdir -p "$T/boot/efi"
+run mount -t vfat "$ESP" "$T/boot/efi"
+
+# BIOS: GRUB's first stage goes into the disk's first sector, the rest into
+# the BIOS boot partition.
+run grub-install --target=i386-pc --boot-directory="$T/boot" "$DISK"
+# UEFI: --removable puts GRUB at EFI/BOOT/BOOTX64.EFI, the path every UEFI
+# firmware starts by itself, so no boot entry in the firmware is needed.
+run grub-install --target=x86_64-efi --efi-directory="$T/boot/efi" \
+	--boot-directory="$T/boot" --removable --no-nvram
+
+# The kernel finds its root filesystem by the partition's unique ID, so it
+# doesn't matter whether the disk is called sda, vda or nvme0n1 at boot.
+PARTUUID=$(sfdisk --part-uuid "$DISK" 3)
+[ -n "$PARTUUID" ] || die "could not read the partition ID of $ROOT"
+ARGS="root=PARTUUID=$PARTUUID rootfstype=ext4 rootwait rw init=/sbin/my-init"
+
+cat >"$T/boot/grub/grub.cfg" <<EOF
+# Boot menu of the installed my-distro, written by my-install.
+# The kernel is /boot/bzImage on the system partition (GRUB found it there).
+set default="0"
+set timeout="3"
+
+insmod all_video
+set gfxpayload="1280x800,1024x768,auto"
+
+menuentry "my-distro" {
+	linux /boot/bzImage $ARGS console=tty1 quiet
+}
+
+menuentry "my-distro (safe graphics)" {
+	linux /boot/bzImage $ARGS console=tty1 nomodeset
+}
+
+menuentry "my-distro (show boot messages)" {
+	linux /boot/bzImage $ARGS console=ttyS0,115200 console=tty1
+}
+EOF
+
+# --- 5. Passwords --------------------------------------------------------------------
+
+echo "[4/5] Passwords"
+echo "The installed system still has the live passwords (root/root, $DESKTOP_USER/$DESKTOP_USER)."
+printf "Set new passwords now? [Y/n] "
+read -r answer
+case "$answer" in
+n*|N*) echo "Kept. Change them later with: passwd" ;;
+*)
+	mount -o bind /dev "$T/dev"
+	for u in root "$DESKTOP_USER"; do
+		echo "New password for $u:"
+		tries=0
+		until chroot "$T" /usr/bin/env PATH=/usr/bin:/bin passwd "$u"; do
+			tries=$((tries + 1))
+			if [ "$tries" -ge 3 ]; then
+				echo "Password of $u not changed. Change it later with: passwd $u"
+				break
+			fi
+			echo "Try again."
+		done
+	done
+	umount "$T/dev"
+	;;
+esac
+
+# --- Done ------------------------------------------------------------------------------
+
+echo "[5/5] Writing everything to the disk"
+sync
+umount "$T/boot/efi"
+umount "$T" || die "could not unmount $T"
+
+echo
+echo "Done. my-distro is installed on $DISK."
+echo "Power off, remove the ISO from the (virtual) CD drive and start again:"
+echo "it boots from the disk, and your files stay after a reboot."
+pause

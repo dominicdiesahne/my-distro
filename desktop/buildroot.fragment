@@ -53,6 +53,17 @@ BR2_TARGET_ROOTFS_ISO9660_INITRD=y
 BR2_TARGET_ROOTFS_CPIO=y
 BR2_TARGET_ROOTFS_CPIO_GZIP=y
 
+# Installer (desktop/overlay/usr/sbin/my-install): copies the live system onto
+# a disk. It needs the kernel inside the root filesystem (/boot/bzImage),
+# GRUB's grub-install with its BIOS and UEFI modules, and tools to make
+# partitions (sfdisk) and filesystems (ext4, FAT for the EFI partition).
+BR2_LINUX_KERNEL_INSTALL_TARGET=y
+BR2_TARGET_GRUB2_INSTALL_TOOLS=y
+BR2_PACKAGE_UTIL_LINUX_BINARIES=y
+BR2_PACKAGE_E2FSPROGS=y
+BR2_PACKAGE_DOSFSTOOLS=y
+BR2_PACKAGE_DOSFSTOOLS_MKFS_FAT=y
+
 # Kernel: add graphics, mouse and USB on top of the QEMU kernel config
 BR2_LINUX_KERNEL_CONFIG_FRAGMENT_FILES="$(BR2_EXTERNAL_MY_DISTRO_PATH)/linux-gui.fragment"
 

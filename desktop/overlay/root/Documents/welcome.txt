@@ -4,3 +4,4 @@ This file is in /root/Documents. Double-click it in the file manager and it
 opens in the text editor (nano: Ctrl+O saves, Ctrl+X quits).
 
 Everything runs from RAM, so changes are gone after a reboot.
+To keep them, install my-distro onto a disk: "Install to disk" on the desktop.
