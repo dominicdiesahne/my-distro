@@ -49,7 +49,7 @@ the taskbar, the login screen, the file history daemon and the search indexer.
   without a single shared word.
 - **Desktop:** Xorg, Openbox, PCManFM file manager with desktop icons, NetSurf
   web browser (HTTPS), xterm, nano, htop, calculator, generated wallpapers.
-  Right-click, *Create New…* makes text, Markdown, shell, Python, C, HTML,
+  Right-click in a Files window, *Create New…* makes text, Markdown, shell, Python, C, HTML,
   CSS, JavaScript, JSON, CSV, Lua, Makefile and config files from templates
   (`~/Templates`).
 - **Python 3** with pip, so `.py` scripts run (`python3 file.py`).
