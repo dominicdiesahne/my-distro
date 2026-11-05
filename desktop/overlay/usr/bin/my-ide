@@ -1,0 +1,13 @@
+#!/bin/sh
+# my-ide: opens LazyVim (Neovim) in its own terminal window.
+#   my-ide [file or folder ...]
+#
+# The terminal uses the JetBrains Mono Nerd Font, which has the icons
+# LazyVim draws, and says it can show all colors (COLORTERM). Inside an
+# existing terminal you can also just run: nvim
+
+export COLORTERM=truecolor
+export LANG=en_US.UTF-8     # icons and box lines are UTF-8 characters
+exec xterm -name my-ide -T "LazyVim" -tn xterm-256color -u8 \
+	-fa "JetBrainsMono Nerd Font Mono" -fs 11 -geometry 130x38 \
+	-e nvim "$@"

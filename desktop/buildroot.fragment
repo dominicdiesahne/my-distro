@@ -36,6 +36,9 @@ BR2_TARGET_LOCALTIME="Europe/Vienna"
 # decode window titles and shows every window as "Unnamed Window".
 BR2_GENERATE_LOCALE="en_US.UTF-8"
 BR2_TOOLCHAIN_GLIBC_GCONV_LIBS_COPY=y
+# Keep Xlib's UTF-8 locale too (its folder is called en_US.UTF-8); without it
+# X programs like xterm fall back to plain ASCII and show icons as garbage.
+BR2_ENABLE_LOCALE_WHITELIST="C en_US en_US.UTF-8 locale.alias locale.dir compose.dir"
 
 # Bootable ISO (images/rootfs.iso9660): GRUB for BIOS and UEFI, the whole
 # root filesystem is loaded into RAM as an initrd (a live system)
@@ -117,3 +120,10 @@ BR2_PACKAGE_CA_CERTIFICATES=y
 # Terminal tools: text editor and system monitor
 BR2_PACKAGE_NANO=y
 BR2_PACKAGE_HTOP=y
+
+# IDE: Neovim with LazyVim (desktop/package/my-ide, config in desktop/lazyvim).
+# It brings git, ripgrep and fd. wget and unzip are for Mason (:Mason),
+# which downloads language servers when you are online.
+BR2_PACKAGE_MY_IDE=y
+BR2_PACKAGE_WGET=y
+BR2_PACKAGE_UNZIP=y

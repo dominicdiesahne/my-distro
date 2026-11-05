@@ -21,6 +21,8 @@ the taskbar, the login screen, the file history daemon and the search indexer.
 | **Another theme, taskbar on top, analog clock** | **Calendar (click the clock)** |
 | ![Violet theme](docs/screenshots/themes.png) | ![Calendar](docs/screenshots/calendar.png) |
 
+![LazyVim IDE with file explorer and syntax highlighting](docs/screenshots/ide.png)
+
 ## Features
 
 - **Own init in C** (`init/init.c`) as PID 1: mounts filesystems, runs the boot
@@ -35,6 +37,10 @@ the taskbar, the login screen, the file history daemon and the search indexer.
   Changes apply at once to the taskbar, window borders, wallpaper, terminal
   and the login screen.
 - **Clock app** (`settings/my-clock.c`): a big analog or digital clock.
+- **IDE:** Neovim with [LazyVim](https://www.lazyvim.org/) (*Code editor* in
+  the Start menu, or `my-ide [file]`). Plugins and syntax parsers for 32
+  languages come preinstalled, so it works without internet. git, ripgrep
+  and fd included.
 - **System-wide undo** (`history/`): every file that any program changes is
   saved as a version (kernel *fanotify*). Undo from a window or with `my-undo`.
 - **Semantic file search** (`search/`): an embedding model (all-MiniLM-L6-v2 via
@@ -195,6 +201,25 @@ Use the **Search files** window (Super+S) or `my-search what you are looking for
 The model is English; German text works poorly. PDFs and office files are found
 by name only.
 
+## IDE (LazyVim)
+
+*Code editor* on the desktop or in the Start menu opens LazyVim in a terminal
+with the JetBrains Mono Nerd Font (for its icons). Press `Space` and wait to
+see all shortcuts; `Space e` file tree, `Space Space` find files,
+`Space /` search in files, `Space g s` git status,
+`:Lazy` plugins, `:Mason` language servers (needs internet).
+
+How it gets there: Buildroot has no Neovim, so `desktop/package/my-ide`
+takes the official prebuilt one (x86-64, glibc, like my-distro). During the
+build, that same Neovim runs on the build machine, installs LazyVim's
+plugins at the versions in `desktop/lazyvim/lazy-lock.json`, and compiles
+the tree-sitter parsers with my-distro's cross-compiler. The result is put
+into dominic's home. The config is `desktop/lazyvim` (= `~/.config/nvim`).
+
+my-distro has no C compiler, so `:TSInstall` for more languages doesn't
+work on the running system; add them to `desktop/package/my-ide/parsers.lua`
+and rebuild. The IDE is set up for the user `dominic` only.
+
 ## Project layout
 
 | Path | What it is |
@@ -204,6 +229,7 @@ by name only.
 | `login/` | Login screen `my-login`, `my-power` (reboot/power off for normal users) |
 | `desktop/overlay/usr/sbin/my-install` | Installer (shell script) |
 | `panel/` | Taskbar `my-panel` |
+| `desktop/lazyvim/`, `desktop/package/my-ide/` | The IDE: LazyVim config, and how Neovim and the plugins get into the image |
 | `settings/` | Settings app, Clock app, and `settings.c` / `dial.c` that the taskbar and login screen share with them |
 | `history/` | `my-historyd`, `my-undo`, the File history window |
 | `search/` | `my-indexd`, `my-search`, the Search files window |
@@ -273,6 +299,7 @@ make run    # boots in the terminal; quit with Ctrl-A, then X
   another Linux, and no updates of an installed system (reinstall instead).
 - NetSurf has limited JavaScript; big web apps (YouTube, Google Docs) don't work.
 - Only x86-64; tested in VirtualBox and QEMU, not on real hardware.
+- The ISO is about 220 MB, half of it the IDE (Neovim, plugins, parsers).
 
 ## License
 

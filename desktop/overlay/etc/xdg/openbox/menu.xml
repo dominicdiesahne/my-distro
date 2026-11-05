@@ -3,6 +3,7 @@
 <openbox_menu xmlns="http://openbox.org/3.4/menu">
   <menu id="root-menu" label="my-distro">
     <item label="Terminal"><action name="Execute"><command>xterm</command></action></item>
+    <item label="Code editor"><action name="Execute"><command>my-ide</command></action></item>
     <item label="Calculator"><action name="Execute"><command>xcalc</command></action></item>
     <item label="Clock"><action name="Execute"><command>my-clock</command></action></item>
     <item label="Eyes"><action name="Execute"><command>xeyes</command></action></item>

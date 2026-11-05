@@ -5,3 +5,10 @@ XTerm*foreground: #d8f3f0
 XTerm*cursorColor: #4fd1c5
 XTerm*loginShell: true
 XTerm*title: Terminal
+
+! Alt+key sends ESC+key (Neovim/LazyVim use Alt shortcuts)
+XTerm*metaSendsEscape: true
+! Programs may copy to the clipboard (OSC 52; LazyVim's yank uses it), but
+! not read it. This is xterm's default list without SetSelection.
+XTerm*disallowedWindowOps: 1,2,3,4,5,6,7,8,9,11,13,14,18,19,20,21,GetSelection,SetWinLines,SetXprop
+XTerm*selectToClipboard: true

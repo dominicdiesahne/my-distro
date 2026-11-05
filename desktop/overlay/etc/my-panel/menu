@@ -4,6 +4,7 @@
 Terminal|xterm|utilities-terminal
 Files|pcmanfm ~|system-file-manager
 Web browser|netsurf-gtk3|web-browser
+Code editor (LazyVim)|my-ide|/usr/lib/nvim/share/icons/hicolor/128x128/apps/nvim.png
 Text editor|xterm -name editor -T "Text editor" -e nano|accessories-text-editor
 System monitor|xterm -name monitor -T "System monitor" -e htop|computer
 Calculator|xcalc|accessories-calculator

@@ -1,0 +1,10 @@
+config BR2_PACKAGE_MY_IDE
+	bool "my-ide"
+	depends on BR2_x86_64 && BR2_TOOLCHAIN_USES_GLIBC  # prebuilt Neovim
+	select BR2_PACKAGE_GIT        # lazy.nvim installs and updates plugins
+	select BR2_PACKAGE_RIPGREP    # search in files
+	select BR2_PACKAGE_FD         # find files
+	help
+	  The IDE of my-distro: Neovim with LazyVim. Plugins and
+	  tree-sitter parsers are installed while building, so it
+	  works without internet. Start it with my-ide.
