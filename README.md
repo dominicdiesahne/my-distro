@@ -20,6 +20,8 @@ the taskbar, the login screen, the file history daemon and the search indexer.
 | ![Settings app](docs/screenshots/settings.png) | ![Clock app](docs/screenshots/clock.png) |
 | **Another theme, taskbar on top, analog clock** | **Calendar (click the clock)** |
 | ![Violet theme](docs/screenshots/themes.png) | ![Calendar](docs/screenshots/calendar.png) |
+| **First-boot setup** | **Users and system** |
+| ![Setup](docs/screenshots/setup.png) | ![Users and system](docs/screenshots/users.png) |
 
 ![LazyVim IDE with file explorer and syntax highlighting](docs/screenshots/ide.png)
 
