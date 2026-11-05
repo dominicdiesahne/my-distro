@@ -299,9 +299,14 @@ static Imlib_Image class_icon(Window w)
 	Imlib_Image img = NULL;
 
 	if (XGetClassHint(dpy, w, &ch)) {
-		for (int i = 0; !img && i < nclass_icons; i++)
-			if ((ch.res_name && strcasecmp(ch.res_name, class_icons[i].cls) == 0) ||
-			    (ch.res_class && strcasecmp(ch.res_class, class_icons[i].cls) == 0))
+		/* The window's own name first, then its class: "xterm -name my-ide"
+		 * has the name my-ide but the class XTerm, and must get my-ide's
+		 * icon, not the one for all xterms. */
+		for (int i = 0; !img && ch.res_name && i < nclass_icons; i++)
+			if (strcasecmp(ch.res_name, class_icons[i].cls) == 0)
+				img = theme_icon(class_icons[i].icon);
+		for (int i = 0; !img && ch.res_class && i < nclass_icons; i++)
+			if (strcasecmp(ch.res_class, class_icons[i].cls) == 0)
 				img = theme_icon(class_icons[i].icon);
 		if (ch.res_name)
 			XFree(ch.res_name);
