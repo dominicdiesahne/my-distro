@@ -6,4 +6,4 @@ Icon=/usr/lib/nvim/share/icons/hicolor/128x128/apps/nvim.png
 Exec=my-ide %F
 Terminal=false
 Categories=Development;IDE;TextEditor;
-MimeType=text/plain;text/x-csrc;text/x-chdr;text/x-c++src;text/x-python;text/x-shellscript;application/json;text/markdown;
+MimeType=text/plain;text/x-csrc;text/x-chdr;text/x-c++src;text/x-python;text/x-shellscript;application/json;text/markdown;text/x-makefile;text/x-python3;text/css;text/javascript;application/javascript;text/csv;text/x-lua;text/html;application/xml;application/x-zerosize;

@@ -1,0 +1,5 @@
+# Where the standard folders are. The file manager takes its
+# "Create New..." menu from the files in Templates.
+XDG_DESKTOP_DIR="$HOME/Desktop"
+XDG_DOCUMENTS_DIR="$HOME/Documents"
+XDG_TEMPLATES_DIR="$HOME/Templates"

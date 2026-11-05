@@ -5,4 +5,4 @@ Icon=accessories-text-editor
 Exec=xterm -name editor -T "Text editor" -e nano %f
 Terminal=false
 Categories=Utility;TextEditor;
-MimeType=text/plain;text/x-csrc;text/x-chdr;text/x-shellscript;text/x-makefile;application/x-shellscript;text/markdown;application/xml;
+MimeType=text/plain;text/x-csrc;text/x-chdr;text/x-shellscript;text/x-makefile;application/x-shellscript;text/markdown;application/xml;text/x-python;text/x-python3;text/css;text/javascript;application/javascript;application/json;text/csv;text/x-lua;text/x-c++src;application/x-zerosize;text/html;

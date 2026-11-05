@@ -49,6 +49,10 @@ the taskbar, the login screen, the file history daemon and the search indexer.
   without a single shared word.
 - **Desktop:** Xorg, Openbox, PCManFM file manager with desktop icons, NetSurf
   web browser (HTTPS), xterm, nano, htop, calculator, generated wallpapers.
+  Right-click, *Create New…* makes text, Markdown, shell, Python, C, HTML,
+  CSS, JavaScript, JSON, CSV, Lua, Makefile and config files from templates
+  (`~/Templates`).
+- **Python 3** with pip, so `.py` scripts run (`python3 file.py`).
 - **Live ISO** for BIOS and UEFI; tested in VirtualBox and QEMU.
 - **Installer** (`my-install`): copies the live system onto a hard disk with
   GRUB for BIOS and UEFI, so your files and settings survive a reboot.
@@ -80,7 +84,7 @@ cd my-distro
 make desktop
 ```
 
-The result is **`out/my-distro.iso`** (~90 MB). Build files go to
+The result is **`out/my-distro.iso`** (~230 MB). Build files go to
 `~/my-distro-build` (change with `make desktop BUILD=/some/path`), not into
 the repository. Kali on WSL: `setup-kali.sh` fixes the usual Kali/WSL update
 problems and installs the tools.

@@ -11,6 +11,11 @@ rm -f "$T/etc/init.d/S40xorg"
 # Desktop icons are launchers; the file manager wants them executable.
 chmod 755 "$T"/root/Desktop/*.desktop
 
+# Templates for "Create New..." in the file manager. Copied from Windows they
+# are all executable; only the scripts should be, so new files start right.
+chmod 644 "$T"/root/Templates/* "$T"/root/Documents/*
+chmod 755 "$T/root/Templates/Shell script.sh" "$T/root/Templates/Python script.py"
+
 # Openbox settings for root: the stock rc.xml plus our keyboard shortcuts
 # and a dark window theme.
 mkdir -p "$T/root/.config/openbox"
