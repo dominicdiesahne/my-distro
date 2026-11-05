@@ -65,7 +65,9 @@ the taskbar, the login screen, the file history daemon and the search indexer.
   CSS, JavaScript, JSON, CSV, Lua, Makefile and config files from templates
   (`~/Templates`).
 - **Python 3** with pip, so `.py` scripts run (`python3 file.py`).
-- **Live ISO** for BIOS and UEFI; tested in VirtualBox and QEMU.
+- **Live ISO** for BIOS and UEFI, from a CD or a USB stick; tested in
+  VirtualBox and QEMU. Drivers for real PCs: Intel and AMD graphics,
+  Realtek and Intel network cards, laptop touchpads.
 - **Installer** (`my-install`): copies the live system onto a hard disk with
   GRUB for BIOS and UEFI, so your files and settings survive a reboot.
 
@@ -116,6 +118,31 @@ the optical drive. Display: graphics controller *VMSVGA*. Start.
 **Hyper-V:** Generation 2 VM, 2048 MB RAM, **Secure Boot off**, ISO in the DVD drive.
 
 In the boot menu, *safe graphics* helps if the screen stays black.
+
+#### On a real PC
+
+Write the ISO to a USB stick (at least 1 GB; **everything on it is
+deleted**):
+
+- **Windows:** [Rufus](https://rufus.ie): choose the ISO, and when it asks,
+  **"Write in DD image mode"**. Or [balenaEtcher](https://etcher.balena.io).
+- **Linux:** `sudo dd if=my-distro.iso of=/dev/sdX bs=4M status=progress && sync`
+  (`/dev/sdX` = the stick, check with `lsblk`; the wrong letter overwrites
+  another disk).
+
+Then start the PC from the stick (the boot menu key is usually F12, F11, F8
+or Esc). In the firmware settings, **Secure Boot must be off**: my-distro's
+boot loader is not signed. The live system runs from RAM and changes nothing
+on the PC's disk unless you run *Install to disk*.
+
+What works: Intel and AMD graphics (the screen's resolution, several
+monitors; no 3D acceleration), wired network with Intel or Realtek cards,
+laptop touchpads (I2C) and USB keyboards and mice, NVMe, SATA and USB disks,
+Intel HD Audio. **No Wi-Fi yet**: use a network cable. NVIDIA graphics only
+get the basic firmware screen.
+
+If something doesn't work, a terminal shows what the PC has: `lspci -k`
+(each device and the driver that took it), `dmesg | grep -i firmware`.
 
 ### 3. Set it up and log in
 
@@ -383,10 +410,13 @@ make run    # boots in the terminal; quit with Ctrl-A, then X
 ## Limitations
 
 - The installer wipes the whole disk: no dual boot next to Windows or
-  another Linux, and no updates of an installed system (reinstall instead).
+  another Linux.
 - NetSurf has limited JavaScript; big web apps (YouTube, Google Docs) don't work.
-- Only x86-64; tested in VirtualBox and QEMU, not on real hardware.
-- The ISO is about 220 MB, half of it the IDE (Neovim, plugins, parsers).
+- Only x86-64. Tested in VirtualBox and QEMU; the drivers for real PCs are
+  in, but not yet tried on one (see [On a real PC](#on-a-real-pc)).
+- No Wi-Fi yet: on a real PC only a network cable works.
+- Graphics drivers set the screen up, but there is no 3D acceleration
+  (Mesa's software renderer only).
 
 ## License
 

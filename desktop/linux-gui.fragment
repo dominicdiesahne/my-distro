@@ -84,3 +84,51 @@ CONFIG_HYPERV_STORAGE=y
 CONFIG_VFAT_FS=y
 CONFIG_NLS_CODEPAGE_437=y
 CONFIG_NLS_ISO8859_1=y
+
+# --- Real PCs and laptops ---------------------------------------------------
+# Drivers that need firmware files are modules (=m): udev loads them when it
+# finds the hardware, after the root filesystem with /lib/firmware is there.
+# Built into the kernel (=y) they would start before that on an installed
+# system and miss their firmware. The firmware: BR2_PACKAGE_LINUX_FIRMWARE_*
+# in buildroot.fragment.
+CONFIG_MODULES=y
+CONFIG_FW_LOADER=y
+
+# Graphics cards: Intel (i915; xe for Arc and the newest laptops) and AMD
+# (amdgpu; radeon for older cards). They give the screen's real resolution
+# and more than one monitor. Without them (or with "safe graphics") the
+# firmware's framebuffer is used. X draws with its modesetting driver.
+CONFIG_DRM_I915=m
+CONFIG_DRM_XE=m
+CONFIG_DRM_AMDGPU=m
+CONFIG_DRM_AMD_DC=y
+CONFIG_DRM_RADEON=m
+
+# Wired network: Realtek (r8169, in most PCs and laptops) and newer Intel
+# (igb, igc)
+CONFIG_NET_VENDOR_REALTEK=y
+CONFIG_R8169=m
+CONFIG_IGB=m
+CONFIG_IGC=m
+
+# Laptop touchpads and touchscreens: most are connected over I2C (HID over
+# I2C), through the I2C controllers of Intel (LPSS) and AMD chipsets, with
+# GPIO pins for their interrupts
+CONFIG_I2C=y
+CONFIG_I2C_HID_ACPI=m
+CONFIG_HID_MULTITOUCH=m
+CONFIG_I2C_DESIGNWARE_CORE=y
+CONFIG_I2C_DESIGNWARE_PLATFORM=y
+CONFIG_I2C_DESIGNWARE_PCI=y
+CONFIG_MFD_INTEL_LPSS_ACPI=y
+CONFIG_MFD_INTEL_LPSS_PCI=y
+CONFIG_GPIOLIB=y
+CONFIG_PINCTRL=y
+CONFIG_PINCTRL_AMD=y
+CONFIG_PINCTRL_INTEL=y
+CONFIG_PINCTRL_SUNRISEPOINT=y
+CONFIG_PINCTRL_CANNONLAKE=y
+CONFIG_PINCTRL_ICELAKE=y
+CONFIG_PINCTRL_TIGERLAKE=y
+CONFIG_PINCTRL_ALDERLAKE=y
+CONFIG_PINCTRL_METEORLAKE=y

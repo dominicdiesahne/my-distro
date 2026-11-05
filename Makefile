@@ -51,6 +51,8 @@ KVM := $(shell [ -w /dev/kvm ] && echo -enable-kvm)
 .PHONY: all run desktop release-files run-desktop run-iso run-install run-disk clean distclean
 
 UPDATE      := out/my-distro-update.tar.xz
+# The files Buildroot put on its ISO (kernel, initrd, GRUB, boot menu)
+ISO_FILES   := $(BR_OUT)/build/buildroot-fs/rootfs.iso9660.tmp
 SIGNING_KEY ?= $(HOME)/.config/my-distro/update-signing-key.pem
 
 all: $(BZIMAGE) $(INITRAMFS)
@@ -150,7 +152,27 @@ desktop: $(BR_DIR)/Makefile
 > $(BR_MAKE)
 > cp desktop/linux-gui.fragment $(BR_OUT)/.linux-gui.fragment
 > mkdir -p out
-> cp $(BR_OUT)/images/rootfs.iso9660 out/my-distro.iso
+> # Buildroot's ISO only boots from a CD. Make it again from the same files
+> # (what grub-mkrescue does), so it also boots when it is written to a USB
+> # stick: GRUB's boot sector for BIOS PCs (boot_hybrid.img, which starts the
+> # CD boot image), and the small FAT image with GRUB for UEFI as a real
+> # partition, which UEFI firmware looks for on USB sticks.
+> [ -d $(ISO_FILES) ] || { echo "$(ISO_FILES) is missing"; exit 1; }
+> # Buildroot's BIOS GRUB looks for its files on "(cd)" only. Build it again
+> # with the prefix /boot/grub (no drive), so it uses the drive it started
+> # from: the CD, or the USB stick. desktop/grub-bios-embedded.cfg searches too.
+> G=$$(ls -d $(BR_OUT)/build/grub2-*/build-i386-pc/grub-core | head -1) && \
+>   $(BR_OUT)/host/bin/grub-mkimage -d $$G -O i386-pc -p /boot/grub \
+>     -c desktop/grub-bios-embedded.cfg -o $(BR_OUT)/build/my-distro-core.img \
+>     boot linux normal iso9660 biosdisk part_msdos part_gpt all_video search search_fs_file && \
+>   cat $$G/cdboot.img $(BR_OUT)/build/my-distro-core.img > $(ISO_FILES)/boot/grub/grub-eltorito.img
+> rm -f out/my-distro.iso
+> $(BR_OUT)/host/bin/xorriso -as mkisofs -o out/my-distro.iso -J -R -V MY_DISTRO \
+>   -b boot/grub/grub-eltorito.img -no-emul-boot -boot-load-size 4 -boot-info-table \
+>   --grub2-boot-info --grub2-mbr $(BR_OUT)/target/lib/grub/i386-pc/boot_hybrid.img \
+>   -eltorito-alt-boot --efi-boot boot/fat.efi -efi-boot-part --efi-boot-image \
+>   --protective-msdos-label $(ISO_FILES) 2>&1 | grep -v "^xorriso : UPDATE" || true
+> [ -s out/my-distro.iso ]
 > cp $(BR_OUT)/images/rootfs.tar.xz $(UPDATE)
 > @echo "ISO: out/my-distro.iso ($$(du -h out/my-distro.iso | cut -f1))"
 > @echo "Update package: $(UPDATE) ($$(du -h $(UPDATE) | cut -f1)); sign it with: make release-files"
