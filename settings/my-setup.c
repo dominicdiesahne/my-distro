@@ -27,6 +27,7 @@
 #define _GNU_SOURCE
 #include <crypt.h>
 #include <ctype.h>
+#include <grp.h>
 #include <gtk/gtk.h>
 #include <pwd.h>
 #include <signal.h>
@@ -255,13 +256,38 @@ static const char *save_user(const char *name, const char *fullname,
 
 	if (set_password(name, password) != 0)
 		return "Could not set the password.";
-	/* netdev: may choose Wi-Fi networks (wpa_supplicant's control socket) */
+	/* netdev: may choose Wi-Fi networks (wpa_supplicant's control socket);
+	 * audio: may use the sound card (/dev/snd) */
 	const char *netdev[] = { "/usr/sbin/addgroup", name, "netdev", NULL };
+	const char *audio[] = { "/usr/sbin/addgroup", name, "audio", NULL };
 
 	run(netdev);
+	run(audio);
 	if (theme)
 		set_theme(home, theme);
 	give_home(home, uid, gid);
+	return NULL;
+}
+
+/* Administrators are the members of the group wheel: they may use sudo
+ * (/etc/sudoers.d/wheel). */
+static int is_admin(const char *name)
+{
+	struct group *g = getgrnam("wheel");
+
+	for (char **m = g ? g->gr_mem : NULL; m && *m; m++)
+		if (strcmp(*m, name) == 0)
+			return 1;
+	return 0;
+}
+
+static const char *set_admin(const char *name, int admin)
+{
+	const char *add[] = { "/usr/sbin/addgroup", name, "wheel", NULL };
+	const char *del[] = { "/usr/sbin/delgroup", name, "wheel", NULL };
+
+	if (run(admin ? add : del) != 0)
+		return "Could not change the administrator rights.";
 	return NULL;
 }
 
@@ -575,6 +601,15 @@ static void on_finish(GtkButton *b, gpointer d)
 	g_free(fullname);
 	if (!err && set_password("root", root_pw) != 0)
 		err = "Could not set the administrator password.";
+	/* Your password is the root password too: you are the administrator,
+	 * so you may also use sudo. With a separate root password you aren't
+	 * (that's what a separate one is for). */
+	if (!err) {
+		int same = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(fb_same_root));
+
+		if (same != is_admin(user))
+			set_admin(user, same);
+	}
 	if (err) {
 		show_error(fb_err_computer, err);
 		return;
@@ -806,6 +841,7 @@ static int first_boot(void)
 
 /* --- "Users and system" ------------------------------------------------------------ */
 
+static GtkWidget *mg_admin;
 static GtkWidget *mg_win, *mg_users, *mg_remove, *mg_status, *mg_hostname,
 	*mg_root1, *mg_root2;
 static const char *mg_me;          /* who started it (can't remove themselves) */
@@ -828,6 +864,9 @@ static void on_user_selected(GtkListBox *l, GtkListBoxRow *r, gpointer d)
 
 	(void)l; (void)d;
 	gtk_widget_set_sensitive(mg_remove, name && strcmp(name, mg_me) != 0);
+	gtk_widget_set_sensitive(mg_admin, name != NULL);
+	gtk_button_set_label(GTK_BUTTON(mg_admin), name && is_admin(name)
+	                     ? "Remove administrator rights" : "Make administrator");
 }
 
 static void fill_users(void)
@@ -846,9 +885,10 @@ static void fill_users(void)
 
 		if (pw->pw_uid < FIRST_UID || pw->pw_uid >= 60000)
 			continue;
-		text = g_markup_printf_escaped("<b>%s</b>   %s%s", pw->pw_name,
+		text = g_markup_printf_escaped("<b>%s</b>   %s%s%s", pw->pw_name,
 			pw->pw_gecos ? pw->pw_gecos : "",
-			strcmp(pw->pw_name, mg_me) == 0 ? "   (you)" : "");
+			strcmp(pw->pw_name, mg_me) == 0 ? "   (you)" : "",
+			is_admin(pw->pw_name) ? "   · administrator" : "");
 		l = gtk_label_new(NULL);
 		gtk_label_set_markup(GTK_LABEL(l), text);
 		gtk_label_set_xalign(GTK_LABEL(l), 0);
@@ -862,6 +902,27 @@ static void fill_users(void)
 	endpwent();
 	gtk_widget_show_all(mg_users);
 	gtk_widget_set_sensitive(mg_remove, FALSE);
+	gtk_widget_set_sensitive(mg_admin, FALSE);
+	gtk_button_set_label(GTK_BUTTON(mg_admin), "Make administrator");
+}
+
+/* Administrator rights (sudo) on or off for the chosen user */
+static void on_admin(GtkButton *b, gpointer d)
+{
+	const char *user = selected_user();
+	char *name;
+	int admin;
+
+	(void)b; (void)d;
+	if (!user)
+		return;
+	name = g_strdup(user);              /* fill_users() frees the row's copy */
+	admin = !is_admin(name);
+	status(set_admin(name, admin), admin
+	       ? "Administrator now: may use sudo with their own password."
+	       : "No administrator rights any more.");
+	fill_users();
+	g_free(name);
 }
 
 /* A dialog with text fields; returns TRUE when OK was pressed. */
@@ -1013,9 +1074,11 @@ static void on_save_root(GtkButton *b, gpointer d)
 
 /* --- System update page: runs my-update and shows what it says ----------------- */
 
-static GtkWidget *up_status, *up_view, *up_check, *up_install, *up_restart;
+static GtkWidget *up_status, *up_view, *up_check, *up_install, *up_restart, *up_undo;
 static GtkTextBuffer *up_buf;
 static char up_latest[32];
+static char up_previous[32];      /* the version "Undo last update" goes back to */
+static int up_undoing;            /* my-update is running "rollback", not "install" */
 
 static void up_append(const char *text)
 {
@@ -1067,6 +1130,16 @@ static void on_check(GtkButton *b, gpointer d)
 	porcelain(out, "installable", installable, sizeof installable);
 	porcelain(out, "live", live, sizeof live);
 	porcelain(out, "error", err, sizeof err);
+	porcelain(out, "rollback", up_previous, sizeof up_previous);
+	if (up_previous[0]) {
+		char *t = g_strdup_printf("Undo last update (back to %s)…", up_previous);
+
+		gtk_button_set_label(GTK_BUTTON(up_undo), t);
+		g_free(t);
+		gtk_widget_show(up_undo);
+	} else {
+		gtk_widget_hide(up_undo);
+	}
 	notes = strstr(out, "notes:\n");
 	gtk_text_buffer_set_text(up_buf, notes ? notes + 7 : "", -1);
 
@@ -1108,38 +1181,44 @@ static void on_install_done(GPid pid, gint st, gpointer d)
 	(void)d;
 	g_spawn_close_pid(pid);
 	gtk_widget_set_sensitive(up_check, TRUE);
+	gtk_widget_set_sensitive(up_undo, TRUE);
 	if (g_spawn_check_wait_status(st, NULL)) {
-		gtk_label_set_text(GTK_LABEL(up_status),
-			"The update is installed. Restart the computer to finish.");
+		gtk_label_set_text(GTK_LABEL(up_status), up_undoing
+			? "The previous version is back. Restart the computer to finish."
+			: "The update is installed. Restart the computer to finish. "
+			  "If something doesn't work afterwards, \"Undo last update\" goes back.");
 		gtk_widget_show(up_restart);
+		if (up_undoing)
+			gtk_widget_hide(up_undo);
 	} else {
-		gtk_label_set_text(GTK_LABEL(up_status),
-			"The update did not work: see the messages below.");
-		gtk_widget_set_sensitive(up_install, TRUE);
+		gtk_label_set_text(GTK_LABEL(up_status), up_undoing
+			? "Going back did not work: see the messages below."
+			: "The update did not work: see the messages below.");
+		gtk_widget_set_sensitive(up_install, !up_undoing);
 	}
 }
 
-static void on_install(GtkButton *b, gpointer d)
+/* Asks first, then runs my-update with that command and shows what it says */
+static void run_update(const char *cmd, const char *question, const char *detail,
+                       const char *yes, const char *busy)
 {
-	const char *argv[] = { "/usr/bin/my-update", "install", NULL };
+	const char *argv[] = { "/usr/bin/my-update", cmd, NULL };
 	GtkWidget *ask;
 	GPid pid;
 	int out, answer;
 	GIOChannel *ch;
 
-	(void)b; (void)d;
 	ask = gtk_message_dialog_new(GTK_WINDOW(mg_win), GTK_DIALOG_MODAL,
-		GTK_MESSAGE_QUESTION, GTK_BUTTONS_NONE, "Install my-distro %s?", up_latest);
-	gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(ask),
-		"Your files, users and settings stay. Don't switch the computer off "
-		"while it installs; restart it afterwards.");
+		GTK_MESSAGE_QUESTION, GTK_BUTTONS_NONE, "%s", question);
+	gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(ask), "%s", detail);
 	gtk_dialog_add_buttons(GTK_DIALOG(ask), "Cancel", GTK_RESPONSE_CANCEL,
-	                       "Install", GTK_RESPONSE_ACCEPT, NULL);
+	                       yes, GTK_RESPONSE_ACCEPT, NULL);
 	answer = gtk_dialog_run(GTK_DIALOG(ask));
 	gtk_widget_destroy(ask);
 	if (answer != GTK_RESPONSE_ACCEPT)
 		return;
 
+	up_undoing = strcmp(cmd, "rollback") == 0;
 	if (!g_spawn_async_with_pipes(NULL, (char **)argv, NULL,
 	                              G_SPAWN_DO_NOT_REAP_CHILD | G_SPAWN_STDERR_TO_DEV_NULL,
 	                              NULL, NULL, &pid, NULL, &out, NULL, NULL)) {
@@ -1148,8 +1227,8 @@ static void on_install(GtkButton *b, gpointer d)
 	}
 	gtk_widget_set_sensitive(up_install, FALSE);
 	gtk_widget_set_sensitive(up_check, FALSE);
-	gtk_label_set_text(GTK_LABEL(up_status),
-		"Installing… don't switch the computer off.");
+	gtk_widget_set_sensitive(up_undo, FALSE);
+	gtk_label_set_text(GTK_LABEL(up_status), busy);
 	gtk_text_buffer_set_text(up_buf, "", -1);
 	ch = g_io_channel_unix_new(out);
 	g_io_channel_set_flags(ch, G_IO_FLAG_NONBLOCK, NULL);
@@ -1157,6 +1236,28 @@ static void on_install(GtkButton *b, gpointer d)
 	g_io_add_watch(ch, G_IO_IN | G_IO_HUP | G_IO_ERR, on_install_output, NULL);
 	g_io_channel_unref(ch);
 	g_child_watch_add(pid, on_install_done, NULL);
+}
+
+static void on_install(GtkButton *b, gpointer d)
+{
+	char *q = g_strdup_printf("Install my-distro %s?", up_latest);
+
+	(void)b; (void)d;
+	run_update("install", q, "Your files, users and settings stay. Don't switch the "
+	           "computer off while it installs; restart it afterwards.", "Install",
+	           "Installing… don't switch the computer off.");
+	g_free(q);
+}
+
+static void on_undo(GtkButton *b, gpointer d)
+{
+	char *q = g_strdup_printf("Go back to my-distro %s?", up_previous);
+
+	(void)b; (void)d;
+	run_update("rollback", q, "The system files of the version before the last update "
+	           "come back. Your files, users and settings stay. Restart afterwards.",
+	           "Go back", "Going back… don't switch the computer off.");
+	g_free(q);
 }
 
 static void on_restart(GtkButton *b, gpointer d)
@@ -1193,7 +1294,7 @@ static int manage(int open_update)
 
 	mg_win = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	gtk_window_set_title(GTK_WINDOW(mg_win), "Users and system");
-	gtk_window_set_default_size(GTK_WINDOW(mg_win), 620, 440);
+	gtk_window_set_default_size(GTK_WINDOW(mg_win), 760, 460);
 	gtk_window_set_icon_name(GTK_WINDOW(mg_win), "system-users");
 	g_signal_connect(mg_win, "destroy", G_CALLBACK(gtk_main_quit), NULL);
 
@@ -1210,6 +1311,8 @@ static int manage(int open_update)
 	row = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
 	gtk_box_pack_start(GTK_BOX(row), button("Add user…", G_CALLBACK(on_add_user)), FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(row), button("Change password…", G_CALLBACK(on_password)), FALSE, FALSE, 0);
+	mg_admin = button("Make administrator", G_CALLBACK(on_admin));
+	gtk_box_pack_start(GTK_BOX(row), mg_admin, FALSE, FALSE, 0);
 	mg_remove = button("Remove user…", G_CALLBACK(on_remove_user));
 	gtk_box_pack_end(GTK_BOX(row), mg_remove, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(p), row, FALSE, FALSE, 0);
@@ -1272,8 +1375,11 @@ static int manage(int open_update)
 	gtk_widget_set_sensitive(up_install, FALSE);
 	up_restart = button("Restart now", G_CALLBACK(on_restart));
 	gtk_widget_set_no_show_all(up_restart, TRUE);
+	up_undo = button("Undo last update…", G_CALLBACK(on_undo));
+	gtk_widget_set_no_show_all(up_undo, TRUE);
 	gtk_box_pack_start(GTK_BOX(row), up_check, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(row), up_install, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(row), up_undo, FALSE, FALSE, 0);
 	gtk_box_pack_end(GTK_BOX(row), up_restart, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(p), row, FALSE, FALSE, 0);
 

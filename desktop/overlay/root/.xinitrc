@@ -11,6 +11,12 @@ export LANG=en_US.UTF-8
 # GTK apps (the file manager) look for an accessibility service we don't have.
 export NO_AT_BRIDGE=1
 
+# The session D-Bus: programs of this session talk over it, e.g. to show
+# notifications (my-notifyd). It ends with the session.
+if [ -z "$DBUS_SESSION_BUS_ADDRESS" ] && command -v dbus-launch >/dev/null; then
+	eval "$(dbus-launch --sh-syntax --exit-with-session)"
+fi
+
 # Openbox starts first, then runs the autostart script: taskbar, desktop
 # icons, a terminal. Starting them after Openbox means it already manages
 # the screen when they appear.

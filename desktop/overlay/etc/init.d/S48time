@@ -1,0 +1,27 @@
+#!/bin/sh
+# Keeps the clock right: BusyBox's ntpd asks time servers on the internet
+# (pool.ntp.org) and adjusts the system clock. Without a network yet it keeps
+# trying. /usr/lib/my-distro/time-event writes the time into the hardware
+# clock once it is known, so it is also right at the next start offline.
+# Log: /var/log/time.log
+SERVERS="0.pool.ntp.org 1.pool.ntp.org 2.pool.ntp.org"
+
+case "$1" in
+start)
+	printf "Starting time sync: "
+	args=""
+	for s in $SERVERS; do args="$args -p $s"; done
+	# -S: run time-event when the time was set or the connection changed
+	ntpd $args -S /usr/lib/my-distro/time-event >/var/log/time.log 2>&1
+	echo "OK"
+	;;
+stop)
+	printf "Stopping time sync: "
+	killall ntpd 2>/dev/null
+	echo "OK"
+	;;
+*)
+	echo "Usage: $0 {start|stop}"
+	exit 1
+	;;
+esac

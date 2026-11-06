@@ -1,0 +1,23 @@
+#!/bin/sh
+# my-eject [FOLDER]: safely remove a USB stick or SD card. Writes everything
+# that is still waiting to it, unmounts it and says when it can be pulled
+# out. Without FOLDER: every drive in /media.
+#
+# Unmounting needs root, so my-power (setuid root, see login/my-power.c)
+# does it; it only accepts folders in /media.
+if [ $# = 0 ]; then
+	set -- $(awk '$2 ~ "^/media/" { print $2 }' /proc/mounts)
+	[ $# = 0 ] && { my-notify -i media-eject "Nothing to eject" "No USB stick or SD card is open."; exit 0; }
+fi
+rc=0
+for dir in "$@"; do
+	name=$(basename "$dir")
+	if out=$(my-power eject "$dir" 2>&1); then
+		my-notify -i media-eject "$name can be removed" "Everything is written to it. You can pull it out now."
+	else
+		my-notify -u critical -i dialog-warning "$name could not be ejected" "$out"
+		echo "my-eject: $out" >&2
+		rc=1
+	fi
+done
+exit $rc

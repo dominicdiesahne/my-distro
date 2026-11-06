@@ -1,0 +1,101 @@
+#!/bin/sh
+# automount add|remove DEVICE: udev runs this when a USB stick, USB disk or
+# SD card is plugged in or pulled out (/etc/udev/rules.d/80-my-automount.rules).
+#
+# add:    mounts the device (e.g. sdb1) at /media/LABEL, owned by whoever is
+#         logged in, and tells them with a notification. The file manager
+#         shows it under /media.
+# remove: unmounts it again. Better: "Eject" first (right-click the folder
+#         in /media, or my-eject), which writes everything to the stick.
+#
+# Log: /var/log/automount.log
+ACTION="$1"
+DEV="$2"
+export PATH=/sbin:/bin:/usr/sbin:/usr/bin
+exec >>/var/log/automount.log 2>&1
+log() { echo "$(date '+%F %T') $DEV: $*"; }
+
+# The user of the desktop session (owner of the window manager), or nobody
+mount_owner() {
+	for p in /proc/[0-9]*; do
+		[ "$(cat "$p/comm" 2>/dev/null)" = openbox ] || continue
+		awk '/^Uid:/ { print $2; exit }' "$p/status"
+		return
+	done
+}
+
+# Where DEV is mounted, from /proc/mounts ("" = not mounted)
+mounted_at() {
+	awk -v d="/dev/$DEV" '$1 == d { print $2; exit }' /proc/mounts | sed 's/\\040/ /g'
+}
+
+case "$ACTION" in
+add)
+	[ -b "/dev/$DEV" ] || exit 0
+	[ -n "$(mounted_at)" ] && exit 0
+
+	# The stick that my-distro itself was started from: leave it alone.
+	disk=$(basename "$(readlink -f "/sys/class/block/$DEV/..")")
+	[ -b "/dev/$disk" ] || disk=$DEV
+	for p in "/dev/$disk" /dev/"$disk"*; do
+		[ "$(blkid -o value -s LABEL "$p" 2>/dev/null)" = MY_DISTRO ] && { log "boot medium, skipped"; exit 0; }
+	done
+	# A stick formatted as a whole, without partitions: the start of its
+	# filesystem can look like a partition table to the kernel. Only the
+	# disk itself is real then.
+	if [ "$disk" != "$DEV" ] && [ -n "$(blkid -o value -s TYPE "/dev/$disk" 2>/dev/null)" ]; then
+		log "part of a filesystem on /dev/$disk, skipped"
+		exit 0
+	fi
+
+	type=$(blkid -o value -s TYPE "/dev/$DEV")
+	label=$(blkid -o value -s LABEL "/dev/$DEV" | tr -c 'A-Za-z0-9._\n-' '_')
+	[ -n "$label" ] || label=$DEV
+	dir="/media/$label"
+	[ -e "$dir" ] && ! rmdir "$dir" 2>/dev/null && dir="/media/$label-$DEV"
+
+	uid=$(mount_owner)
+	[ -n "$uid" ] || uid=0
+	gid=$(awk -F: -v u="$uid" '$3 == u { print $4; exit }' /etc/passwd)
+	[ -n "$gid" ] || gid=0
+	# FAT, exFAT and NTFS have no owners: the files belong to the logged-in user
+	own="uid=$uid,gid=$gid,dmask=022,fmask=133"
+
+	case "$type" in
+	vfat)          fstype=vfat;  opts="$own,flush,utf8,shortname=mixed" ;;
+	exfat)         fstype=exfat; opts="$own" ;;
+	ntfs)          fstype=ntfs3; opts="$own" ;;
+	ext2|ext3|ext4) fstype=$type; opts="" ;;
+	iso9660|udf)   fstype=$type; opts="ro" ;;
+	*) log "filesystem '$type' not supported"; exit 0 ;;
+	esac
+
+	mkdir -p "$dir"
+	if ! mount -t "$fstype" ${opts:+-o "$opts"} -o nosuid,nodev "/dev/$DEV" "$dir"; then
+		# A Windows disk that was not shut down cleanly (Fast Startup) can
+		# only be read
+		if mount -t "$fstype" -o "${opts:+$opts,}ro,nosuid,nodev" "/dev/$DEV" "$dir"; then
+			log "mounted read-only at $dir"
+			/usr/lib/my-distro/notify-session -i drive-removable-media \
+				"$label (read-only)" "Opened read-only in $dir. If it is a Windows disk, shut Windows down fully first."
+			exit 0
+		fi
+		rmdir "$dir"
+		log "mount failed"
+		/usr/lib/my-distro/notify-session -i dialog-warning "Could not open $label" \
+			"The $type filesystem could not be mounted. Details: /var/log/automount.log"
+		exit 0
+	fi
+	log "mounted at $dir ($type, owner $uid)"
+	/usr/lib/my-distro/notify-session -i drive-removable-media "$label" \
+		"Opened in $dir. Before you pull it out: right-click the folder, Eject."
+	;;
+remove)
+	dir=$(mounted_at)
+	[ -n "$dir" ] || exit 0
+	umount -l "/dev/$DEV"
+	case "$dir" in /media/?*) rmdir "$dir" 2>/dev/null ;; esac
+	log "pulled out, unmounted $dir"
+	;;
+esac
+exit 0

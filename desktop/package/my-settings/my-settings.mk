@@ -22,6 +22,10 @@ define MY_SETTINGS_BUILD_CMDS
 	$(MY_SETTINGS_CC) -o $(@D)/my-setup $(@D)/my-setup.c $(@D)/settings.c \
 		$(MY_SETTINGS_GTK) $$($(PKG_CONFIG_HOST_BINARY) --cflags --libs libxcrypt)
 	$(MY_SETTINGS_CC) -o $(@D)/my-wifi $(@D)/my-wifi.c $(MY_SETTINGS_GTK)
+	$(MY_SETTINGS_CC) -o $(@D)/my-notifyd $(@D)/my-notifyd.c $(@D)/settings.c \
+		$(MY_SETTINGS_GTK)
+	$(MY_SETTINGS_CC) -o $(@D)/my-notify $(@D)/my-notify.c \
+		$$($(PKG_CONFIG_HOST_BINARY) --cflags --libs gio-2.0)
 endef
 
 define MY_SETTINGS_INSTALL_TARGET_CMDS
@@ -29,6 +33,9 @@ define MY_SETTINGS_INSTALL_TARGET_CMDS
 	$(INSTALL) -D -m 0755 $(@D)/my-clock $(TARGET_DIR)/usr/bin/my-clock
 	$(INSTALL) -D -m 0755 $(@D)/my-setup $(TARGET_DIR)/usr/bin/my-setup
 	$(INSTALL) -D -m 0755 $(@D)/my-wifi $(TARGET_DIR)/usr/bin/my-wifi
+	$(INSTALL) -D -m 0755 $(@D)/my-notifyd $(TARGET_DIR)/usr/bin/my-notifyd
+	$(INSTALL) -D -m 0755 $(@D)/my-notify $(TARGET_DIR)/usr/bin/my-notify
+	ln -sf my-notify $(TARGET_DIR)/usr/bin/notify-send
 endef
 
 $(eval $(generic-package))

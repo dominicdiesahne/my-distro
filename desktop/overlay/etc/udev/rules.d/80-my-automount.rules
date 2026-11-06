@@ -1,0 +1,7 @@
+# USB sticks, USB disks and SD cards: mount them in /media when they are
+# plugged in, unmount when they are pulled out (/usr/lib/my-distro/automount).
+# Internal disks are not touched: on a PC with Windows that would risk its
+# files. ID_FS_TYPE and ID_BUS come from 60-persistent-storage.rules.
+ACTION=="add", SUBSYSTEM=="block", ENV{ID_FS_USAGE}=="filesystem", ENV{ID_BUS}=="usb", RUN+="/usr/lib/my-distro/automount add %k"
+ACTION=="add", SUBSYSTEM=="block", ENV{ID_FS_USAGE}=="filesystem", KERNEL=="mmcblk[0-9]*", RUN+="/usr/lib/my-distro/automount add %k"
+ACTION=="remove", SUBSYSTEM=="block", RUN+="/usr/lib/my-distro/automount remove %k"

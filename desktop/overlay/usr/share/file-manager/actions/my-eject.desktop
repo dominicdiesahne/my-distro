@@ -1,0 +1,15 @@
+[Desktop Entry]
+Type=Action
+Name=Eject
+Tooltip=Eject (safely remove)
+Icon=media-eject
+Profiles=media;
+
+# Only for the folders of USB sticks in /media. Careful: libfm (2016)
+# crashes at start with "Folders=/media;"; "/media/*" works.
+[X-Action-Profile media]
+Name=Eject
+MimeTypes=inode/directory;
+SelectionCount==1
+Folders=/media/*;
+Exec=my-eject %f

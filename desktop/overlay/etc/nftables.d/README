@@ -1,0 +1,8 @@
+Your own firewall rules: files NAME.nft in this folder are added to the
+rules in /etc/nftables.conf. System updates keep this folder.
+
+Example, /etc/nftables.d/ssh.nft (lets others connect to an SSH server):
+
+    add rule inet my-firewall input tcp dport 22 accept
+
+Load the rules again (as root): /etc/init.d/S35firewall restart

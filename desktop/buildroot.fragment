@@ -190,3 +190,28 @@ BR2_PACKAGE_PYTHON3_ZLIB=y
 BR2_PACKAGE_PYTHON3_BZIP2=y
 BR2_PACKAGE_PYTHON3_XZ=y
 BR2_PACKAGE_PYTHON_PIP=y
+
+# --- 0.9.2 -------------------------------------------------------------------
+
+# BusyBox with ntpd (the time from the internet, /etc/init.d/S48time)
+BR2_PACKAGE_BUSYBOX_CONFIG_FRAGMENT_FILES="$(BR2_EXTERNAL_MY_DISTRO_PATH)/busybox.fragment"
+
+# Sound: ALSA's tools. amixer (my-volume and the taskbar's speaker set the
+# volume with the same controls), alsamixer (all controls, in a terminal),
+# alsactl (good start values at boot), aplay and speaker-test to try it.
+BR2_PACKAGE_ALSA_LIB=y
+BR2_PACKAGE_ALSA_LIB_MIXER=y
+BR2_PACKAGE_ALSA_UTILS=y
+BR2_PACKAGE_ALSA_UTILS_ALSACTL=y
+BR2_PACKAGE_ALSA_UTILS_ALSAMIXER=y
+BR2_PACKAGE_ALSA_UTILS_AMIXER=y
+BR2_PACKAGE_ALSA_UTILS_APLAY=y
+BR2_PACKAGE_ALSA_UTILS_SPEAKER_TEST=y
+
+# Firewall: the nft command loads /etc/nftables.conf (kernel part in
+# linux-gui.fragment)
+BR2_PACKAGE_NFTABLES=y
+
+# sudo: members of the group wheel may run commands as root with their own
+# password (/etc/sudoers.d/wheel)
+BR2_PACKAGE_SUDO=y

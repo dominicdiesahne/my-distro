@@ -1,0 +1,11 @@
+#!/bin/sh
+# time-event EVENT: ntpd runs this (S48time). EVENT is "step" (it set the
+# clock), "stratum" (it found a server), "periodic" (every 11 minutes) or
+# "unsync". When the time is known, save it in the hardware clock (UTC).
+case "$1" in
+step|stratum)
+	hwclock -w -u 2>/dev/null
+	echo "$(date '+%F %T') $1: time set, hardware clock updated" >>/var/log/time.log
+	;;
+esac
+exit 0

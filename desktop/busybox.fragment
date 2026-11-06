@@ -1,0 +1,11 @@
+# Our changes on top of Buildroot's BusyBox config.
+
+# ntpd: sets the clock from time servers on the internet (/etc/init.d/S48time)
+CONFIG_NTPD=y
+
+# "addgroup USER GROUP" puts a user into a group, "delgroup USER GROUP" takes
+# them out. my-setup does that for new accounts (netdev: Wi-Fi, audio: sound)
+# and for administrators (wheel: sudo). Without the first one, accounts made
+# by the setup before 0.9.2 were in none of these groups.
+CONFIG_FEATURE_ADDUSER_TO_GROUP=y
+CONFIG_FEATURE_DEL_USER_FROM_GROUP=y

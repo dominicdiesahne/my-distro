@@ -1,0 +1,26 @@
+#!/bin/sh
+# Sound: gives every sound card sensible start values (not muted, a medium
+# volume). After login the taskbar sets your own last volume again.
+# Log: /var/log/sound.log
+
+case "$1" in
+start)
+	printf "Starting sound: "
+	if ls /dev/snd/controlC* >/dev/null 2>&1; then
+		alsactl init >/var/log/sound.log 2>&1
+		# alsactl init leaves some cards silent: open the main controls
+		for c in Master PCM Speaker Headphone Front; do
+			amixer -q sset "$c" 70% unmute >>/var/log/sound.log 2>&1
+		done
+		echo "OK"
+	else
+		echo "no sound card"
+	fi
+	;;
+stop)
+	;;
+*)
+	echo "Usage: $0 {start|stop}"
+	exit 1
+	;;
+esac

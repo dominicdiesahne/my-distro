@@ -1,0 +1,6 @@
+# Members of the group wheel (administrators) may run any command as root
+# with sudo, after typing their own password. The account made in the setup
+# is one when it shares its password with root; "Users and system" can make
+# others administrators. Your own rules: /etc/sudoers.d/local (kept by
+# system updates; check it with visudo -c before you log out).
+%wheel ALL=(ALL:ALL) ALL

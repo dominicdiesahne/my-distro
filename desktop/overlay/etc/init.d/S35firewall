@@ -1,0 +1,27 @@
+#!/bin/sh
+# Loads the firewall rules (/etc/nftables.conf and /etc/nftables.d/*.nft)
+# before the network starts (S40network). Log: /var/log/firewall.log
+#
+#   /etc/init.d/S35firewall restart   load the rules again after a change
+#   /etc/init.d/S35firewall stop      no firewall until the next start
+
+case "$1" in
+start|restart|reload)
+	printf "Starting firewall: "
+	if nft -f /etc/nftables.conf >/var/log/firewall.log 2>&1; then
+		echo "OK"
+	else
+		echo "FAILED (see /var/log/firewall.log)"
+		exit 1
+	fi
+	;;
+stop)
+	printf "Stopping firewall: "
+	nft flush ruleset
+	echo "OK"
+	;;
+*)
+	echo "Usage: $0 {start|stop|restart}"
+	exit 1
+	;;
+esac

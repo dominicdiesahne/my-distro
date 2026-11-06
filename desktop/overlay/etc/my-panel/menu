@@ -11,6 +11,8 @@ Calculator|xcalc|accessories-calculator
 Clock|my-clock|my-clock
 Search files|my-search-gui|system-search
 File history|my-history|document-open-recent
+Screenshot|my-screenshot --delay 1|camera-photo
+Eject USB stick|my-eject|media-eject
 Wi-Fi|my-wifi|network-wireless
 Settings|my-settings|preferences-desktop
 Users and system|my-setup|system-users
@@ -18,5 +20,6 @@ System update|my-setup --update|software-update-available
 Install to disk|xterm -name my-install -T "Install my-distro" -e /usr/sbin/my-install|drive-harddisk
 -
 Log out|openbox --exit|system-log-out
+Suspend|my-power suspend|weather-clear-night
 Reboot|my-power reboot|view-refresh
 Power off|my-power poweroff|system-shutdown

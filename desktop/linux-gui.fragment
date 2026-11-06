@@ -193,3 +193,51 @@ CONFIG_BRCMFMAC_USB=y
 # Virtual Wi-Fi radios for testing without Wi-Fi hardware (only when loaded
 # by hand: modprobe mac80211_hwsim radios=2)
 CONFIG_MAC80211_HWSIM=m
+
+# --- 0.9.2 -------------------------------------------------------------------
+
+# USB sticks, SD cards and disks from Windows and Macs: exFAT (most sticks
+# over 32 GB), NTFS (Windows disks, read and write), CDs/DVDs (ISO 9660 with
+# Joliet names, UDF) and UTF-8 file names on FAT. /usr/lib/my-distro/automount
+# mounts them when they are plugged in.
+CONFIG_EXFAT_FS=y
+CONFIG_NTFS3_FS=y
+CONFIG_ISO9660_FS=y
+CONFIG_JOLIET=y
+CONFIG_UDF_FS=y
+CONFIG_NLS_UTF8=y
+
+# Firewall: netfilter with nftables (rules in /etc/nftables.conf, loaded by
+# /etc/init.d/S35firewall). conntrack remembers connections we started, so
+# their replies get in while everything else from outside is dropped.
+CONFIG_NETFILTER=y
+CONFIG_NF_CONNTRACK=y
+CONFIG_NF_TABLES=y
+CONFIG_NF_TABLES_INET=y
+CONFIG_NF_TABLES_IPV4=y
+CONFIG_NF_TABLES_IPV6=y
+CONFIG_NFT_CT=y
+CONFIG_NFT_LOG=y
+CONFIG_NFT_LIMIT=y
+CONFIG_NFT_REJECT=y
+CONFIG_NFT_REJECT_INET=y
+
+# Sound: the codec chips behind Intel HD Audio (Realtek in most PCs and
+# laptops, Conexant, Cirrus, IDT, VIA, Analog Devices) and the sound over
+# HDMI/DisplayPort. Built in (=y) like HD Audio itself, so they are there
+# when it looks for them. Realtek, Cirrus and HDMI are groups: switching
+# the group on brings all its chips (ALC269, ALC662, CS8409, Intel HDMI, ...).
+# USB headsets and sound cards as a module.
+CONFIG_SND_HDA_CODEC_REALTEK=y
+CONFIG_SND_HDA_CODEC_CIRRUS=y
+CONFIG_SND_HDA_CODEC_HDMI=y
+CONFIG_SND_HDA_CODEC_CONEXANT=y
+CONFIG_SND_HDA_CODEC_SIGMATEL=y
+CONFIG_SND_HDA_CODEC_VIA=y
+CONFIG_SND_HDA_CODEC_ANALOG=y
+CONFIG_SND_USB_AUDIO=m
+
+# The hardware clock: S48time writes the time from the internet into it, so
+# it is right at the next start even without a network.
+CONFIG_RTC_CLASS=y
+CONFIG_RTC_DRV_CMOS=y

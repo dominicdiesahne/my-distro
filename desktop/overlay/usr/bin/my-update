@@ -13,12 +13,22 @@ come from the maintainer get installed, even if a download is tampered with.
     my-update watch             check now and every few hours; the taskbar
                                 shows an "Update" button when there is one
     my-update install           download, verify and install it (root)
+    my-update rollback          undo the last update: back to the version
+                                before it (root)
 
 Installing replaces the system's programs, libraries, kernel and default
 settings with the new version's. It keeps what belongs to you and this
 computer: home folders, users and passwords, the computer name, the keyboard
 layout, /var (logs, search index, file history) and the boot loader. Restart
 afterwards so everything runs the new version.
+
+Every file an update replaces stays in /.my-update/previous (a hard link: the
+old file itself, so it needs no time and no extra space until the update is
+done), with a list of the files the update added. "rollback" moves the old
+files back and removes the added ones, so the system is the version before
+the update again; the next update replaces the saved version. If the desktop
+doesn't start after an update, log in as root on the text console
+(Ctrl+Alt+F1) and run my-update rollback there.
 
 On the live system nothing survives a reboot, so it only tells you that a new
 ISO is out.
@@ -45,6 +55,10 @@ FIXUPS = "/usr/lib/my-distro/installed-fixups"
 CACHE = "/.my-update"
 NEEDED_SPACE = 1500 << 20          # package + unpacked system, with room to spare
 PACKAGE = "my-distro-update.tar.xz"
+# The files of the version before the last update, for "rollback"
+PREVIOUS = os.path.join(CACHE, "previous")
+ADDED = "ADDED"                    # in PREVIOUS: what the update added (one path per line)
+INFO = "INFO"                      # in PREVIOUS: "from = 0.9.2" / "to = 0.9.3"
 
 DEFAULTS = {
     "url": "https://api.github.com/repos/dominicdiesahne/my-distro/releases/latest",
@@ -60,6 +74,8 @@ KEEP = [
     "etc/X11/xorg.conf.d/00-keyboard.conf",
     "etc/my-distro/setup-done", "etc/my-distro/update.conf",
     "etc/wpa_supplicant.conf",                   # saved Wi-Fi networks
+    "etc/nftables.d",                            # your own firewall rules
+    "etc/sudoers.d/local",                       # your own sudo rules
 ]
 
 
@@ -172,6 +188,9 @@ def cmd_check(args, quiet=False):
     except Exception as e:                       # offline, GitHub down, ...
         if "--porcelain" in args:
             say("installed=%s\nerror=%s" % (mine, e))
+            prev = previous_version()
+            if prev:
+                say("rollback=%s" % prev)        # works offline too
         elif not quiet:
             say("Could not check for updates: %s" % e)
         return 1
@@ -184,6 +203,9 @@ def cmd_check(args, quiet=False):
         say("available=%d" % newer)
         say("installable=%d" % (newer and has_package(rel) and not is_live()))
         say("live=%d" % is_live())
+        prev = previous_version()
+        if prev:
+            say("rollback=%s" % prev)
         say("notes:")
         say(rel["notes"])
     elif not quiet:
@@ -265,7 +287,41 @@ def members(tar):
         yield m
 
 
-def apply(staging):
+class Saver:
+    """Keeps the files an update replaces in PREVIOUS, for rollback.
+
+    Before a file is replaced, a hard link to it goes to PREVIOUS/<its path>:
+    the same file under a second name. The update then puts the new file in
+    its place with a rename, so the old one lives on in PREVIOUS. Files and
+    folders the update adds are listed in PREVIOUS/ADDED.
+    """
+
+    def __init__(self, old_version):
+        shutil.rmtree(PREVIOUS, ignore_errors=True)   # only one step back
+        os.makedirs(PREVIOUS, mode=0o700)
+        self.added = open(os.path.join(PREVIOUS, ADDED), "w")
+        with open(os.path.join(PREVIOUS, INFO), "w") as f:
+            f.write("from = %s\n" % old_version)
+
+    def replacing(self, dst):
+        """dst (an absolute path) is about to be replaced or added."""
+        if not os.path.lexists(dst):
+            self.added.write(dst + "\n")
+            return
+        keep = os.path.join(PREVIOUS, dst.lstrip("/"))
+        os.makedirs(os.path.dirname(keep), exist_ok=True)
+        try:
+            os.link(dst, keep, follow_symlinks=False)
+        except OSError:
+            shutil.copy2(dst, keep, follow_symlinks=False)   # e.g. a file on another disk
+
+    def done(self, new_version):
+        self.added.close()
+        with open(os.path.join(PREVIOUS, INFO), "a") as f:
+            f.write("to = %s\n" % new_version)
+
+
+def apply(staging, saver):
     """Moves the new files from staging into place, folders first."""
     for top, dirs, files in os.walk(staging):
         rel_top = os.path.relpath(top, staging)
@@ -276,11 +332,13 @@ def apply(staging):
             if os.path.islink(src):
                 if not os.path.isdir(dst) or os.path.islink(dst):
                     try:
+                        saver.replacing(dst)
                         os.replace(src, dst)    # a link to a folder: like a file
                     except OSError as e:
                         say("  skipped %s (%s)" % (dst, e.strerror))
                 continue
             if not os.path.lexists(dst):
+                saver.replacing(dst)            # a new folder
                 os.mkdir(dst)
             elif not os.path.isdir(dst) or os.path.islink(dst):
                 say("  skipped %s (a folder now, not on this system)" % dst)
@@ -294,9 +352,23 @@ def apply(staging):
                 say("  skipped %s (a folder on this system)" % dst)
                 continue
             try:
+                saver.replacing(dst)
                 os.replace(src, dst)            # atomic: programs see old or new
             except OSError as e:
                 say("  skipped %s (%s)" % (dst, e.strerror))
+
+
+def previous_version():
+    """The version "rollback" goes back to, or None if there is none."""
+    try:
+        with open(os.path.join(PREVIOUS, INFO)) as f:
+            for line in f:
+                key, _, value = line.partition("=")
+                if key.strip() == "from" and value.strip():
+                    return value.strip()
+    except OSError:
+        pass
+    return None
 
 
 def cmd_install(args):
@@ -352,7 +424,9 @@ def cmd_install(args):
                        filter="fully_trusted")
 
     say("Installing...")
-    apply(staging)
+    saver = Saver(mine)
+    apply(staging, saver)
+    saver.done(rel["version"])
     if os.access(FIXUPS, os.X_OK):
         subprocess.run([FIXUPS, "/"])
     shutil.rmtree(staging, ignore_errors=True)
@@ -360,14 +434,86 @@ def cmd_install(args):
     os.sync()
     write_status(None)
     say("Done: my-distro %s is installed. Restart the computer to finish." % rel["version"])
+    say("(my-distro %s is saved: \"my-update rollback\" goes back to it.)" % mine)
+    return 0
+
+
+def cmd_rollback(args):
+    if os.geteuid() != 0:
+        say("Going back needs root: run it as root, or use System update in "
+            "\"Users and system\".")
+        return 1
+    old = previous_version()
+    if not old:
+        say("There is no earlier version to go back to (it is saved by updates "
+            "from my-distro 0.9.2 on, until the next update).")
+        return 1
+    mine = installed_version()
+    say("Going back from my-distro %s to %s..." % (mine, old))
+
+    # 1. the files the update replaced: move them back (renames on the same
+    #    disk, so each file is the old or the new one, never half)
+    restored = 0
+    for top, dirs, files in os.walk(PREVIOUS, topdown=False):
+        rel_top = os.path.relpath(top, PREVIOUS)
+        for name in files + [d for d in dirs if os.path.islink(os.path.join(top, d))]:
+            if rel_top == "." and name in (ADDED, INFO):
+                continue
+            src = os.path.join(top, name)
+            dst = os.path.normpath(os.path.join("/", rel_top, name))
+            if kept(dst.lstrip("/")):
+                continue                            # never touch your files
+            try:
+                if os.path.isdir(dst) and not os.path.islink(dst):
+                    say("  skipped %s (a folder now)" % dst)
+                    continue
+                os.replace(src, dst)
+                restored += 1
+            except OSError as e:
+                say("  skipped %s (%s)" % (dst, e.strerror))
+
+    # 2. what the update added: remove it (files first, then the folders it
+    #    made, deepest first, only if they are empty)
+    try:
+        with open(os.path.join(PREVIOUS, ADDED)) as f:
+            added = [line.rstrip("\n") for line in f if line.strip()]
+    except OSError:
+        added = []
+    removed = 0
+    for path in added:
+        if kept(path.lstrip("/")) or not os.path.lexists(path):
+            continue
+        if os.path.isdir(path) and not os.path.islink(path):
+            continue
+        try:
+            os.remove(path)
+            removed += 1
+        except OSError as e:
+            say("  could not remove %s (%s)" % (path, e.strerror))
+    for path in sorted(added, key=len, reverse=True):
+        if os.path.isdir(path) and not os.path.islink(path):
+            try:
+                os.rmdir(path)
+            except OSError:
+                pass                                # not empty: something of yours
+
+    # The old version's own fixups (it may differ from the newer one)
+    if os.access(FIXUPS, os.X_OK):
+        subprocess.run([FIXUPS, "/"])
+    shutil.rmtree(PREVIOUS, ignore_errors=True)
+    os.sync()
+    write_status(None)
+    say("  %d files restored, %d removed." % (restored, removed))
+    say("Done: my-distro %s is back. Restart the computer to finish." % installed_version())
     return 0
 
 
 def main():
     args = sys.argv[1:]
-    cmds = {"check": cmd_check, "watch": cmd_watch, "install": cmd_install}
+    cmds = {"check": cmd_check, "watch": cmd_watch, "install": cmd_install,
+            "rollback": cmd_rollback}
     if not args or args[0] not in cmds:
-        say("usage: my-update check [--notes] | watch | install")
+        say("usage: my-update check [--notes] | watch | install | rollback")
         return 2
     try:
         return cmds[args[0]](args[1:])

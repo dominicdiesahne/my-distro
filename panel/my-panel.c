@@ -20,6 +20,13 @@
  * - "Update to 0.9" next to the clock when a new version of my-distro is out.
  *   my-update watch writes that into ~/.cache/my-distro/update; a click
  *   opens System update (my-setup --update).
+ * - A speaker with the volume, when there is a sound card (ALSA's mixer).
+ *   Scroll on it: louder / quieter; click: sound off / on; right-click: all
+ *   controls (alsamixer). The volume keys (my-volume) change the same
+ *   control, and the speaker follows. Your volume is saved in
+ *   ~/.config/my-distro/volume and set again at the next login.
+ * - A battery with its charge, on laptops (/sys/class/power_supply). Below
+ *   10 % while not charging it warns once with a notification.
  *
  * Colors, size, position and the clock's style come from the settings file
  * (settings/settings.h). When it changes, the panel restarts itself.
@@ -36,12 +43,14 @@
 #include <X11/keysym.h>
 #include <X11/Xft/Xft.h>
 #include <Imlib2.h>
+#include <alsa/asoundlib.h>
 #include <cairo.h>
 #include <cairo-xlib.h>
 #include <dirent.h>
 #include <math.h>
 #include <fcntl.h>
 #include <glob.h>
+#include <poll.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -75,10 +84,13 @@
 #define MENU_FILE  "/etc/my-panel/menu"
 #define ICONS_FILE "/etc/my-panel/icons"
 
-enum { HOVER_WIFI = -5, HOVER_UPDATE = -4, HOVER_CLOCK = -3, HOVER_NONE = -2,
-       HOVER_START = -1 };
+enum { HOVER_BATTERY = -7, HOVER_VOLUME = -6, HOVER_WIFI = -5, HOVER_UPDATE = -4,
+       HOVER_CLOCK = -3, HOVER_NONE = -2, HOVER_START = -1 };
 
 #define UPDATE_FILE ".cache/my-distro/update"   /* in the home folder */
+#define VOLUME_FILE ".config/my-distro/volume"  /* in the home folder */
+#define VOLUME_STEP 5                            /* percent per scroll step */
+#define BATTERY_LOW 10                           /* percent: warn once */
 
 struct task {
 	Window win;
@@ -131,6 +143,20 @@ static time_t update_mtime;
 static int wifi_level = -2;       /* -2 no Wi-Fi adapter, -1 not connected, 1-4 bars */
 static int wifi_x, wifi_w;        /* its button (wifi_w = 0: not shown) */
 static time_t clock_now;
+
+/* Sound: the mixer of the default sound card and the control we show */
+static snd_mixer_t *mixer;
+static snd_mixer_elem_t *vol_elem;
+static int vol_pct = -1;          /* -1 = no sound card */
+static int vol_on = 1;            /* 0 = muted */
+static time_t vol_retry;          /* when we last tried to open the mixer */
+static int vol_x, vol_w;
+
+/* Battery */
+static int bat_pct = -1;          /* -1 = no battery */
+static int bat_charging, bat_warned;
+static time_t bat_read;
+static int bat_x, bat_w;
 
 /* Calendar popup */
 static XftDraw *cal_draw;
@@ -682,22 +708,374 @@ static void draw_wifi(int right)
 	}
 }
 
+static void run(const char *cmd);
+
+/* A cairo context for drawing into the panel's pixmap, on top of Xft */
+static cairo_t *panel_cairo(void)
+{
+	cairo_surface_t *surf = cairo_xlib_surface_create(dpy, buf, vis, sw, panel_h);
+	cairo_t *cr = cairo_create(surf);
+
+	cairo_surface_destroy(surf);     /* cr keeps it alive */
+	XFlush(dpy);                     /* Xft's drawing first */
+	return cr;
+}
+
+/* --- Sound ------------------------------------------------------------------ */
+
+static void close_mixer(void)
+{
+	if (mixer)
+		snd_mixer_close(mixer);
+	mixer = NULL;
+	vol_elem = NULL;
+}
+
+/*
+ * Opens the mixer of the default sound card and picks the control the
+ * volume keys change too (my-volume): Master, PCM, Speaker, Headphone, or
+ * else the first one with a playback volume. Returns 1 if there is one.
+ */
+static int open_mixer(void)
+{
+	static const char *names[] = { "Master", "PCM", "Speaker", "Headphone" };
+	snd_mixer_elem_t *e;
+
+	if (snd_mixer_open(&mixer, 0) < 0) {
+		mixer = NULL;
+		return 0;
+	}
+	if (snd_mixer_attach(mixer, "default") < 0 ||
+	    snd_mixer_selem_register(mixer, NULL, NULL) < 0 ||
+	    snd_mixer_load(mixer) < 0) {
+		close_mixer();
+		return 0;
+	}
+	for (size_t i = 0; !vol_elem && i < sizeof names / sizeof *names; i++)
+		for (e = snd_mixer_first_elem(mixer); e; e = snd_mixer_elem_next(e))
+			if (strcmp(snd_mixer_selem_get_name(e), names[i]) == 0 &&
+			    snd_mixer_selem_get_index(e) == 0 &&
+			    snd_mixer_selem_has_playback_volume(e)) {
+				vol_elem = e;
+				break;
+			}
+	for (e = snd_mixer_first_elem(mixer); !vol_elem && e; e = snd_mixer_elem_next(e))
+		if (snd_mixer_selem_has_playback_volume(e))
+			vol_elem = e;
+	if (!vol_elem)
+		close_mixer();
+	return vol_elem != NULL;
+}
+
+static void volume_path(char *path, size_t len)
+{
+	const char *home = getenv("HOME");
+
+	snprintf(path, len, "%s/%s", home ? home : "/", VOLUME_FILE);
+}
+
+/* Remembers the volume for the next login: "70 on" */
+static void save_volume(void)
+{
+	char path[512], tmp[520];
+	FILE *f;
+
+	volume_path(path, sizeof path);
+	snprintf(tmp, sizeof tmp, "%s", path);
+	*strrchr(tmp, '/') = '\0';           /* ~/.config/my-distro */
+	*strrchr(tmp, '/') = '\0';           /* ~/.config */
+	mkdir(tmp, 0755);
+	snprintf(tmp, sizeof tmp, "%s", path);
+	*strrchr(tmp, '/') = '\0';
+	mkdir(tmp, 0755);
+	snprintf(tmp, sizeof tmp, "%s.new", path);
+	if ((f = fopen(tmp, "w"))) {
+		fprintf(f, "%d %s\n", vol_pct, vol_on ? "on" : "off");
+		if (fclose(f) == 0)
+			rename(tmp, path);
+	}
+}
+
+/* Sets the volume in percent (0-100) and, if on >= 0, sound on / off. */
+static void set_volume(int pct, int on)
+{
+	long min, max;
+
+	if (!vol_elem)
+		return;
+	pct = pct < 0 ? 0 : pct > 100 ? 100 : pct;
+	snd_mixer_selem_get_playback_volume_range(vol_elem, &min, &max);
+	snd_mixer_selem_set_playback_volume_all(vol_elem, min + (max - min) * pct / 100);
+	if (on >= 0 && snd_mixer_selem_has_playback_switch(vol_elem))
+		snd_mixer_selem_set_playback_switch_all(vol_elem, on);
+}
+
+/*
+ * Reads the volume (it can also change from outside: volume keys,
+ * alsamixer). Returns 1 when the speaker has to be drawn again.
+ */
+static int read_volume(void)
+{
+	long min, max, v = 0;
+	int sw_on = 1, pct, changed, save;
+
+	if (!mixer) {
+		time_t now = time(NULL);
+
+		/* no sound card yet: a USB one may come; look again now and then */
+		if (now - vol_retry < 10)
+			return 0;
+		vol_retry = now;
+		if (!open_mixer()) {
+			changed = vol_pct != -1;
+			vol_pct = -1;
+			return changed;
+		}
+	} else {
+		struct pollfd pfd[8];
+		int n = snd_mixer_poll_descriptors(mixer, pfd, 8);
+
+		/* handle_events would wait when nothing happened: ask poll first */
+		if (n > 0 && poll(pfd, n, 0) > 0 && snd_mixer_handle_events(mixer) < 0) {
+			close_mixer();                /* the card is gone */
+			vol_pct = -1;
+			return 1;
+		}
+	}
+	snd_mixer_selem_get_playback_volume_range(vol_elem, &min, &max);
+	snd_mixer_selem_get_playback_volume(vol_elem, SND_MIXER_SCHN_FRONT_LEFT, &v);
+	if (snd_mixer_selem_has_playback_switch(vol_elem))
+		snd_mixer_selem_get_playback_switch(vol_elem, SND_MIXER_SCHN_FRONT_LEFT, &sw_on);
+	pct = max > min ? (int)(((v - min) * 100 + (max - min) / 2) / (max - min)) : 0;
+	changed = pct != vol_pct || !!sw_on != vol_on;
+	save = changed && vol_pct != -1;      /* changed by you, not the first read */
+	vol_pct = pct;
+	vol_on = !!sw_on;
+	if (save)
+		save_volume();
+	return changed;
+}
+
+/* At login: your volume from last time */
+static void restore_volume(void)
+{
+	char path[512], on[8] = "on";
+	int pct;
+	FILE *f;
+
+	volume_path(path, sizeof path);
+	if (!vol_elem || !(f = fopen(path, "r")))
+		return;
+	if (fscanf(f, "%d %7s", &pct, on) >= 1)
+		set_volume(pct, strcmp(on, "off") != 0);
+	fclose(f);
+}
+
+/* Speaker with waves (or a cross when muted) and the percent. */
+static void draw_volume(int right)
+{
+	char label[16];
+	int bh = panel_h - 2 * PAD, tw;
+	double cx, cy = panel_h / 2.0, s = 1.0;
+	cairo_t *cr;
+
+	vol_w = 0;
+	if (vol_pct < 0)
+		return;
+	snprintf(label, sizeof label, "%d%%", vol_pct);
+	tw = text_width(small, label);
+	vol_w = 18 + tw + 26;
+	vol_x = right - PAD - vol_w;
+	XftDrawRect(draw, hover == HOVER_VOLUME ? &c_hover : &c_bg, vol_x, PAD, vol_w, bh);
+	text(draw, small, vol_on ? &c_dim : &c_sep, vol_x + vol_w - 8 - tw, PAD, bh, label);
+
+	cr = panel_cairo();
+	cx = vol_x + 10;
+	/* the speaker: a small box and a cone */
+	cairo_move_to(cr, cx, cy - 2.5 * s);
+	cairo_line_to(cr, cx + 3 * s, cy - 2.5 * s);
+	cairo_line_to(cr, cx + 7 * s, cy - 6 * s);
+	cairo_line_to(cr, cx + 7 * s, cy + 6 * s);
+	cairo_line_to(cr, cx + 3 * s, cy + 2.5 * s);
+	cairo_line_to(cr, cx, cy + 2.5 * s);
+	cairo_close_path(cr);
+	dial_color(cr, vol_on ? cfg.pal.text : cfg.pal.dim, 1);
+	cairo_fill(cr);
+	cairo_set_line_width(cr, 1.4);
+	cairo_set_line_cap(cr, CAIRO_LINE_CAP_ROUND);
+	if (!vol_on || vol_pct == 0) {        /* x */
+		cairo_move_to(cr, cx + 10 * s, cy - 3 * s);
+		cairo_line_to(cr, cx + 16 * s, cy + 3 * s);
+		cairo_move_to(cr, cx + 16 * s, cy - 3 * s);
+		cairo_line_to(cr, cx + 10 * s, cy + 3 * s);
+		dial_color(cr, vol_on ? cfg.pal.text : "#e5484d", 1);
+		cairo_stroke(cr);
+	} else {                              /* 1-3 waves */
+		int waves = vol_pct < 34 ? 1 : vol_pct < 67 ? 2 : 3;
+
+		for (int i = 0; i < 3; i++) {
+			cairo_new_sub_path(cr);
+			cairo_arc(cr, cx + 7 * s, cy, (3.5 + i * 3) * s, -M_PI / 3.2, M_PI / 3.2);
+			dial_color(cr, i < waves ? cfg.pal.text : cfg.pal.sep, 1);
+			cairo_stroke(cr);
+		}
+	}
+	cairo_destroy(cr);
+}
+
+/* --- Battery ------------------------------------------------------------------ */
+
+/*
+ * /sys/class/power_supply has one folder per battery (type "Battery") with
+ * its charge in percent (capacity) and status (Charging, Discharging, Full,
+ * Not charging). With two batteries we show the average. Returns 1 when the
+ * battery has to be drawn again.
+ */
+static int read_battery(void)
+{
+	char path[300], line[64];
+	int sum = 0, n = 0, charging = 0, pct, changed;
+	time_t now = time(NULL);
+	DIR *d;
+	struct dirent *e;
+	FILE *f;
+
+	if (now - bat_read < 5)              /* changes slowly */
+		return 0;
+	bat_read = now;
+	if ((d = opendir("/sys/class/power_supply"))) {
+		while ((e = readdir(d))) {
+			int cap = -1;
+
+			if (e->d_name[0] == '.')
+				continue;
+			snprintf(path, sizeof path, "/sys/class/power_supply/%s/type", e->d_name);
+			if (!(f = fopen(path, "r")))
+				continue;
+			line[0] = '\0';
+			if (!fgets(line, sizeof line, f))
+				line[0] = '\0';
+			fclose(f);
+			if (strncmp(line, "Battery", 7) != 0)
+				continue;
+			/* HID devices (wireless mice) report a battery too: skip them */
+			snprintf(path, sizeof path, "/sys/class/power_supply/%s/scope", e->d_name);
+			if ((f = fopen(path, "r"))) {
+				int device = fgets(line, sizeof line, f) && strncmp(line, "Device", 6) == 0;
+
+				fclose(f);
+				if (device)
+					continue;
+			}
+			snprintf(path, sizeof path, "/sys/class/power_supply/%s/capacity", e->d_name);
+			if ((f = fopen(path, "r"))) {
+				if (fscanf(f, "%d", &cap) != 1)
+					cap = -1;
+				fclose(f);
+			}
+			if (cap < 0)
+				continue;
+			sum += cap > 100 ? 100 : cap;
+			n++;
+			snprintf(path, sizeof path, "/sys/class/power_supply/%s/status", e->d_name);
+			if ((f = fopen(path, "r"))) {
+				if (fgets(line, sizeof line, f) && strncmp(line, "Discharging", 11) != 0)
+					charging = 1;     /* charging, full, or plugged in */
+				fclose(f);
+			}
+		}
+		closedir(d);
+	}
+	pct = n ? sum / n : -1;
+
+	if (pct >= 0 && pct <= BATTERY_LOW && !charging && !bat_warned) {
+		char cmd[256];
+
+		snprintf(cmd, sizeof cmd, "my-notify -u critical -i battery-caution "
+		         "'Battery low: %d %%' 'Plug in the charger, or save your work.'", pct);
+		run(cmd);
+		bat_warned = 1;
+	}
+	if (charging || pct > BATTERY_LOW)
+		bat_warned = 0;
+
+	changed = pct != bat_pct || charging != bat_charging;
+	bat_pct = pct;
+	bat_charging = charging;
+	return changed;
+}
+
+/* A battery outline filled up to its charge, and the percent. */
+static void draw_battery(int right)
+{
+	char label[16];
+	int bh = panel_h - 2 * PAD, tw;
+	double bw = 22, bht = 11, x, y = panel_h / 2.0 - bht / 2;
+	const char *fill = bat_charging ? cfg.pal.accent :
+	                   bat_pct <= BATTERY_LOW * 2 ? "#e5484d" : cfg.pal.text;
+	cairo_t *cr;
+
+	bat_w = 0;
+	if (bat_pct < 0)
+		return;
+	snprintf(label, sizeof label, "%d%%", bat_pct);
+	tw = text_width(small, label);
+	bat_w = (int)bw + 3 + tw + 26;
+	bat_x = right - PAD - bat_w;
+	XftDrawRect(draw, hover == HOVER_BATTERY ? &c_hover : &c_bg, bat_x, PAD, bat_w, bh);
+	text(draw, small, &c_dim, bat_x + bat_w - 8 - tw, PAD, bh, label);
+
+	cr = panel_cairo();
+	x = bat_x + 10.5;
+	cairo_rectangle(cr, x, y + 0.5, bw, bht);           /* outline */
+	cairo_set_line_width(cr, 1.2);
+	dial_color(cr, cfg.pal.text, 0.9);
+	cairo_stroke(cr);
+	cairo_rectangle(cr, x + bw + 0.5, y + 3.5, 2.5, bht - 6);   /* the nub */
+	cairo_fill(cr);
+	cairo_rectangle(cr, x + 2, y + 2.5, (bw - 4) * bat_pct / 100.0, bht - 4);
+	dial_color(cr, fill, 1);
+	cairo_fill(cr);
+	if (bat_charging) {                                  /* a small lightning bolt */
+		double mx = x + bw / 2, my = y + bht / 2 + 0.5;
+
+		cairo_move_to(cr, mx + 1.5, my - 5);
+		cairo_line_to(cr, mx - 2.5, my + 0.8);
+		cairo_line_to(cr, mx, my + 0.8);
+		cairo_line_to(cr, mx - 1.5, my + 5);
+		cairo_line_to(cr, mx + 2.5, my - 0.8);
+		cairo_line_to(cr, mx, my - 0.8);
+		cairo_close_path(cr);
+		dial_color(cr, cfg.pal.on_accent, 1);
+		cairo_fill(cr);
+	}
+	cairo_destroy(cr);
+}
+
 static void draw_panel(void)
 {
 	char label[TITLE_MAX + 8];
 	int bh = panel_h - 2 * PAD;
 	int left = PAD + START_W + 2 * PAD;
-	int avail;
+	int avail, right;
 
 	XftDrawRect(draw, &c_bg, 0, 0, sw, panel_h);
 	/* thin accent line on the edge towards the screen */
 	XftDrawRect(draw, &c_accent, 0, cfg.panel_position == PANEL_TOP ? panel_h - 1 : 0,
 	            sw, 1);
 
+	/* From the right: clock, update button, Wi-Fi, volume, battery. Each
+	 * one starts left of the one before (the ones not shown take no room). */
 	draw_clock();
 	draw_update();
-	draw_wifi(update_w ? update_x : clock_x);
-	avail = (wifi_w ? wifi_x : update_w ? update_x : clock_x) - PAD - left;
+	right = update_w ? update_x : clock_x;
+	draw_wifi(right);
+	right = wifi_w ? wifi_x : right;
+	draw_volume(right);
+	right = vol_w ? vol_x : right;
+	draw_battery(right);
+	right = bat_w ? bat_x : right;
+	avail = right - PAD - left;
 
 	/* Start button */
 	XftDrawRect(draw, menu_open ? &c_active : hover == HOVER_START ? &c_hover
@@ -1073,6 +1451,10 @@ static int panel_hit(int x)
 		return HOVER_UPDATE;
 	if (wifi_w && x >= wifi_x && x < wifi_x + wifi_w)
 		return HOVER_WIFI;
+	if (vol_w && x >= vol_x && x < vol_x + vol_w)
+		return HOVER_VOLUME;
+	if (bat_w && x >= bat_x && x < bat_x + bat_w)
+		return HOVER_BATTERY;
 	if (x >= PAD && x < PAD + START_W)
 		return HOVER_START;
 	for (int i = 0; i < ntasks; i++)
@@ -1267,6 +1649,21 @@ static void handle(XEvent *e)
 			}
 			break;
 		}
+		/* The speaker: scroll = louder / quieter, click = sound on / off,
+		 * right-click = all controls */
+		if (panel_hit(e->xbutton.x) == HOVER_VOLUME) {
+			switch (e->xbutton.button) {
+			case Button4: set_volume(vol_pct + VOLUME_STEP, 1); break;
+			case Button5: set_volume(vol_pct - VOLUME_STEP, -1); break;
+			case Button1: set_volume(vol_pct, !vol_on); break;
+			case Button3:
+				run("xterm -name alsamixer -T Volume -geometry 100x26 -e alsamixer");
+				break;
+			}
+			if (read_volume())
+				draw_panel();
+			break;
+		}
 		if (e->xbutton.button != Button1)
 			break;
 		i = panel_hit(e->xbutton.x);
@@ -1448,6 +1845,11 @@ int main(int argc, char **argv)
 
 	update_clock();
 	refresh_tasks();
+	if (open_mixer())
+		restore_volume();          /* your volume from last time */
+	vol_retry = time(NULL);
+	read_volume();
+	read_battery();
 	draw_panel();
 
 	for (;;) {
@@ -1477,7 +1879,8 @@ int main(int argc, char **argv)
 			draw_panel();
 		}
 
-		if (update_clock() | read_update_status() | read_wifi() || cfg.clock_seconds)
+		if (update_clock() | read_update_status() | read_wifi() | read_volume() |
+		    read_battery() || cfg.clock_seconds)
 			draw_panel();
 		if (cal_open)
 			draw_calendar();     /* its big clock */

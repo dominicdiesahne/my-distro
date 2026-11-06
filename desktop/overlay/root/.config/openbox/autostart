@@ -1,6 +1,7 @@
 # Started by Openbox once it is running (see /root/.xinitrc).
 
 my-settings --apply        # colors, wallpaper, window theme from the Settings app
+my-notifyd &               # shows notifications in the corner of the screen
 my-panel &                  # taskbar: Start menu, open windows, clock
 my-indexd &                 # keeps the search index of your files up to date
 my-update watch &           # looks for system updates (the taskbar shows them)

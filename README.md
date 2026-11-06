@@ -73,6 +73,33 @@ the taskbar, the login screen, the file history daemon and the search indexer.
   (wpa_supplicant underneath; started by a udev rule when an adapter appears).
 - **Installer** (`my-install`): copies the live system onto a hard disk with
   GRUB for BIOS and UEFI, so your files and settings survive a reboot.
+- **Sound**: a speaker in the taskbar shows the volume. Scroll on it for
+  louder/quieter, click to mute, right-click for all controls (alsamixer).
+  The volume keys work too (`my-volume up|down|mute`). Your volume is
+  remembered for the next login. Drivers for the sound chips of most PCs
+  (Intel HD Audio with Realtek, Conexant, Cirrus, IDT, VIA codecs, HDMI)
+  and USB headsets.
+- **Notifications** (`settings/my-notifyd.c`): small boxes in the corner
+  next to the taskbar, in the colors of your theme. Any program can send one
+  over the standard freedesktop D-Bus interface; from a script:
+  `my-notify "Title" "Text"` (also called `notify-send`).
+- **USB sticks and SD cards** open by themselves in `/media/NAME`, with a
+  notification: FAT, exFAT, NTFS (Windows), ext4, CDs/DVDs. To remove one
+  safely: right-click its folder, *Eject* (or Start menu, *Eject USB stick*,
+  or `my-eject`). Internal disks are never opened by themselves.
+- **Screenshots** (`panel/my-screenshot.c`): Print = whole screen,
+  Alt+Print = the window in front, Shift+Print = drag an area; or Start
+  menu, *Screenshot*. They go to `~/Pictures`.
+- **Firewall** (nftables): nobody can connect to this computer from outside;
+  everything you start (web, updates) works as before. Rules in
+  `/etc/nftables.conf`, your own in `/etc/nftables.d/`.
+- **Time from the internet**: the clock sets itself (BusyBox `ntpd`,
+  `pool.ntp.org`) and keeps the hardware clock right too.
+- **sudo**: administrators run commands as root with their own password.
+  The account from the setup is one (when it shares its password with root);
+  *Users and system* makes others administrators.
+- **Laptops**: the battery's charge in the taskbar (a warning below 10 %),
+  *Suspend* in the Start menu.
 
 ## Try it
 
@@ -206,6 +233,8 @@ the rest is the system (ext4). It boots with BIOS and UEFI alike.
 | Super+T or Ctrl+Alt+T | Terminal |
 | Super+E | File manager |
 | Super+Up / Super+Down | Maximise / minimise |
+| Print / Alt+Print / Shift+Print | Screenshot: screen / window / area |
+| Volume keys, Sleep key | Louder, quieter, mute; suspend |
 | Alt+Tab, Alt+F4 | Switch / close windows |
 | Ctrl+Alt+F1 / Ctrl+Alt+F7 | Text console / back to the desktop |
 
@@ -218,11 +247,13 @@ The keyboard layout is German (`desktop/overlay/etc/X11/xorg.conf.d/00-keyboard.
 1. GRUB loads the kernel and the whole root filesystem into RAM (initrd).
 2. The kernel starts our init, `/sbin/my-init` (`init/init.c`).
 3. init mounts `/proc`, `/sys`, `/dev`, `/tmp` and runs `/etc/init.d/rcS`:
-   udev, network (DHCP), `S50history` (file history), `S90desktop`.
+   udev, `S35firewall`, network (DHCP), `S45sound`, `S48time` (clock from
+   the internet), `S50history` (file history), `S90desktop`.
 4. `S90desktop` starts the X server with **`my-login`** as its only client.
 5. After login, `my-login` drops root rights and runs `~/.xinitrc` as you,
-   which starts Openbox; Openbox's autostart starts the taskbar, the search
-   indexer, the desktop icons and a terminal.
+   which starts the session D-Bus and Openbox; Openbox's autostart starts
+   the notifications, the taskbar, the search indexer, the desktop icons
+   and a terminal.
 6. *Log out* ends the session and the login screen comes back.
    *Power off* sends init `SIGUSR2`: it stops all processes, makes the root
    filesystem read-only (installed system) and powers off.
@@ -312,13 +343,25 @@ What happens (`/usr/bin/my-update`, a Python script):
    (`/etc/passwd`, `shadow`, `group`), the computer name, the keyboard layout,
    the boot loader, the saved Wi-Fi networks and `update.conf`.
 5. It runs `/usr/lib/my-distro/installed-fixups` (same as the installer:
-   no "Install to disk" icon), and you restart.
+   no "Install to disk" icon; it also adds what a new version needs to the
+   session files in the home folders, which updates never replace), and
+   you restart.
+
+**Undo an update.** Before a file is replaced, the updater keeps the old
+one in `/.my-update/previous` (a hard link, so it costs no time). If
+something doesn't work after an update, *System update* shows **Undo last
+update (back to 0.9.2)**: it puts the old files back and removes the ones
+the update added. If the desktop doesn't start any more, log in as root on
+the text console (Ctrl+Alt+F1) and run `my-update rollback`. One step back
+is kept, until the next update. This works for updates installed by 0.9.2
+or newer (the update *to* 0.9.2 is still done by the old updater).
 
 The **live ISO** can't keep an update (it runs from RAM), so there it only
 says that a new ISO is out. Systems before 0.8 have no updater: install the
 0.8 ISO once, updates come by themselves after that.
 
-From a terminal: `my-update check --notes`, and as root `my-update install`.
+From a terminal: `my-update check --notes`, and as root `my-update install`
+or `my-update rollback`.
 
 ### Making a release
 
@@ -346,11 +389,15 @@ built into the system). How to make a key is in the `Makefile` at
 |---|---|
 | `Makefile` | `make desktop` (ISO and update package), `make release-files` (signature), `make run-iso`; `make` / `make run` for the minimal version |
 | `init/init.c` | PID 1 |
-| `login/` | Login screen `my-login`, `my-power` (reboot/power off for normal users), `my-admin` (root password check for Users and system) |
+| `login/` | Login screen `my-login`, `my-power` (reboot, power off, suspend, eject USB sticks for normal users), `my-admin` (root password check for Users and system) |
 | `desktop/overlay/usr/sbin/my-install` | Installer (shell script) |
 | `desktop/overlay/usr/bin/my-update` | System updates (Python), settings in `desktop/overlay/etc/my-distro/update.conf`, public key `update-key.pem` |
 | `desktop/overlay/etc/my-distro/version` | The version number (the welcome text and `my-update` read it) |
-| `panel/` | Taskbar `my-panel` |
+| `panel/` | Taskbar `my-panel` (with volume and battery), `my-screenshot` |
+| `settings/my-notifyd.c`, `settings/my-notify.c` | Notifications: the daemon that shows them, and the command that sends one |
+| `desktop/overlay/usr/lib/my-distro/automount` | Opens USB sticks and SD cards (started by a udev rule) |
+| `desktop/overlay/etc/init.d/S35firewall`, `S45sound`, `S48time` | Firewall, sound start values, time sync |
+| `desktop/busybox.fragment` | BusyBox options on top of Buildroot's (ntpd) |
 | `desktop/lazyvim/`, `desktop/package/my-ide/` | The IDE: LazyVim config, and how Neovim and the plugins get into the image |
 | `settings/` | Settings app, Clock app, setup / Users and system (`my-setup`), and `settings.c` / `dial.c` that the taskbar and login screen share with them |
 | `history/` | `my-historyd`, `my-undo`, the File history window |
@@ -429,6 +476,9 @@ make run    # boots in the terminal; quit with Ctrl-A, then X
   Wi-Fi window yet.
 - Graphics drivers set the screen up, but there is no 3D acceleration
   (Mesa's software renderer only).
+- Sound plays on one card at a time (ALSA, no sound server). The digital
+  microphones of some new laptops (Intel SOF) don't work yet.
+- Closing a laptop's lid does nothing yet; use *Suspend* in the Start menu.
 
 ## License
 

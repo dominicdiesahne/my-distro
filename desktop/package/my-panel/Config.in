@@ -7,5 +7,8 @@ config BR2_PACKAGE_MY_PANEL
 	select BR2_PACKAGE_IMLIB2_X
 	select BR2_PACKAGE_IMLIB2_PNG
 	select BR2_PACKAGE_CAIRO
+	select BR2_PACKAGE_ALSA_LIB
+	select BR2_PACKAGE_ALSA_LIB_MIXER
 	help
-	  The my-distro taskbar: start menu, window buttons, clock.
+	  The my-distro taskbar: start menu, window buttons, clock,
+	  volume and battery; and my-screenshot.

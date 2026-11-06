@@ -1,0 +1,21 @@
+#!/bin/sh
+# my-volume up|down|mute|get: louder, quieter, sound on/off, or show it.
+# The volume keys of a keyboard run this (Openbox shortcuts). The taskbar's
+# speaker shows the result and also changes the volume (scroll, click).
+#
+# It uses the first of these controls the sound card has, the same order as
+# the taskbar (panel/my-panel.c): Master, PCM, Speaker, Headphone.
+STEP=5%
+ctl=""
+for c in Master PCM Speaker Headphone; do
+	if amixer -q sget "$c" >/dev/null 2>&1; then ctl=$c; break; fi
+done
+[ -n "$ctl" ] || { echo "my-volume: no sound card" >&2; exit 1; }
+
+case "$1" in
+up)   amixer -q sset "$ctl" "$STEP+" unmute ;;
+down) amixer -q sset "$ctl" "$STEP-" ;;
+mute) amixer -q sset "$ctl" toggle ;;
+get|"") amixer sget "$ctl" | sed -n 's/.*\[\([0-9]*%\)\].*\[\(on\|off\)\].*/\1 \2/p' | head -1 ;;
+*) echo "usage: my-volume up|down|mute|get" >&2; exit 2 ;;
+esac

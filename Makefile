@@ -137,11 +137,10 @@ desktop: $(BR_DIR)/Makefile
 > mkdir -p $(BR_SRC)
 > cp -r desktop init panel login history search settings $(BR_SRC)/
 > chmod -R u=rwX,go=rX $(BR_SRC)
-> chmod 755 $(BR_SRC)/desktop/overlay/etc/init.d/S90desktop $(BR_SRC)/desktop/overlay/etc/init.d/S50history $(BR_SRC)/desktop/overlay/root/.xinitrc \
->   $(BR_SRC)/desktop/overlay/usr/sbin/my-install $(BR_SRC)/desktop/overlay/usr/bin/my-ide \
->   $(BR_SRC)/desktop/overlay/usr/bin/my-update $(BR_SRC)/desktop/overlay/usr/lib/my-distro/installed-fixups \
->   $(BR_SRC)/desktop/overlay/usr/lib/my-distro/wifi-start $(BR_SRC)/desktop/overlay/usr/lib/my-distro/wifi-event \
->   $(BR_SRC)/desktop/post-build.sh
+> # Programs and scripts: everything in these folders is one
+> chmod 755 $(BR_SRC)/desktop/overlay/etc/init.d/* $(BR_SRC)/desktop/overlay/root/.xinitrc \
+>   $(BR_SRC)/desktop/overlay/usr/bin/* $(BR_SRC)/desktop/overlay/usr/sbin/* \
+>   $(BR_SRC)/desktop/overlay/usr/lib/my-distro/* $(BR_SRC)/desktop/post-build.sh
 > $(BR_MAKE) qemu_x86_64_defconfig
 > cd $(BR_OUT) && $(BR_DIR)/support/kconfig/merge_config.sh -m .config $(BR_SRC)/desktop/buildroot.fragment
 > $(BR_MAKE) olddefconfig
@@ -150,8 +149,12 @@ desktop: $(BR_DIR)/Makefile
 > if ls -d $(BR_OUT)/build/linux-[0-9]* >/dev/null 2>&1 && \
 >    ! cmp -s desktop/linux-gui.fragment $(BR_OUT)/.linux-gui.fragment; then \
 >   $(BR_MAKE) linux-reconfigure; fi
+> # Nor changes to BusyBox's (it builds in a minute, so start it again)
+> if ! cmp -s desktop/busybox.fragment $(BR_OUT)/.busybox.fragment; then \
+>   $(BR_MAKE) busybox-dirclean; fi
 > $(BR_MAKE)
 > cp desktop/linux-gui.fragment $(BR_OUT)/.linux-gui.fragment
+> cp desktop/busybox.fragment $(BR_OUT)/.busybox.fragment
 > mkdir -p out
 > # Buildroot's ISO only boots from a CD. Make it again from the same files
 > # (what grub-mkrescue does), so it also boots when it is written to a USB
