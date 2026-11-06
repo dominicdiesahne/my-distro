@@ -18,9 +18,17 @@
 T=/mnt/target                  # where the new system is mounted
 LOG=/tmp/my-install.log
 
+# "su root -c" keeps the user's PATH, which has no sbin directories; sfdisk,
+# mkfs and grub-install live there.
+PATH=/usr/sbin:/sbin:/usr/bin:/bin
+export PATH
+
+# Reads from the terminal itself: when the installer stops inside a command
+# whose input is a here-document (sfdisk), plain "read" would get that instead
+# and the window would close before the message can be read.
 pause() {
 	printf "\nPress Enter to close this window. "
-	read -r _
+	read -r _ </dev/tty
 }
 
 # Stop after showing a message. Exit code 3 tells the non-root copy of this
