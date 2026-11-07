@@ -384,26 +384,6 @@ says that a new ISO is out. Systems before 0.8 have no updater: install the
 From a terminal: `my-update check --notes`, and as root `my-update install`
 or `my-update rollback`.
 
-### Making a release
-
-```bash
-# 1. Raise the version (the only place it is written down)
-echo 0.9 > desktop/overlay/etc/my-distro/version
-# 2. Build: out/my-distro.iso and out/my-distro-update.tar.xz
-make desktop
-# 3. Sum and signature of the update package
-make release-files
-# 4. Publish all four files
-gh release create v0.9 out/my-distro.iso out/my-distro-update.tar.xz* --title "my-distro 0.9" --notes "..."
-```
-
-The tag must be the version with a `v` (`v0.9`). The **private signing
-key** is `~/.config/my-distro/update-signing-key.pem` on the build machine,
-never in the repository. **Back it up**: without it, installed systems can't
-get updates any more (a new key needs a new ISO, because the public key is
-built into the system). How to make a key is in the `Makefile` at
-`release-files`.
-
 ## Project layout
 
 | Path | What it is |
