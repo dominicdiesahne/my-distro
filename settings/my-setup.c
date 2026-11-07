@@ -384,6 +384,176 @@ static const char *set_layout(const char *id)
 	return ok ? NULL : "Could not save the keyboard layout.";
 }
 
+/* --- Time zone ------------------------------------------------------------------ */
+/*
+ * /etc/localtime is a link to the zone's file in /usr/share/zoneinfo (e.g.
+ * Europe/Vienna); glibc reads it to turn the clock's UTC into local time.
+ * /etc/timezone names the zone too, for programs that read that instead.
+ * The list of zones comes from zone1970.tab (one line per zone).
+ */
+#define ZONEINFO "/usr/share/zoneinfo"
+
+static void current_timezone(char *buf, size_t len)
+{
+	char link[256];
+	ssize_t n = readlink("/etc/localtime", link, sizeof link - 1);
+	char *p;
+
+	snprintf(buf, len, "Europe/Vienna");
+	if (n > 0) {
+		link[n] = '\0';
+		if ((p = strstr(link, "zoneinfo/")))
+			snprintf(buf, len, "%s", p + 9);
+	}
+}
+
+static int valid_timezone(const char *id)
+{
+	char path[300];
+	struct stat st;
+
+	if (!id || !id[0] || strstr(id, "..") || id[0] == '/')
+		return 0;
+	for (const char *c = id; *c; c++)
+		if (!isalnum((unsigned char)*c) && !strchr("/_+-", *c))
+			return 0;
+	snprintf(path, sizeof path, "%s/%s", ZONEINFO, id);
+	return stat(path, &st) == 0 && S_ISREG(st.st_mode);
+}
+
+static const char *set_timezone(const char *id)
+{
+	char target[300], text[80];
+
+	if (!valid_timezone(id))
+		return "Unknown time zone.";
+	snprintf(target, sizeof target, "../usr/share/zoneinfo/%s", id);
+	unlink("/etc/localtime.new");
+	if (symlink(target, "/etc/localtime.new") != 0 ||
+	    rename("/etc/localtime.new", "/etc/localtime") != 0)
+		return "Could not set the time zone.";
+	snprintf(text, sizeof text, "%s\n", id);
+	write_file("/etc/timezone", text, 0644);
+	return NULL;
+}
+
+/* All zones, sorted ("Europe/Vienna", ...) */
+static GPtrArray *zone_list(void)
+{
+	static GPtrArray *zones;
+	char *text = NULL, **lines;
+
+	if (zones)
+		return zones;
+	zones = g_ptr_array_new_with_free_func(g_free);
+	if (g_file_get_contents(ZONEINFO "/zone1970.tab", &text, NULL, NULL)) {
+		lines = g_strsplit(text, "\n", -1);
+		for (int i = 0; lines[i]; i++) {
+			char **f = g_strsplit(lines[i], "\t", 4);
+
+			if (lines[i][0] != '#' && g_strv_length(f) >= 3 && strchr(f[2], '/'))
+				g_ptr_array_add(zones, g_strdup(f[2]));
+			g_strfreev(f);
+		}
+		g_strfreev(lines);
+		g_free(text);
+	}
+	g_ptr_array_add(zones, g_strdup("Etc/UTC"));
+	return zones;                     /* timezone_widget() sorts it */
+}
+
+static int zone_cmp(gconstpointer a, gconstpointer b)
+{
+	return strcmp(*(char *const *)a, *(char *const *)b);
+}
+
+static int tz_filling;
+static GtkWidget *tz_status_label;   /* where "Time zone set." goes, or NULL */
+
+/* The cities of one region: "Europe/Vienna" -> "Vienna", "America/
+ * Argentina/Cordoba" -> "Argentina / Cordoba" */
+static void fill_cities(GtkWidget *city, const char *region, const char *select)
+{
+	GPtrArray *zones = zone_list();
+	size_t rl = strlen(region);
+
+	tz_filling = 1;
+	gtk_combo_box_text_remove_all(GTK_COMBO_BOX_TEXT(city));
+	for (guint i = 0; i < zones->len; i++) {
+		const char *z = zones->pdata[i];
+
+		if (strncmp(z, region, rl) == 0 && z[rl] == '/') {
+			char *shown = g_strdup(z + rl + 1);
+
+			g_strdelimit(shown, "_", ' ');
+			if (strchr(shown, '/')) {
+				char **parts = g_strsplit(shown, "/", -1);
+
+				g_free(shown);
+				shown = g_strjoinv(" / ", parts);
+				g_strfreev(parts);
+			}
+			gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(city), z, shown);
+			g_free(shown);
+		}
+	}
+	if (!select || !gtk_combo_box_set_active_id(GTK_COMBO_BOX(city), select))
+		gtk_combo_box_set_active(GTK_COMBO_BOX(city), 0);
+	tz_filling = 0;
+}
+
+static void on_city(GtkComboBox *c, gpointer d)
+{
+	const char *id = gtk_combo_box_get_active_id(c), *err;
+
+	(void)d;
+	if (tz_filling || !id)
+		return;
+	err = set_timezone(id);
+	if (tz_status_label)
+		gtk_label_set_text(GTK_LABEL(tz_status_label), err ? err : "Time zone set.");
+}
+
+static void on_region(GtkComboBox *c, gpointer city)
+{
+	const char *region = gtk_combo_box_get_active_id(c);
+
+	if (!region)
+		return;
+	fill_cities(city, region, NULL);
+	on_city(GTK_COMBO_BOX(city), NULL);        /* the region's first city */
+}
+
+/* Two drop-down lists: region (Europe, America, ...) and city. Choosing a
+ * city sets the time zone at once. */
+static GtkWidget *timezone_widget(void)
+{
+	GtkWidget *box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+	GtkWidget *region = gtk_combo_box_text_new(), *city = gtk_combo_box_text_new();
+	GPtrArray *zones = zone_list();
+	char now[128], last[64] = "", cur_region[64];
+
+	g_ptr_array_sort(zones, zone_cmp);
+	current_timezone(now, sizeof now);
+	snprintf(cur_region, sizeof cur_region, "%.*s", (int)strcspn(now, "/"), now);
+	for (guint i = 0; i < zones->len; i++) {
+		const char *z = zones->pdata[i];
+		int n = strcspn(z, "/");
+
+		if ((int)strlen(last) != n || strncmp(last, z, n) != 0) {
+			snprintf(last, sizeof last, "%.*s", n, z);
+			gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(region), last, last);
+		}
+	}
+	gtk_combo_box_set_active_id(GTK_COMBO_BOX(region), cur_region);
+	fill_cities(city, cur_region, now);
+	g_signal_connect(region, "changed", G_CALLBACK(on_region), city);
+	g_signal_connect(city, "changed", G_CALLBACK(on_city), NULL);
+	gtk_box_pack_start(GTK_BOX(box), region, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(box), city, TRUE, TRUE, 0);
+	return box;
+}
+
 static void write_setup_done(const char *how)
 {
 	char text[64];
@@ -752,6 +922,7 @@ static int first_boot(void)
 	g_signal_connect(row, "changed", G_CALLBACK(on_layout), NULL);
 	add_field(p, "Keyboard layout", row);
 	add_field(p, "Try your keyboard here", entry(0));
+	add_field(p, "Time zone", timezone_widget());
 	if (live) {
 		GtkWidget *skip = gtk_button_new_with_label("Skip: try it with the demo account");
 
@@ -1333,6 +1504,11 @@ static int manage(int open_update)
 	g_signal_connect(combo, "changed", G_CALLBACK(on_layout_manage), NULL);
 	gtk_widget_set_halign(combo, GTK_ALIGN_START);
 	gtk_box_pack_start(GTK_BOX(p), combo, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(p), label("Time zone (for everyone, at once)", NULL),
+	                   FALSE, FALSE, 8);
+	combo = timezone_widget();
+	gtk_widget_set_halign(combo, GTK_ALIGN_START);
+	gtk_box_pack_start(GTK_BOX(p), combo, FALSE, FALSE, 0);
 
 	/* Administrator */
 	p = mg_page(stack, "admin", "Administrator");
@@ -1388,7 +1564,8 @@ static int manage(int open_update)
 	gtk_widget_set_size_request(side, 150, -1);
 
 	mg_status = label("", NULL);
-	gtk_container_set_border_width(GTK_CONTAINER(mg_status), 12);
+	g_object_set(mg_status, "margin", 12, NULL);   /* a label has no border width */
+	tz_status_label = mg_status;
 	vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
 	gtk_box_pack_start(GTK_BOX(vbox), stack, TRUE, TRUE, 0);
 	gtk_box_pack_start(GTK_BOX(vbox), mg_status, FALSE, FALSE, 0);

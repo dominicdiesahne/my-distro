@@ -76,6 +76,8 @@ KEEP = [
     "etc/wpa_supplicant.conf",                   # saved Wi-Fi networks
     "etc/nftables.d",                            # your own firewall rules
     "etc/sudoers.d/local",                       # your own sudo rules
+    "etc/localtime", "etc/timezone",             # the time zone
+    "etc/my-distro/power.conf",                  # what closing the lid does
 ]
 
 

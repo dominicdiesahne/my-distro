@@ -1,0 +1,28 @@
+#!/bin/sh
+# Starts my-lidd: closing a laptop's lid locks the screen and suspends
+# (settings: /etc/my-distro/power.conf). Restarted if it crashes.
+# Log: /var/log/power.log
+PIDFILE=/run/my-lidd.keepalive
+
+case "$1" in
+start)
+	printf "Starting lid switch: "
+	/usr/bin/my-keepalive -a /usr/sbin/my-lidd </dev/null >>/var/log/power.log 2>&1 &
+	echo $! > $PIDFILE
+	echo "OK"
+	;;
+stop)
+	printf "Stopping lid switch: "
+	[ -f $PIDFILE ] && kill "$(cat $PIDFILE)" 2>/dev/null
+	rm -f $PIDFILE
+	echo "OK"
+	;;
+restart)
+	"$0" stop
+	"$0" start
+	;;
+*)
+	echo "Usage: $0 {start|stop|restart}"
+	exit 1
+	;;
+esac

@@ -1,15 +1,20 @@
 #!/bin/sh
-# Starts my-historyd, which saves a version of every changed file.
+# Starts my-historyd, which saves a version of every changed file. If it
+# crashes, my-keepalive starts it again.
 # Log: /var/log/my-history.log
+PIDFILE=/run/my-historyd.keepalive
 
 case "$1" in
 start)
 	printf "Starting file history: "
-	/usr/sbin/my-historyd </dev/null >/var/log/my-history.log 2>&1 &
+	/usr/bin/my-keepalive -a /usr/sbin/my-historyd </dev/null >/var/log/my-history.log 2>&1 &
+	echo $! > $PIDFILE
 	echo "OK"
 	;;
 stop)
 	printf "Stopping file history: "
+	[ -f $PIDFILE ] && kill "$(cat $PIDFILE)" 2>/dev/null
+	rm -f $PIDFILE
 	killall my-historyd 2>/dev/null
 	echo "OK"
 	;;

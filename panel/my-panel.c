@@ -484,6 +484,7 @@ static int update_clock(void)
 	strcpy(old_time, clock_text);
 	strcpy(old_date, date_text);
 	clock_now = time(NULL);
+	tzset();         /* the time zone may have changed (Users and system) */
 	localtime_r(&clock_now, &tm);
 	settings_format_time(&cfg, &tm, clock_text, sizeof clock_text);
 	settings_format_date(&cfg, &tm, date_text, sizeof date_text);
@@ -1196,6 +1197,11 @@ static void run(const char *cmd)
 {
 	if (fork() == 0) {
 		setsid();
+		/* We ignore SIGCHLD (so our children are reaped by themselves), and a
+		 * started program would inherit that: then it couldn't wait for its
+		 * own children (Users and system for adduser, the lock screen for
+		 * the password check). Give it the normal handling back. */
+		signal(SIGCHLD, SIG_DFL);
 		execl("/bin/sh", "sh", "-c", cmd, (char *)NULL);
 		_exit(127);
 	}

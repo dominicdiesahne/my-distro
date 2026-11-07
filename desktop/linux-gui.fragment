@@ -241,3 +241,25 @@ CONFIG_SND_USB_AUDIO=m
 # it is right at the next start even without a network.
 CONFIG_RTC_CLASS=y
 CONFIG_RTC_DRV_CMOS=y
+
+# --- 0.9.3 -------------------------------------------------------------------
+
+# Compressed swap in RAM (zram, set up by /etc/init.d/S20zram), packed with
+# zstd (lz4 as the fallback)
+CONFIG_ZSMALLOC=y
+CONFIG_ZRAM=y
+CONFIG_ZRAM_BACKEND_ZSTD=y
+CONFIG_ZRAM_BACKEND_LZ4=y
+CONFIG_ZRAM_DEF_COMP_ZSTD=y
+CONFIG_CRYPTO_ZSTD=y
+CONFIG_CRYPTO_LZ4=y
+
+# Laptop screens: the backlight (brightness keys: my-power brightness). The
+# lid switch is ACPI's button driver, already in.
+CONFIG_BACKLIGHT_CLASS_DEVICE=y
+CONFIG_ACPI_VIDEO=m
+
+# Virtual input devices made by programs (uinput): used to test the lid
+# switch in a VM, and by remote-control and game-pad tools
+CONFIG_INPUT_MISC=y
+CONFIG_INPUT_UINPUT=m

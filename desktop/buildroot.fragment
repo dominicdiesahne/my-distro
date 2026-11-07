@@ -215,3 +215,17 @@ BR2_PACKAGE_NFTABLES=y
 # sudo: members of the group wheel may run commands as root with their own
 # password (/etc/sudoers.d/wheel)
 BR2_PACKAGE_SUDO=y
+
+# --- 0.9.3 -------------------------------------------------------------------
+
+# Display settings (Settings app, Display page) set the screens with xrandr
+BR2_PACKAGE_XAPP_XRANDR=y
+
+# The screen lock (login/my-lock.c) asks the X server how long nobody has
+# touched keyboard or mouse: the screen saver extension's library
+BR2_PACKAGE_XLIB_LIBXSCRNSAVER=y
+
+# Media player: mpv (videos and music, FFmpeg for the formats). LuaJIT gives
+# it its on-screen controls (play/pause, seek bar, volume).
+BR2_PACKAGE_LUAJIT=y
+BR2_PACKAGE_MPV=y

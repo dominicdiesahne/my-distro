@@ -23,7 +23,7 @@ define MY_SETTINGS_BUILD_CMDS
 		$(MY_SETTINGS_GTK) $$($(PKG_CONFIG_HOST_BINARY) --cflags --libs libxcrypt)
 	$(MY_SETTINGS_CC) -o $(@D)/my-wifi $(@D)/my-wifi.c $(MY_SETTINGS_GTK)
 	$(MY_SETTINGS_CC) -o $(@D)/my-notifyd $(@D)/my-notifyd.c $(@D)/settings.c \
-		$(MY_SETTINGS_GTK)
+		$(MY_SETTINGS_GTK) $$($(PKG_CONFIG_HOST_BINARY) --cflags --libs x11)
 	$(MY_SETTINGS_CC) -o $(@D)/my-notify $(@D)/my-notify.c \
 		$$($(PKG_CONFIG_HOST_BINARY) --cflags --libs gio-2.0)
 endef

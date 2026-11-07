@@ -52,6 +52,9 @@ struct settings {
 	int panel_position;    /* PANEL_BOTTOM or PANEL_TOP */
 	int panel_height;      /* pixels, 28-56 */
 	int font_size;         /* points, 8-16 */
+
+	int lock_minutes;      /* lock the screen after this long without use; 0 = never */
+	int scale;             /* text and icons in percent: 100-200 (Xft.dpi = 96 * scale) */
 };
 
 /* All built-in themes, ending with { NULL } */

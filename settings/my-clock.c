@@ -126,6 +126,7 @@ static gboolean on_draw(GtkWidget *w, cairo_t *cr, gpointer data)
 	struct tm tm;
 
 	(void)data;
+	tzset();                 /* the time zone may have changed */
 	localtime_r(&now, &tm);
 	dial_color(cr, cfg.pal.bg, 1);
 	cairo_paint(cr);

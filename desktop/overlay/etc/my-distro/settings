@@ -26,3 +26,8 @@ date_format = %a %d.%m.
 panel_position = bottom
 panel_height = 36
 font_size = 10
+
+# Lock the screen after this many minutes without use (0 = never)
+lock_minutes = 10
+# Size of text and icons in percent, 100-200 (applies at the next login)
+scale = 100

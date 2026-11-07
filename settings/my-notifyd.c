@@ -18,6 +18,7 @@
  * (/usr/share/dbus-1/services/org.freedesktop.Notifications.service).
  */
 #include <gtk/gtk.h>
+#include <gdk/gdkx.h>
 #include <string.h>
 
 #include "settings.h"
@@ -71,6 +72,8 @@ struct note {
 	guint id;
 	GtkWidget *win;
 	guint timer;
+	int timeout;              /* ms; 0 = until clicked */
+	int waiting;              /* not shown yet: the screen is locked */
 	char *default_action;     /* key of the "default" action, or NULL */
 };
 
@@ -215,6 +218,40 @@ static GtkWidget *make_icon(const char *icon)
 	return gtk_image_new_from_icon_name(icon, GTK_ICON_SIZE_DIALOG);
 }
 
+/* my-lock's window owns this X selection while the screen is locked */
+static int screen_locked(void)
+{
+	Display *d = GDK_DISPLAY_XDISPLAY(gdk_display_get_default());
+
+	return XGetSelectionOwner(d, XInternAtom(d, "MY_LOCK_SCREEN", False)) != None;
+}
+
+static void reveal(struct note *n)
+{
+	n->waiting = 0;
+	gtk_widget_show_all(n->win);
+	if (n->timeout > 0)
+		n->timer = g_timeout_add(n->timeout, on_timeout, n);
+}
+
+/* Once a second: unlocked again? Then show what came in meanwhile. */
+static gboolean check_waiting(gpointer d)
+{
+	int shown = 0;
+
+	(void)d;
+	if (screen_locked())
+		return G_SOURCE_CONTINUE;
+	for (GList *l = notes; l; l = l->next)
+		if (((struct note *)l->data)->waiting) {
+			reveal(l->data);
+			shown = 1;
+		}
+	if (shown)
+		place_all();
+	return G_SOURCE_CONTINUE;
+}
+
 static void label_class(GtkWidget *l, const char *cls)
 {
 	gtk_style_context_add_class(gtk_widget_get_style_context(l), cls);
@@ -308,11 +345,16 @@ static guint show_note(guint replaces, const char *icon, const char *summary,
 	/* -1: our default; 0: stay until clicked; critical ones stay too */
 	if (timeout < 0)
 		timeout = critical ? 0 : TIMEOUT_MS;
-	if (timeout > 0)
-		n->timer = g_timeout_add(timeout, on_timeout, n);
+	n->timeout = timeout;
 
 	notes = g_list_prepend(notes, n);
-	gtk_widget_show_all(win);
+	/* While the screen is locked nobody may read them: show them after */
+	if (screen_locked()) {
+		n->waiting = 1;
+		gtk_widget_show_all(gtk_bin_get_child(GTK_BIN(win)));
+	} else {
+		reveal(n);
+	}
 	place_all();
 	return id;
 }
@@ -396,6 +438,7 @@ int main(int argc, char **argv)
 {
 	gtk_init(&argc, &argv);
 	load_style();
+	g_timeout_add_seconds(1, check_waiting, NULL);
 	g_bus_own_name(G_BUS_TYPE_SESSION, "org.freedesktop.Notifications",
 	               G_BUS_NAME_OWNER_FLAGS_NONE, on_bus, NULL, on_name_lost,
 	               NULL, NULL);

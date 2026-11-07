@@ -1,0 +1,44 @@
+#!/bin/sh
+# my-keepalive [-a] PROGRAM [ARGS]: runs PROGRAM and starts it again when it
+# crashes, so the taskbar, notifications, file history, ... come back by
+# themselves instead of being gone until the next login.
+#
+#   - Crashed (killed by a signal, e.g. a segfault): start it again after a
+#     second, with a note in the system log (logread, /var/log/messages).
+#   - Ended normally (exit code below 128, e.g. because the session ended
+#     and the X server went away): stop, unless -a ("always") is given.
+#   - Crashes 5 times within a minute: give up, so a program that can't
+#     start at all doesn't run in a loop forever.
+#   - my-keepalive itself gets TERM (logout, stop script): it stops PROGRAM
+#     and ends too.
+always=0
+[ "$1" = -a ] && { always=1; shift; }
+[ $# -gt 0 ] || { echo "usage: my-keepalive [-a] PROGRAM [ARGS]" >&2; exit 2; }
+name=$(basename "$1")
+child=
+trap '[ -n "$child" ] && kill "$child" 2>/dev/null; exit 0' TERM INT HUP
+
+crashes=0
+first=$(date +%s)
+while :; do
+	"$@" &
+	child=$!
+	wait "$child"
+	rc=$?
+	child=
+	if [ "$always" = 0 ] && [ "$rc" -lt 128 ]; then
+		exit "$rc"
+	fi
+	now=$(date +%s)
+	if [ $((now - first)) -gt 60 ]; then
+		first=$now
+		crashes=0
+	fi
+	crashes=$((crashes + 1))
+	if [ "$crashes" -ge 5 ]; then
+		logger -t my-keepalive "$name ended $crashes times within a minute (code $rc): giving up"
+		exit 1
+	fi
+	logger -t my-keepalive "$name ended (code $rc): starting it again"
+	sleep 1
+done

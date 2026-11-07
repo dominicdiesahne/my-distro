@@ -7,6 +7,7 @@ Web browser|netsurf-gtk3|web-browser
 Code editor (LazyVim)|my-ide|/usr/lib/nvim/share/icons/hicolor/128x128/apps/nvim.png
 Text editor|xterm -name editor -T "Text editor" -e nano|accessories-text-editor
 System monitor|xterm -name monitor -T "System monitor" -e htop|computer
+Media player|mpv --player-operation-mode=pseudo-gui|/usr/share/icons/hicolor/64x64/apps/mpv.png
 Calculator|xcalc|accessories-calculator
 Clock|my-clock|my-clock
 Search files|my-search-gui|system-search
@@ -19,7 +20,8 @@ Users and system|my-setup|system-users
 System update|my-setup --update|software-update-available
 Install to disk|xterm -name my-install -T "Install my-distro" -e /usr/sbin/my-install|drive-harddisk
 -
+Lock screen|my-lock|system-lock-screen
 Log out|openbox --exit|system-log-out
-Suspend|my-power suspend|weather-clear-night
+Suspend|my-suspend|weather-clear-night
 Reboot|my-power reboot|view-refresh
 Power off|my-power poweroff|system-shutdown

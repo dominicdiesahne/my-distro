@@ -11,13 +11,21 @@
  *   - the wallpaper: PCManFM draws it, `pcmanfm --set-wallpaper` changes it
  *   - terminal colors: X resources for xterm, loaded with `xrdb -merge`
  *
+ *   - screens (Display page): xrandr sets resolution and arrangement now;
+ *     the same xrandr options are saved in ~/.config/my-distro/display and
+ *     set again at every login
+ *   - size of text and icons: Xft.dpi in the X resources (programs started
+ *     afterwards; everything at the next login)
+ *
  * `my-settings --apply` only does apply_desktop and exits; Openbox's
  * autostart runs it at every login. Run it yourself after editing the
- * settings file by hand.
+ * settings file by hand. `my-settings --page display` opens the window on
+ * that page.
  */
 #include <dirent.h>
 #include <gtk/gtk.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -123,9 +131,11 @@ static void write_xresources(const struct settings *s)
 
 	if (!f)
 		return;
+	/* Xft.dpi: how big text is drawn (96 = 100 %); GTK apps, xterm, the
+	 * taskbar all follow it */
 	fprintf(f, "! Written by my-settings.\nXTerm*background: %s\nXTerm*foreground: %s\n"
-		"XTerm*cursorColor: %s\nXTerm*faceSize: %d\n",
-		s->pal.bg, s->pal.text, s->pal.accent, s->font_size + 1);
+		"XTerm*cursorColor: %s\nXTerm*faceSize: %d\nXft.dpi: %d\n",
+		s->pal.bg, s->pal.text, s->pal.accent, s->font_size + 1, 96 * s->scale / 100);
 	fclose(f);
 	snprintf(path, sizeof path, "%s/.config/my-distro/xresources", g_get_home_dir());
 	q = g_shell_quote(path);
@@ -190,6 +200,37 @@ static int pcmanfm_running(void)
 	if (d)
 		closedir(d);
 	return found;
+}
+
+/* ~/.config/my-distro/display: the xrandr options chosen on the Display page */
+static void display_file(char *path, int len)
+{
+	snprintf(path, len, "%s/.config/my-distro/display", g_get_home_dir());
+}
+
+/* Runs xrandr with these options (a string like "--output X --mode 1280x800") */
+static int run_xrandr(const char *opts)
+{
+	char *cmd = g_strdup_printf("xrandr %s", opts);
+	int st = -1;
+
+	g_spawn_command_line_sync(cmd, NULL, NULL, &st, NULL);
+	g_free(cmd);
+	return st == 0;
+}
+
+/* At login: the screens as they were chosen last time */
+static void apply_display(void)
+{
+	char path[512], *opts = NULL;
+
+	display_file(path, sizeof path);
+	if (g_file_get_contents(path, &opts, NULL, NULL)) {
+		g_strstrip(opts);
+		if (opts[0] && opts[0] != '#')
+			run_xrandr(opts);      /* fails harmlessly if a screen is gone */
+		g_free(opts);
+	}
 }
 
 static void apply_desktop(const struct settings *s)
@@ -558,6 +599,368 @@ static void build_taskbar(GtkWidget *stack)
 	row(g, 3, "Text size", bind(new_spin(&cfg.font_size, 8, 16)));
 }
 
+/* --- Display: screens with xrandr ------------------------------------------ */
+
+#define MAX_OUTPUTS 4
+#define MAX_MODES   48
+
+/* One screen output as `xrandr --query` lists it:
+ *   HDMI-1 connected primary 1920x1080+0+0 (normal left ...) 527mm x 296mm
+ *      1920x1080     60.00*+  50.00
+ *      1280x720      60.00
+ */
+struct output {
+	char name[32];
+	int primary, on;              /* on: shows a picture now */
+	char mode[32];                /* its resolution now ("1920x1080") */
+	int x, y;
+	char modes[MAX_MODES][32];
+	int nmodes;
+};
+
+static struct output outputs[MAX_OUTPUTS];
+static int noutputs;
+static GtkWidget *mode_combo[MAX_OUTPUTS], *arrange_combo, *scale_combo, *lock_combo;
+static GtkWidget *display_status;
+
+static void read_outputs(void)
+{
+	char *out = NULL, **lines;
+	struct output *cur = NULL;
+
+	noutputs = 0;
+	if (!g_spawn_command_line_sync("xrandr --query", &out, NULL, NULL, NULL) || !out)
+		return;
+	lines = g_strsplit(out, "\n", -1);
+	for (int i = 0; lines[i]; i++) {
+		char *l = lines[i], name[32], geo[64];
+		int w, h, x, y;
+
+		if (l[0] != ' ' && l[0] != '\t') {
+			cur = NULL;
+			if (strstr(l, " connected") && noutputs < MAX_OUTPUTS &&
+			    sscanf(l, "%31s", name) == 1) {
+				cur = &outputs[noutputs++];
+				memset(cur, 0, sizeof *cur);
+				snprintf(cur->name, sizeof cur->name, "%s", name);
+				cur->primary = strstr(l, " primary ") != NULL;
+				/* the first WxH+X+Y after the name: on, with that mode */
+				for (char *p = strchr(l, ' '); p && *p; p = strchr(p + 1, ' '))
+					if (sscanf(p, " %63s", geo) == 1 &&
+					    sscanf(geo, "%dx%d+%d+%d", &w, &h, &x, &y) == 4) {
+						cur->on = 1;
+						snprintf(cur->mode, sizeof cur->mode, "%dx%d", w, h);
+						cur->x = x;
+						cur->y = y;
+						break;
+					}
+			}
+		} else if (cur && cur->nmodes < MAX_MODES && sscanf(l, " %31s", name) == 1 &&
+		           strchr(name, 'x')) {
+			int dup = 0;
+
+			for (int m = 0; m < cur->nmodes; m++)
+				dup |= strcmp(cur->modes[m], name) == 0;
+			if (!dup)
+				snprintf(cur->modes[cur->nmodes++], 32, "%s", name);
+		}
+	}
+	g_strfreev(lines);
+	g_free(out);
+	/* the main screen first */
+	for (int i = 1; i < noutputs; i++)
+		if (outputs[i].primary) {
+			struct output t = outputs[0];
+
+			outputs[0] = outputs[i];
+			outputs[i] = t;
+		}
+}
+
+/* The xrandr options that bring back what is on the screens now */
+static char *current_layout(void)
+{
+	GString *s = g_string_new("");
+
+	for (int i = 0; i < noutputs; i++) {
+		if (outputs[i].on)
+			g_string_append_printf(s, "--output %s --mode %s --pos %dx%d%s ",
+				outputs[i].name, outputs[i].mode, outputs[i].x, outputs[i].y,
+				i == 0 ? " --primary" : "");
+		else
+			g_string_append_printf(s, "--output %s --off ", outputs[i].name);
+	}
+	return g_string_free(s, FALSE);
+}
+
+/* The xrandr options for what is chosen on the page */
+static char *chosen_layout(void)
+{
+	const char *m0 = gtk_combo_box_get_active_id(GTK_COMBO_BOX(mode_combo[0]));
+	const char *m1 = noutputs > 1 ? gtk_combo_box_get_active_id(GTK_COMBO_BOX(mode_combo[1])) : NULL;
+	const char *how = noutputs > 1 ? gtk_combo_box_get_active_id(GTK_COMBO_BOX(arrange_combo)) : "";
+	const char *a = outputs[0].name, *b = noutputs > 1 ? outputs[1].name : "";
+	GString *s = g_string_new("");
+
+	if (!m0)
+		m0 = outputs[0].mode;
+	if (noutputs < 2 || !m1) {
+		g_string_printf(s, "--output %s --mode %s --primary", a, m0);
+	} else if (strcmp(how, "only-main") == 0) {
+		g_string_printf(s, "--output %s --mode %s --primary --output %s --off", a, m0, b);
+	} else if (strcmp(how, "only-second") == 0) {
+		g_string_printf(s, "--output %s --off --output %s --mode %s --primary", a, b, m1);
+	} else if (strcmp(how, "mirror") == 0) {
+		g_string_printf(s, "--output %s --mode %s --primary --output %s --mode %s --same-as %s",
+		                a, m0, b, m1, a);
+	} else {                                   /* right-of, left-of, above, below */
+		g_string_printf(s, "--output %s --mode %s --primary --pos 0x0 --output %s --mode %s --%s %s",
+		                a, m0, b, m1, how, a);
+	}
+	/* the others (a third screen) are left as they are */
+	return g_string_free(s, FALSE);
+}
+
+static void fill_display_page(void)
+{
+	for (int i = 0; i < 2; i++) {
+		GtkComboBoxText *c = GTK_COMBO_BOX_TEXT(mode_combo[i]);
+
+		gtk_combo_box_text_remove_all(c);
+		gtk_widget_set_visible(mode_combo[i], i < noutputs);
+		gtk_widget_set_visible(g_object_get_data(G_OBJECT(mode_combo[i]), "label"), i < noutputs);
+		if (i >= noutputs)
+			continue;
+		for (int m = 0; m < outputs[i].nmodes; m++)
+			gtk_combo_box_text_append(c, outputs[i].modes[m], outputs[i].modes[m]);
+		if (!gtk_combo_box_set_active_id(GTK_COMBO_BOX(c), outputs[i].mode))
+			gtk_combo_box_set_active(GTK_COMBO_BOX(c), 0);    /* off: its best mode */
+		gtk_label_set_text(GTK_LABEL(g_object_get_data(G_OBJECT(mode_combo[i]), "label")),
+			i == 0 ? (noutputs > 1 ? "Main screen" : "Resolution") : "Second screen");
+		gtk_widget_set_tooltip_text(mode_combo[i], outputs[i].name);
+	}
+	gtk_widget_set_visible(arrange_combo, noutputs > 1);
+	gtk_widget_set_visible(g_object_get_data(G_OBJECT(arrange_combo), "label"), noutputs > 1);
+	if (noutputs > 1) {
+		const char *how = "right-of";
+
+		if (!outputs[1].on)
+			how = "only-main";
+		else if (!outputs[0].on)
+			how = "only-second";
+		else if (outputs[1].x == outputs[0].x && outputs[1].y == outputs[0].y)
+			how = "mirror";
+		else if (outputs[1].x < outputs[0].x)
+			how = "left-of";
+		else if (outputs[1].y > outputs[0].y && outputs[1].x == outputs[0].x)
+			how = "below";
+		else if (outputs[1].y < outputs[0].y && outputs[1].x == outputs[0].x)
+			how = "above";
+		gtk_combo_box_set_active_id(GTK_COMBO_BOX(arrange_combo), how);
+	}
+}
+
+/* "Keep these settings?" with a countdown: a screen that shows nothing can't
+ * be clicked, so without an answer the old settings come back. */
+static int keep_seconds;
+
+static gboolean countdown(gpointer dlg)
+{
+	char *t;
+
+	if (--keep_seconds <= 0) {
+		gtk_dialog_response(GTK_DIALOG(dlg), GTK_RESPONSE_REJECT);
+		return G_SOURCE_REMOVE;
+	}
+	t = g_strdup_printf("Going back to the old settings in %d seconds.", keep_seconds);
+	gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(dlg), "%s", t);
+	g_free(t);
+	return G_SOURCE_CONTINUE;
+}
+
+static void on_display_apply(GtkButton *b, gpointer d)
+{
+	char *before = current_layout(), *after = chosen_layout(), path[512], *dir;
+	GtkWidget *dlg, *win = gtk_widget_get_toplevel(GTK_WIDGET(b));
+	guint timer;
+	int answer;
+
+	(void)d;
+	if (!run_xrandr(after)) {
+		gtk_label_set_text(GTK_LABEL(display_status), "The screen can't show that.");
+		run_xrandr(before);
+		goto out;
+	}
+	dlg = gtk_message_dialog_new(GTK_WINDOW(win), GTK_DIALOG_MODAL, GTK_MESSAGE_QUESTION,
+	                             GTK_BUTTONS_NONE, "Keep these display settings?");
+	gtk_dialog_add_buttons(GTK_DIALOG(dlg), "Go back", GTK_RESPONSE_REJECT,
+	                       "Keep", GTK_RESPONSE_ACCEPT, NULL);
+	keep_seconds = 16;
+	countdown(dlg);
+	timer = g_timeout_add_seconds(1, countdown, dlg);
+	answer = gtk_dialog_run(GTK_DIALOG(dlg));
+	if (keep_seconds > 0)
+		g_source_remove(timer);
+	gtk_widget_destroy(dlg);
+
+	if (answer == GTK_RESPONSE_ACCEPT) {
+		FILE *f;
+
+		display_file(path, sizeof path);
+		dir = g_path_get_dirname(path);
+		make_dirs(dir);
+		g_free(dir);
+		if ((f = fopen(path, "w"))) {
+			fprintf(f, "%s\n", after);
+			fclose(f);
+		}
+		gtk_label_set_text(GTK_LABEL(display_status), "Saved: also at the next login.");
+		apply_desktop(&cfg);            /* the wallpaper for the new size */
+	} else {
+		run_xrandr(before);
+		gtk_label_set_text(GTK_LABEL(display_status), "The old settings are back.");
+	}
+out:
+	g_free(before);
+	g_free(after);
+	read_outputs();
+	fill_display_page();
+}
+
+static void on_display_reset(GtkButton *b, gpointer d)
+{
+	char path[512], *opts = g_strdup_printf("--output %s --auto --primary", outputs[0].name);
+	GString *s = g_string_new(opts);
+
+	(void)b; (void)d;
+	for (int i = 1; i < noutputs; i++)          /* others: right of the main one */
+		g_string_append_printf(s, " --output %s --auto --right-of %s",
+		                       outputs[i].name, outputs[i - 1].name);
+	if (noutputs > 0)
+		run_xrandr(s->str);
+	display_file(path, sizeof path);
+	unlink(path);
+	gtk_label_set_text(GTK_LABEL(display_status), "Back to what the screens prefer.");
+	g_string_free(s, TRUE);
+	g_free(opts);
+	read_outputs();
+	fill_display_page();
+	apply_desktop(&cfg);
+}
+
+/* A drop-down list whose item ids are numbers, bound to an int of cfg */
+static void on_combo_number(GtkComboBox *c, gpointer field)
+{
+	const char *id = gtk_combo_box_get_active_id(c);
+
+	if (building || !id)
+		return;
+	*(int *)field = atoi(id);
+	changed();
+}
+
+static GtkWidget *number_choice(int *field, const char *const items[][2])
+{
+	GtkWidget *c = gtk_combo_box_text_new();
+
+	for (int i = 0; items[i][0]; i++)
+		gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(c), items[i][0], items[i][1]);
+	g_signal_connect(c, "changed", G_CALLBACK(on_combo_number), field);
+	return c;
+}
+
+static void labeled_row(GtkWidget *g, int y, const char *text, GtkWidget *w)
+{
+	GtkWidget *l = gtk_label_new(text);
+
+	gtk_widget_set_halign(l, GTK_ALIGN_START);
+	gtk_widget_set_halign(w, GTK_ALIGN_START);
+	gtk_grid_attach(GTK_GRID(g), l, 0, y, 1, 1);
+	gtk_grid_attach(GTK_GRID(g), w, 1, y, 1, 1);
+	g_object_set_data(G_OBJECT(w), "label", l);
+}
+
+static void build_display(GtkWidget *stack)
+{
+	static const char *const scales[][2] = {
+		{ "100", "100 %" }, { "125", "125 %" }, { "150", "150 %" },
+		{ "175", "175 %" }, { "200", "200 % (for very sharp screens)" }, { NULL, NULL } };
+	GtkWidget *g = page(stack, "display", "Display");
+	GtkWidget *buttons = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8), *apply, *reset;
+
+	heading(g, 0, "Screens");
+	for (int i = 0; i < 2; i++) {
+		mode_combo[i] = gtk_combo_box_text_new();
+		labeled_row(g, 1 + i, i == 0 ? "Resolution" : "Second screen", mode_combo[i]);
+	}
+	arrange_combo = gtk_combo_box_text_new();
+	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(arrange_combo), "right-of", "Right of the main screen");
+	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(arrange_combo), "left-of", "Left of the main screen");
+	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(arrange_combo), "above", "Above the main screen");
+	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(arrange_combo), "below", "Below the main screen");
+	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(arrange_combo), "mirror", "Same picture on both");
+	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(arrange_combo), "only-main", "Only the main screen");
+	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(arrange_combo), "only-second", "Only the second screen");
+	labeled_row(g, 3, "Second screen is", arrange_combo);
+
+	apply = gtk_button_new_with_label("Apply");
+	gtk_style_context_add_class(gtk_widget_get_style_context(apply), "suggested-action");
+	g_signal_connect(apply, "clicked", G_CALLBACK(on_display_apply), NULL);
+	reset = gtk_button_new_with_label("Automatic");
+	g_signal_connect(reset, "clicked", G_CALLBACK(on_display_reset), NULL);
+	gtk_box_pack_start(GTK_BOX(buttons), apply, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(buttons), reset, FALSE, FALSE, 0);
+	gtk_grid_attach(GTK_GRID(g), buttons, 1, 4, 1, 1);
+	display_status = gtk_label_new("");
+	gtk_widget_set_halign(display_status, GTK_ALIGN_START);
+	gtk_style_context_add_class(gtk_widget_get_style_context(display_status), "dim-label");
+	gtk_grid_attach(GTK_GRID(g), display_status, 1, 5, 1, 1);
+
+	heading(g, 6, "Size");
+	scale_combo = number_choice(&cfg.scale, scales);
+	row(g, 7, "Text and icons", scale_combo);
+	{
+		GtkWidget *l = gtk_label_new("Programs you open from now on use the new size; "
+		                             "all of the desktop after the next login.");
+
+		gtk_label_set_line_wrap(GTK_LABEL(l), TRUE);
+		gtk_label_set_xalign(GTK_LABEL(l), 0);
+		gtk_style_context_add_class(gtk_widget_get_style_context(l), "dim-label");
+		gtk_grid_attach(GTK_GRID(g), l, 1, 8, 1, 1);
+	}
+
+	read_outputs();
+}
+
+static void on_lock_now(GtkButton *b, gpointer d)
+{
+	(void)b; (void)d;
+	g_spawn_command_line_async("my-lock", NULL);
+}
+
+static void build_lock(GtkWidget *stack)
+{
+	static const char *const times[][2] = {
+		{ "1", "1 minute" }, { "2", "2 minutes" }, { "5", "5 minutes" },
+		{ "10", "10 minutes" }, { "15", "15 minutes" }, { "30", "30 minutes" },
+		{ "60", "1 hour" }, { "0", "Never" }, { NULL, NULL } };
+	GtkWidget *g = page(stack, "lock", "Screen lock");
+	GtkWidget *now = gtk_button_new_with_label("Lock now");
+	GtkWidget *l = gtk_label_new("The lock screen asks for your password. Lock it yourself "
+	                             "with Super+L or Start menu, Lock screen. It also locks "
+	                             "before the computer goes to sleep.");
+
+	heading(g, 0, "Screen lock");
+	lock_combo = number_choice(&cfg.lock_minutes, times);
+	row(g, 1, "Lock after no use for", lock_combo);
+	g_signal_connect(now, "clicked", G_CALLBACK(on_lock_now), NULL);
+	row(g, 2, "", now);
+	gtk_label_set_line_wrap(GTK_LABEL(l), TRUE);
+	gtk_label_set_xalign(GTK_LABEL(l), 0);
+	gtk_style_context_add_class(gtk_widget_get_style_context(l), "dim-label");
+	gtk_grid_attach(GTK_GRID(g), l, 0, 3, 2, 1);
+}
+
 /* Puts the values of cfg into the widgets (without reacting to it). */
 static void update_widgets(void)
 {
@@ -630,6 +1033,18 @@ static void update_widgets(void)
 	gtk_image_set_from_pixbuf(GTK_IMAGE(wall_preview), pb);
 	g_object_unref(pb);
 
+	/* screen lock and size: numbers as the items' ids */
+	snprintf(example, sizeof example, "%d", cfg.lock_minutes);
+	if (!gtk_combo_box_set_active_id(GTK_COMBO_BOX(lock_combo), example)) {
+		gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(lock_combo), example, example);
+		gtk_combo_box_set_active_id(GTK_COMBO_BOX(lock_combo), example);
+	}
+	snprintf(example, sizeof example, "%d", cfg.scale);
+	if (!gtk_combo_box_set_active_id(GTK_COMBO_BOX(scale_combo), example)) {
+		gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(scale_combo), example, example);
+		gtk_combo_box_set_active_id(GTK_COMBO_BOX(scale_combo), example);
+	}
+
 	building = 0;
 }
 
@@ -640,6 +1055,7 @@ int main(int argc, char **argv)
 	if (argc > 1 && strcmp(argv[1], "--apply") == 0) {
 		/* at login: no window, so GTK is only needed for the pictures */
 		settings_load(&cfg, NULL);
+		apply_display();          /* first: the wallpaper fits the new size */
 		apply_desktop(&cfg);
 		return 0;
 	}
@@ -660,6 +1076,8 @@ int main(int argc, char **argv)
 	build_wallpaper(stack);
 	build_clock(stack);
 	build_taskbar(stack);
+	build_display(stack);
+	build_lock(stack);
 
 	side = gtk_stack_sidebar_new();
 	gtk_stack_sidebar_set_stack(GTK_STACK_SIDEBAR(side), GTK_STACK(stack));
@@ -687,6 +1105,9 @@ int main(int argc, char **argv)
 
 	update_widgets();
 	gtk_widget_show_all(win);
+	fill_display_page();          /* after show_all: it hides what isn't there */
+	if (argc > 2 && strcmp(argv[1], "--page") == 0)
+		gtk_stack_set_visible_child_name(GTK_STACK(stack), argv[2]);
 	gtk_main();
 	return 0;
 }

@@ -1,0 +1,14 @@
+# The desktop's own parts, started at every login. Your
+# ~/.config/openbox/autostart runs this file first (". /usr/lib/my-distro/
+# autostart"), then your own programs. System updates replace this file;
+# put your own things in yours.
+#
+# my-keepalive starts a part again if it crashes (see my-keepalive).
+
+my-settings --apply                  # colors, wallpaper, window theme, display
+my-keepalive my-notifyd &            # notifications in the corner of the screen
+my-keepalive my-panel &              # taskbar: Start menu, open windows, clock
+my-keepalive my-indexd &             # keeps the search index of your files up to date
+my-keepalive my-lock --watch &       # locks the screen after a while without use
+my-update watch &                    # looks for system updates (the taskbar shows them)
+my-keepalive pcmanfm --desktop &     # wallpaper and the icons on the desktop

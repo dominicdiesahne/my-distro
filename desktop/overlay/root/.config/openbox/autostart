@@ -1,9 +1,8 @@
-# Started by Openbox once it is running (see /root/.xinitrc).
+# Started by Openbox once it is running (see ~/.xinitrc).
+#
+# First the desktop's own parts: taskbar, notifications, screen lock, ...
+# (/usr/lib/my-distro/autostart, kept up to date by system updates).
+. /usr/lib/my-distro/autostart
 
-my-settings --apply        # colors, wallpaper, window theme from the Settings app
-my-notifyd &               # shows notifications in the corner of the screen
-my-panel &                  # taskbar: Start menu, open windows, clock
-my-indexd &                 # keeps the search index of your files up to date
-my-update watch &           # looks for system updates (the taskbar shows them)
-pcmanfm --desktop &         # wallpaper colour and the icons on the desktop
+# Your own programs go below, each with "&" at the end.
 xterm -geometry 90x24+150+50 &   # right of the desktop icons

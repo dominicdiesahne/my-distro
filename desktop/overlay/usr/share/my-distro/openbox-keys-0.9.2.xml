@@ -5,4 +5,4 @@
   <keybind key="XF86AudioRaiseVolume"><action name="Execute"><command>my-volume up</command></action></keybind>
   <keybind key="XF86AudioLowerVolume"><action name="Execute"><command>my-volume down</command></action></keybind>
   <keybind key="XF86AudioMute"><action name="Execute"><command>my-volume mute</command></action></keybind>
-  <keybind key="XF86Sleep"><action name="Execute"><command>my-power suspend</command></action></keybind>
+  <keybind key="XF86Sleep"><action name="Execute"><command>my-suspend</command></action></keybind>

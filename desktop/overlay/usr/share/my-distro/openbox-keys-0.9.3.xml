@@ -1,0 +1,5 @@
+  <!-- my-distro 0.9.3: screen lock, brightness -->
+  <keybind key="W-l"><action name="Execute"><command>my-lock</command></action></keybind>
+  <keybind key="XF86ScreenSaver"><action name="Execute"><command>my-lock</command></action></keybind>
+  <keybind key="XF86MonBrightnessUp"><action name="Execute"><command>my-power brightness up</command></action></keybind>
+  <keybind key="XF86MonBrightnessDown"><action name="Execute"><command>my-power brightness down</command></action></keybind>

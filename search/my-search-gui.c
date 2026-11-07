@@ -250,6 +250,7 @@ static void spawn(char *const argv[])
 	if (fork() == 0) {
 		close(ConnectionNumber(dpy));
 		setsid();
+		signal(SIGCHLD, SIG_DFL);   /* we ignore it; the opened app must not */
 		execvp(argv[0], argv);
 		_exit(127);
 	}

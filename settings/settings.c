@@ -44,6 +44,8 @@ static void defaults(struct settings *s)
 	s->panel_position = PANEL_BOTTOM;
 	s->panel_height = 36;
 	s->font_size = 10;
+	s->lock_minutes = 10;
+	s->scale = 100;
 }
 
 static int yes(const char *v)
@@ -97,6 +99,10 @@ static void apply(struct settings *s, const char *key, const char *v)
 		s->panel_height = clamp(atoi(v), 28, 56);
 	else if (strcmp(key, "font_size") == 0)
 		s->font_size = clamp(atoi(v), 8, 16);
+	else if (strcmp(key, "lock_minutes") == 0)
+		s->lock_minutes = clamp(atoi(v), 0, 240);
+	else if (strcmp(key, "scale") == 0)
+		s->scale = clamp(atoi(v), 100, 200);
 }
 
 /* Reads one file of "key = value" lines; '#' starts a comment line. */
@@ -204,14 +210,18 @@ int settings_save(const struct settings *s)
 		"# date_format: see `man strftime`, e.g. %%a %%d.%%m. = Wed 04.11.\n"
 		"date_format = %s\n\n"
 		"# Taskbar: bottom or top; height 28-56 pixels; font size 8-16\n"
-		"panel_position = %s\npanel_height = %d\nfont_size = %d\n",
+		"panel_position = %s\npanel_height = %d\nfont_size = %d\n\n"
+		"# Lock the screen after this many minutes without use (0 = never)\n"
+		"lock_minutes = %d\n"
+		"# Size of text and icons in percent, 100-200 (at the next login)\n"
+		"scale = %d\n",
 		s->theme, s->accent, s->wallpaper, s->wallpaper_mode,
 		s->panel_clock == CLOCK_ANALOG ? "analog" : "digital",
 		s->clock_app == CLOCK_ANALOG ? "analog" : "digital",
 		s->clock_24h ? "yes" : "no", s->clock_seconds ? "yes" : "no",
 		s->clock_date ? "yes" : "no", s->date_format,
 		s->panel_position == PANEL_TOP ? "top" : "bottom",
-		s->panel_height, s->font_size);
+		s->panel_height, s->font_size, s->lock_minutes, s->scale);
 	if (fclose(f) != 0)
 		return -1;
 	return rename(tmp, path);

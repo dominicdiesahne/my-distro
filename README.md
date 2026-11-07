@@ -99,7 +99,23 @@ the taskbar, the login screen, the file history daemon and the search indexer.
   The account from the setup is one (when it shares its password with root);
   *Users and system* makes others administrators.
 - **Laptops**: the battery's charge in the taskbar (a warning below 10 %),
-  *Suspend* in the Start menu.
+  *Suspend* in the Start menu. Closing the lid locks the screen and puts the
+  laptop to sleep (`login/my-lidd.c`, settings in `/etc/my-distro/power.conf`);
+  the brightness keys work.
+- **Screen lock** (`login/my-lock.c`): Super+L, Start menu *Lock screen*,
+  before sleeping, and after 10 minutes without use (Settings, *Screen
+  lock*). Notifications wait until you unlock.
+- **Display settings** (Settings, *Display*): resolution, a second screen
+  (extend to any side, mirror, only one), size of text and icons. A
+  countdown brings the old settings back if the screen goes black.
+- **Media player**: mpv plays videos and music (double-click a file, or Start
+  menu *Media player*), with on-screen controls.
+- **Time zone** in the setup and in *Users and system*.
+- **More memory**: compressed swap in RAM (zram, zstd), so a 2 GB computer
+  doesn't run out when the search model and a browser are open.
+- **Parts restart themselves** (`my-keepalive`): if the taskbar,
+  notifications, file history, lid switch or the login screen crash, they
+  start again.
 
 ## Try it
 
@@ -234,7 +250,8 @@ the rest is the system (ext4). It boots with BIOS and UEFI alike.
 | Super+E | File manager |
 | Super+Up / Super+Down | Maximise / minimise |
 | Print / Alt+Print / Shift+Print | Screenshot: screen / window / area |
-| Volume keys, Sleep key | Louder, quieter, mute; suspend |
+| Super+L | Lock the screen |
+| Volume keys, brightness keys, Sleep key | Louder, quieter, mute; brighter, darker; lock and suspend |
 | Alt+Tab, Alt+F4 | Switch / close windows |
 | Ctrl+Alt+F1 / Ctrl+Alt+F7 | Text console / back to the desktop |
 
@@ -247,13 +264,17 @@ The keyboard layout is German (`desktop/overlay/etc/X11/xorg.conf.d/00-keyboard.
 1. GRUB loads the kernel and the whole root filesystem into RAM (initrd).
 2. The kernel starts our init, `/sbin/my-init` (`init/init.c`).
 3. init mounts `/proc`, `/sys`, `/dev`, `/tmp` and runs `/etc/init.d/rcS`:
-   udev, `S35firewall`, network (DHCP), `S45sound`, `S48time` (clock from
-   the internet), `S50history` (file history), `S90desktop`.
+   udev, `S20zram` (compressed swap), `S35firewall`, network (DHCP),
+   `S45sound`, `S46power` (lid switch), `S48time` (clock from the internet),
+   `S50history` (file history), `S90desktop`. Daemons run under
+   `my-keepalive`, which starts them again if they crash.
 4. `S90desktop` starts the X server with **`my-login`** as its only client.
 5. After login, `my-login` drops root rights and runs `~/.xinitrc` as you,
-   which starts the session D-Bus and Openbox; Openbox's autostart starts
-   the notifications, the taskbar, the search indexer, the desktop icons
-   and a terminal.
+   which starts the session D-Bus and Openbox. Openbox runs your
+   `~/.config/openbox/autostart`, which first runs the system's
+   `/usr/lib/my-distro/autostart` (notifications, taskbar, screen lock, search
+   indexer, desktop icons; updated by system updates) and then your own
+   programs (a terminal).
 6. *Log out* ends the session and the login screen comes back.
    *Power off* sends init `SIGUSR2`: it stops all processes, makes the root
    filesystem read-only (installed system) and powers off.
@@ -389,13 +410,16 @@ built into the system). How to make a key is in the `Makefile` at
 |---|---|
 | `Makefile` | `make desktop` (ISO and update package), `make release-files` (signature), `make run-iso`; `make` / `make run` for the minimal version |
 | `init/init.c` | PID 1 |
-| `login/` | Login screen `my-login`, `my-power` (reboot, power off, suspend, eject USB sticks for normal users), `my-admin` (root password check for Users and system) |
+| `login/` | Login screen `my-login`, screen lock `my-lock` with `my-checkpass`, lid switch `my-lidd`, `my-power` (reboot, power off, suspend, brightness, eject USB sticks for normal users), `my-admin` (root password check for Users and system) |
 | `desktop/overlay/usr/sbin/my-install` | Installer (shell script) |
 | `desktop/overlay/usr/bin/my-update` | System updates (Python), settings in `desktop/overlay/etc/my-distro/update.conf`, public key `update-key.pem` |
 | `desktop/overlay/etc/my-distro/version` | The version number (the welcome text and `my-update` read it) |
 | `panel/` | Taskbar `my-panel` (with volume and battery), `my-screenshot` |
 | `settings/my-notifyd.c`, `settings/my-notify.c` | Notifications: the daemon that shows them, and the command that sends one |
 | `desktop/overlay/usr/lib/my-distro/automount` | Opens USB sticks and SD cards (started by a udev rule) |
+| `desktop/overlay/usr/lib/my-distro/autostart` | The desktop's own parts at login (users' autostart runs it first) |
+| `desktop/overlay/usr/bin/my-keepalive` | Starts a crashed program again (taskbar, daemons, login screen) |
+| `desktop/overlay/etc/init.d/S20zram`, `S46power` | Compressed swap, lid switch |
 | `desktop/overlay/etc/init.d/S35firewall`, `S45sound`, `S48time` | Firewall, sound start values, time sync |
 | `desktop/busybox.fragment` | BusyBox options on top of Buildroot's (ntpd) |
 | `desktop/lazyvim/`, `desktop/package/my-ide/` | The IDE: LazyVim config, and how Neovim and the plugins get into the image |
@@ -478,7 +502,8 @@ make run    # boots in the terminal; quit with Ctrl-A, then X
   (Mesa's software renderer only).
 - Sound plays on one card at a time (ALSA, no sound server). The digital
   microphones of some new laptops (Intel SOF) don't work yet.
-- Closing a laptop's lid does nothing yet; use *Suspend* in the Start menu.
+- mpv decodes videos on the CPU (no graphics acceleration): HD video is
+  fine on most PCs, 4K is too much.
 
 ## License
 

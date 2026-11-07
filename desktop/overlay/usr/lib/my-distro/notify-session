@@ -2,23 +2,4 @@
 # notify-session [my-notify options] SUMMARY [BODY]: shows a notification on
 # the desktop of whoever is logged in. For programs that run as root without
 # a desktop of their own (automount). Normal programs use my-notify directly.
-#
-# Notifications go over the user's session D-Bus. Its address is in the
-# environment of their window manager (.xinitrc starts the bus), and only
-# that user may talk to it, so run my-notify as them.
-for p in /proc/[0-9]*; do
-	[ "$(cat "$p/comm" 2>/dev/null)" = openbox ] || continue
-	uid=$(awk '/^Uid:/ { print $2; exit }' "$p/status")
-	user=$(awk -F: -v u="$uid" '$3 == u { print $1; exit }' /etc/passwd)
-	bus=$(tr '\0' '\n' <"$p/environ" | sed -n 's/^DBUS_SESSION_BUS_ADDRESS=//p')
-	[ -n "$user" ] && [ -n "$bus" ] || continue
-	if [ "$uid" = 0 ]; then
-		DBUS_SESSION_BUS_ADDRESS="$bus" /usr/bin/my-notify "$@"
-	else
-		# "--": BusyBox's su would read my-notify's -i as its own option
-		DBUS_SESSION_BUS_ADDRESS="$bus" su -s /bin/sh \
-			-c 'exec /usr/bin/my-notify "$@"' -- "$user" my-notify "$@"
-	fi
-	exit 0
-done
-exit 1
+exec /usr/lib/my-distro/in-session /usr/bin/my-notify "$@"

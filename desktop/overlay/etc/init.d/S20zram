@@ -1,0 +1,34 @@
+#!/bin/sh
+# Compressed memory as swap (zram): when the RAM gets full, the kernel
+# packs pages it doesn't need right now into a part of the RAM, compressed
+# with zstd to about a third. So a 2 GB computer behaves like one with more,
+# instead of programs being killed when memory runs out. Nothing is written
+# to the disk. Size: half of the RAM (that much uncompressed data).
+#
+# See it: swapon -s, cat /sys/block/zram0/mm_stat
+
+case "$1" in
+start)
+	printf "Starting compressed swap (zram): "
+	Z=/sys/block/zram0
+	[ -d $Z ] || { echo "no zram"; exit 0; }
+	grep -q '^/dev/zram0' /proc/swaps && { echo "already on"; exit 0; }
+	ram_kb=$(awk '/^MemTotal:/ { print $2 }' /proc/meminfo)
+	# zstd packs best; lz4 is the fallback if the kernel lacks it
+	for alg in zstd lz4 lzo-rle lzo; do
+		grep -qw "$alg" $Z/comp_algorithm && { echo "$alg" > $Z/comp_algorithm; break; }
+	done
+	echo $((ram_kb / 2 * 1024)) > $Z/disksize
+	mkswap /dev/zram0 >/dev/null && swapon -p 100 /dev/zram0 || { echo "FAILED"; exit 1; }
+	# Swapping into RAM is cheap: let the kernel use it more readily
+	echo 100 > /proc/sys/vm/swappiness
+	echo "OK ($((ram_kb / 2048)) MB, $(cat $Z/comp_algorithm | sed 's/.*\[\(.*\)\].*/\1/'))"
+	;;
+stop)
+	swapoff /dev/zram0 2>/dev/null
+	;;
+*)
+	echo "Usage: $0 {start|stop}"
+	exit 1
+	;;
+esac

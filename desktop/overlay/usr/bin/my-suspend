@@ -1,0 +1,6 @@
+#!/bin/sh
+# my-suspend: lock the screen, then put the computer to sleep (Start menu,
+# Sleep key). A key, the mouse or opening the lid wakes it up again, and the
+# lock screen asks for your password.
+my-lock --background || echo "my-suspend: the screen could not be locked" >&2
+exec my-power suspend

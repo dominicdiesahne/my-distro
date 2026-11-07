@@ -302,6 +302,7 @@ static void act_view(void)
 	if (fork() == 0) {
 		close(ConnectionNumber(dpy));
 		setsid();
+		signal(SIGCHLD, SIG_DFL);   /* we ignore it; xterm must not */
 		execlp("xterm", "xterm", "-name", "my-history", "-T", title,
 		       "-e", "less", vf, (char *)NULL);
 		_exit(127);

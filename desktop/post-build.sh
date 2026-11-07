@@ -34,10 +34,12 @@ sed -e 's|<name>Clearlooks</name>|<name>my-distro</name>|' \
   <keybind key="W-Up"><action name="ToggleMaximize"/></keybind>\
   <keybind key="W-Down"><action name="Iconify"/></keybind>|' \
     "$T/etc/xdg/openbox/rc.xml" > "$T/root/.config/openbox/rc.xml"
-# Shortcuts added in 0.9.2 (screenshots, volume keys): from a file that
-# installed-fixups also adds to the rc.xml of users from older versions.
-sed -i "/<chainQuitKey>/r $T/usr/share/my-distro/openbox-keys-0.9.2.xml" \
-    "$T/root/.config/openbox/rc.xml"
+# Shortcuts added since 0.9.2 (screenshots, volume, screen lock, brightness):
+# from files that installed-fixups also adds to the rc.xml of users from
+# older versions.
+for keys in "$T"/usr/share/my-distro/openbox-keys-*.xml; do
+	sed -i "/<chainQuitKey>/r $keys" "$T/root/.config/openbox/rc.xml"
+done
 
 # sudo reads /etc/sudoers.d (our rule for the group wheel) only when the
 # files there belong to root and can't be written by others

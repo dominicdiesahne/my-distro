@@ -149,6 +149,13 @@ desktop: $(BR_DIR)/Makefile
 > if ls -d $(BR_OUT)/build/linux-[0-9]* >/dev/null 2>&1 && \
 >    ! cmp -s desktop/linux-gui.fragment $(BR_OUT)/.linux-gui.fragment; then \
 >   $(BR_MAKE) linux-reconfigure; fi
+> # Xorg's screen saver extension (the screen lock asks it for the idle
+> # time) is only built when libXScrnSaver was selected before Xorg was
+> # built: a build folder from before 0.9.3 has an Xorg without it. Build it
+> # again from scratch (only reconfiguring mixes old and new object files).
+> X=$$(ls -d $(BR_OUT)/build/xserver_xorg-server-* 2>/dev/null | head -1); \
+>   if [ -n "$$X" ] && [ -f "$$X/config.log" ] && ! grep -q -- '--enable-screensaver' "$$X/config.log"; then \
+>   $(BR_MAKE) xserver_xorg-server-dirclean; fi
 > # Nor changes to BusyBox's (it builds in a minute, so start it again)
 > if ! cmp -s desktop/busybox.fragment $(BR_OUT)/.busybox.fragment; then \
 >   $(BR_MAKE) busybox-dirclean; fi

@@ -36,13 +36,14 @@ for u in $(awk -F: '$3 >= 1000 && $3 < 60000 { print $1 }' "$R/etc/passwd"); do
 done
 chmod 644 "$G"
 
-# --- Desktop sessions from before 0.9.2 ----------------------------------------
+# --- Desktop sessions from older versions ----------------------------------------
 # Home folders are never replaced by an update, so the session files there
 # (copied from /etc/skel when the account was made) are still the old ones.
-# Add what 0.9.2 needs to them, unless it is there already (also when you
-# changed the files yourself): the session D-Bus in ~/.xinitrc, the
-# notification daemon in the autostart, the new keyboard shortcuts.
-KEYS="$R/usr/share/my-distro/openbox-keys-0.9.2.xml"
+# Add what newer versions need to them, unless it is there already (also when
+# you changed the files yourself): the session D-Bus in ~/.xinitrc (0.9.2),
+# the keyboard shortcuts of each version, and (0.9.3) the autostart: the
+# desktop's own parts now start from /usr/lib/my-distro/autostart, which
+# updates keep current, so the user's file only keeps their own programs.
 for h in "$R/root" "$R"/home/*; do
 	[ -d "$h" ] || continue
 	x="$h/.xinitrc"
@@ -55,14 +56,25 @@ fi\
 ' "$x"
 	fi
 	a="$h/.config/openbox/autostart"
-	if [ -f "$a" ] && ! grep -q my-notifyd "$a"; then
-		sed -i '/^my-panel/i\
-my-notifyd \&               # shows notifications in the corner of the screen' "$a"
-		grep -q my-notifyd "$a" || echo 'my-notifyd &' >>"$a"
+	if [ -f "$a" ] && ! grep -q '/usr/lib/my-distro/autostart' "$a"; then
+		# the lines that start the desktop's parts go; the rest stays
+		sed -i -E '/^[[:space:]]*(my-settings --apply|my-notifyd|my-panel|my-indexd|my-update watch|pcmanfm --desktop)([[:space:]&#]|$)/d' "$a"
+		sed -i '1a\
+\
+# The desktop'"'"'s own parts: taskbar, notifications, screen lock, ...\
+# (/usr/lib/my-distro/autostart, kept up to date by system updates).\
+. /usr/lib/my-distro/autostart' "$a"
 	fi
 	rc="$h/.config/openbox/rc.xml"
-	if [ -f "$rc" ] && [ -f "$KEYS" ] && ! grep -q my-screenshot "$rc"; then
-		sed -i "/<chainQuitKey>/r $KEYS" "$rc"
+	if [ -f "$rc" ]; then
+		# each version's shortcuts, unless that version's marker is there
+		for keys in "$R"/usr/share/my-distro/openbox-keys-*.xml; do
+			[ -f "$keys" ] || continue
+			mark=$(head -n 1 "$keys")
+			grep -qF "$mark" "$rc" || sed -i "/<chainQuitKey>/r $keys" "$rc"
+		done
+		# 0.9.2's sleep key: now locks the screen first
+		sed -i 's|<command>my-power suspend</command>|<command>my-suspend</command>|' "$rc"
 	fi
 done
 exit 0
