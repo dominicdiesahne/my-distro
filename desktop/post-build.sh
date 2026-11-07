@@ -88,3 +88,4 @@ chmod 600 "$T/etc/wpa_supplicant.conf"
 
 # The live system starts without /etc/my-distro/setup-done, so the setup runs.
 rm -f "$T/etc/my-distro/setup-done"
+# (The copy for the factory reset is made later, in post-fakeroot.sh.)

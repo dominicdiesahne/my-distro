@@ -1,0 +1,78 @@
+#!/bin/sh
+# my-reset: factory reset. Puts the installed system back to how it was
+# right after installing: only the system stays (in the version it has now).
+#
+# Deleted: all users and their home folders (files, settings, browser data),
+# passwords (back to the demo ones), the computer name, saved Wi-Fi networks
+# and VPNs, the time zone, keyboard layout, file history, your own firewall
+# and sudo rules, and the saved version for "Undo last update". At the next
+# start the setup asks for your user name and passwords again.
+#
+#   my-reset            asks, then restarts and resets (as root; in recovery
+#                       mode or in a terminal)
+#   my-reset --schedule only marks the reset for the next start ("Users and
+#                       system" does that, then restarts)
+#   my-reset --now      does the reset itself: /etc/init.d/S00reset runs it at
+#                       the start, before anything else uses the files
+#
+# How: everything that system updates keep (my-update keep-list) is deleted
+# and replaced by its first state, saved in the system when it was built
+# (/usr/share/my-distro/factory).
+PATH=/usr/sbin:/usr/bin:/sbin:/bin
+FACTORY=/usr/share/my-distro/factory
+PENDING=/etc/my-distro/reset-pending
+
+[ "$(id -u)" = 0 ] || { echo "my-reset: only root can reset the system."; exit 1; }
+if grep -q "rdinit=" /proc/cmdline; then
+	echo "my-reset: this is the live system; it starts fresh at every boot anyway."
+	exit 1
+fi
+[ -d "$FACTORY" ] || { echo "my-reset: $FACTORY is missing."; exit 1; }
+
+case "$1" in
+--schedule)
+	echo "reset at the next start" >"$PENDING"
+	sync
+	exit 0
+	;;
+--now)
+	;;
+"")
+	echo "Factory reset: deletes ALL users, their files and all settings."
+	echo "Only the system stays. The setup starts again afterwards."
+	printf "Type reset to continue: "
+	read -r answer
+	[ "$answer" = reset ] || { echo "Cancelled, nothing was changed."; exit 1; }
+	echo "reset at the next start" >"$PENDING"
+	sync
+	echo "Restarting, the reset runs during the start..."
+	reboot
+	exit 0
+	;;
+*)
+	echo "usage: my-reset [--schedule | --now]"
+	exit 1
+	;;
+esac
+
+# --- The reset itself -----------------------------------------------------------
+echo "Factory reset: deleting users, files and settings..."
+for k in $(/usr/bin/my-update keep-list); do
+	case "$k" in
+	# made at every start, or needed to start at all (the disk's boot loader
+	# and its list of partitions)
+	tmp|run|proc|sys|dev|mnt|media|lost+found|boot/*|etc/fstab) continue ;;
+	esac
+	rm -rf "/${k:?}"
+	if [ -e "$FACTORY/$k" ] || [ -L "$FACTORY/$k" ]; then
+		mkdir -p "/$(dirname "$k")"
+		cp -a "$FACTORY/$k" "/$k"
+	fi
+done
+# The installed system's own changes (no installer icon, welcome text, ...)
+/usr/lib/my-distro/installed-fixups /
+rm -f "$PENDING"
+sync
+echo "Factory reset done. The setup starts with the desktop."
+logger -t my-reset "factory reset done"
+exit 0

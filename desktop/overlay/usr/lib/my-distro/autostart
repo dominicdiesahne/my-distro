@@ -8,6 +8,7 @@
 my-settings --apply                  # colors, wallpaper, window theme, display
 my-keepalive my-notifyd &            # notifications in the corner of the screen
 my-keepalive my-panel &              # taskbar: Start menu, open windows, clock
+my-keepalive my-clipd &              # keeps copied text when its program closes
 my-keepalive my-indexd &             # keeps the search index of your files up to date
 my-keepalive my-lock --watch &       # locks the screen after a while without use
 my-update watch &                    # looks for system updates (the taskbar shows them)

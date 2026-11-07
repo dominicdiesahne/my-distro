@@ -1,0 +1,46 @@
+#!/bin/sh
+# my-camera: shows the webcam in a window ("Camera" in the Start menu).
+# Press S to take a photo (it goes to your Pictures folder), Q to close.
+#
+# Webcams are video4linux devices (/dev/video0, ...); the uvcvideo driver
+# makes them for USB webcams and the cameras built into laptops. mpv shows
+# the picture through FFmpeg's video4linux input. Members of the group video
+# may use them (the setup puts every user in it).
+#   my-camera /dev/video2    use that camera
+
+# A camera makes two devices: the picture (index 0) and data about it.
+find_camera() {
+	for d in /sys/class/video4linux/video*; do
+		[ -e "$d" ] || continue
+		[ "$(cat "$d/index" 2>/dev/null)" = 0 ] || continue
+		echo "/dev/${d##*/}"
+		return
+	done
+}
+
+dev=${1:-$(find_camera)}
+if [ -z "$dev" ] || [ ! -e "$dev" ]; then
+	my-notify -i camera-web "No camera found" \
+		"Plug in a USB webcam. Built-in laptop cameras work too, unless they are switched off (some laptops have a key or a slider for that)."
+	exit 1
+fi
+if [ ! -r "$dev" ]; then
+	my-notify -i camera-web "No access to the camera" \
+		"Your user is not in the group video. In Users and system it is added to new users; as root: addgroup YOUR-NAME video, then log in again."
+	exit 1
+fi
+
+pics=
+if [ -f "$HOME/.config/user-dirs.dirs" ]; then
+	pics=$(sed -n 's/^XDG_PICTURES_DIR="\(.*\)"/\1/p' "$HOME/.config/user-dirs.dirs" |
+		sed "s|\$HOME|$HOME|")
+fi
+[ -n "$pics" ] || pics=$HOME/Pictures
+mkdir -p "$pics"
+
+name=$(cat "/sys/class/video4linux/${dev##*/}/name" 2>/dev/null)
+exec mpv --title="Camera${name:+ - $name}" --profile=low-latency --untimed \
+	--no-cache --keep-open=no --osd-level=1 \
+	--osd-playing-msg="S: take a photo (saved in Pictures)   Q: close" --osd-duration=4000 \
+	--screenshot-directory="$pics" --screenshot-template="Photo %tY-%tm-%td %tH.%tM.%tS" \
+	"av://v4l2:$dev"

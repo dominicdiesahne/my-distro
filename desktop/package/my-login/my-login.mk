@@ -2,7 +2,8 @@
 #
 # my-login: builds login/my-login.c (login screen), login/my-power.c,
 # login/my-admin.c (opens "Users and system" as root), login/my-lock.c (screen
-# lock) with login/my-checkpass.c, and login/my-lidd.c (laptop lid)
+# lock) with login/my-checkpass.c, login/my-lidd.c (laptop lid) and
+# login/my-vpnctl.c (the VPN window's root part)
 #
 ################################################################################
 
@@ -25,6 +26,7 @@ define MY_LOGIN_BUILD_CMDS
 		$(MY_LOGIN_SHARED)/settings.c $$($(PKG_CONFIG_HOST_BINARY) --cflags --libs x11 xft xrender xscrnsaver imlib2)
 	$(MY_LOGIN_CC) -o $(@D)/my-checkpass $(@D)/my-checkpass.c $$($(PKG_CONFIG_HOST_BINARY) --cflags --libs libxcrypt)
 	$(MY_LOGIN_CC) -o $(@D)/my-lidd $(@D)/my-lidd.c
+	$(MY_LOGIN_CC) -o $(@D)/my-vpnctl $(@D)/my-vpnctl.c
 endef
 
 define MY_LOGIN_INSTALL_TARGET_CMDS
@@ -34,15 +36,18 @@ define MY_LOGIN_INSTALL_TARGET_CMDS
 	$(INSTALL) -D -m 0755 $(@D)/my-lock $(TARGET_DIR)/usr/bin/my-lock
 	$(INSTALL) -D -m 0755 $(@D)/my-checkpass $(TARGET_DIR)/usr/bin/my-checkpass
 	$(INSTALL) -D -m 0755 $(@D)/my-lidd $(TARGET_DIR)/usr/sbin/my-lidd
+	$(INSTALL) -D -m 0755 $(@D)/my-vpnctl $(TARGET_DIR)/usr/bin/my-vpnctl
 endef
 
 # setuid root, so normal users can reboot (see my-power.c), open "Users and
-# system" with the root password (see my-admin.c) and unlock the screen with
-# their own password (see my-checkpass.c)
+# system" with the root password (see my-admin.c), unlock the screen with
+# their own password (see my-checkpass.c) and connect a VPN (my-vpnctl.c,
+# members of netdev only)
 define MY_LOGIN_PERMISSIONS
 	/usr/bin/my-power f 4755 0 0 - - - - -
 	/usr/bin/my-admin f 4755 0 0 - - - - -
 	/usr/bin/my-checkpass f 4755 0 0 - - - - -
+	/usr/bin/my-vpnctl f 4755 0 0 - - - - -
 endef
 
 $(eval $(generic-package))

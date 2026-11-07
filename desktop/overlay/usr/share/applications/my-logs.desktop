@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=System logs
+Comment=See and search what the system wrote down
+Icon=text-x-generic
+Exec=my-logs
+Terminal=false
+Categories=System;Monitor;

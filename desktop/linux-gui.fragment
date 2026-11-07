@@ -263,3 +263,23 @@ CONFIG_ACPI_VIDEO=m
 # switch in a VM, and by remote-control and game-pad tools
 CONFIG_INPUT_MISC=y
 CONFIG_INPUT_UINPUT=m
+
+# --- 0.9.4 -------------------------------------------------------------------
+
+# VPN: WireGuard (the VPN window imports .conf files; /usr/lib/my-distro/vpn
+# sets the tunnel up with the wg tool)
+CONFIG_NET_UDP_TUNNEL=y
+CONFIG_WIREGUARD=y
+
+# Webcams: USB Video Class covers nearly all USB webcams and the cameras built
+# into laptops. my-camera shows them in mpv. vivid is a virtual test camera
+# (only when loaded by hand: modprobe vivid), for trying it without one.
+CONFIG_MEDIA_SUPPORT=y
+CONFIG_MEDIA_SUPPORT_FILTER=y
+CONFIG_MEDIA_CAMERA_SUPPORT=y
+CONFIG_MEDIA_USB_SUPPORT=y
+CONFIG_MEDIA_TEST_SUPPORT=y
+CONFIG_VIDEO_DEV=y
+CONFIG_USB_VIDEO_CLASS=m
+CONFIG_V4L_TEST_DRIVERS=y
+CONFIG_VIDEO_VIVID=m

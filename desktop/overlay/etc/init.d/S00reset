@@ -1,0 +1,16 @@
+#!/bin/sh
+# Factory reset, if one was asked for (my-reset --schedule, from "Users and
+# system" or from my-reset in recovery mode): done first at the start, before
+# any service or user has the files open.
+case "$1" in
+start)
+	if [ -f /etc/my-distro/reset-pending ]; then
+		/usr/sbin/my-reset --now
+	fi
+	;;
+stop|restart) ;;
+*)
+	echo "Usage: $0 {start}"
+	exit 1
+	;;
+esac

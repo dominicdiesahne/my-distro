@@ -207,6 +207,11 @@ menuentry "my-distro (safe graphics)" {
 menuentry "my-distro (show boot messages)" {
 	linux /boot/bzImage $ARGS console=ttyS0,115200 console=tty1
 }
+
+# Text console only, no desktop: to undo an update or reset the system
+menuentry "my-distro (recovery mode)" {
+	linux /boot/bzImage $ARGS console=tty1 my-recovery
+}
 EOF
 
 # --- 5. Your account -----------------------------------------------------------------

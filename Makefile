@@ -140,7 +140,9 @@ desktop: $(BR_DIR)/Makefile
 > # Programs and scripts: everything in these folders is one
 > chmod 755 $(BR_SRC)/desktop/overlay/etc/init.d/* $(BR_SRC)/desktop/overlay/root/.xinitrc \
 >   $(BR_SRC)/desktop/overlay/usr/bin/* $(BR_SRC)/desktop/overlay/usr/sbin/* \
->   $(BR_SRC)/desktop/overlay/usr/lib/my-distro/* $(BR_SRC)/desktop/post-build.sh
+>   $(BR_SRC)/desktop/overlay/usr/lib/my-distro/* $(BR_SRC)/desktop/post-build.sh \
+>   $(BR_SRC)/desktop/post-fakeroot.sh \
+>   $(BR_SRC)/desktop/overlay/usr/share/udhcpc/default.script.d/*
 > $(BR_MAKE) qemu_x86_64_defconfig
 > cd $(BR_OUT) && $(BR_DIR)/support/kconfig/merge_config.sh -m .config $(BR_SRC)/desktop/buildroot.fragment
 > $(BR_MAKE) olddefconfig
@@ -159,9 +161,21 @@ desktop: $(BR_DIR)/Makefile
 > # Nor changes to BusyBox's (it builds in a minute, so start it again)
 > if ! cmp -s desktop/busybox.fragment $(BR_OUT)/.busybox.fragment; then \
 >   $(BR_MAKE) busybox-dirclean; fi
+> # Nor changes to a package's own options (EAP for wpa_supplicant in 0.9.4,
+> # screen capture for FFmpeg): build these again when their BR2_PACKAGE_*_
+> # lines differ from the last build (or there is no record of it yet).
+> for p in wpa_supplicant:WPA_SUPPLICANT ffmpeg:FFMPEG; do \
+>   n=$${p%%:*}; v=$${p##*:}; \
+>   ls -d $(BR_OUT)/build/$$n-[0-9]* >/dev/null 2>&1 || continue; \
+>   if [ ! -f $(BR_OUT)/.config.last ] || \
+>      ! cmp -s <(grep "^BR2_PACKAGE_$${v}_" $(BR_OUT)/.config) \
+>               <(grep "^BR2_PACKAGE_$${v}_" $(BR_OUT)/.config.last); then \
+>     $(BR_MAKE) $$n-dirclean; fi; \
+> done
 > $(BR_MAKE)
 > cp desktop/linux-gui.fragment $(BR_OUT)/.linux-gui.fragment
 > cp desktop/busybox.fragment $(BR_OUT)/.busybox.fragment
+> cp $(BR_OUT)/.config $(BR_OUT)/.config.last
 > mkdir -p out
 > # Buildroot's ISO only boots from a CD. Make it again from the same files
 > # (what grub-mkrescue does), so it also boots when it is written to a USB

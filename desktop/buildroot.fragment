@@ -11,6 +11,8 @@ BR2_TARGET_GENERIC_ISSUE="Welcome to my-distro"
 BR2_ROOTFS_DEVICE_CREATION_DYNAMIC_EUDEV=y
 BR2_ROOTFS_OVERLAY="$(BR2_EXTERNAL_MY_DISTRO_PATH)/overlay"
 BR2_ROOTFS_POST_BUILD_SCRIPT="board/qemu/x86_64/post-build.sh $(BR2_EXTERNAL_MY_DISTRO_PATH)/post-build.sh"
+# Inside each image, with the final owners: the factory-reset copy
+BR2_ROOTFS_POST_FAKEROOT_SCRIPT="$(BR2_EXTERNAL_MY_DISTRO_PATH)/post-fakeroot.sh"
 BR2_TARGET_ROOTFS_EXT2_SIZE="1G"
 BR2_PACKAGE_MY_INIT=y
 
@@ -229,3 +231,18 @@ BR2_PACKAGE_XLIB_LIBXSCRNSAVER=y
 # it its on-screen controls (play/pause, seek bar, volume).
 BR2_PACKAGE_LUAJIT=y
 BR2_PACKAGE_MPV=y
+
+# --- 0.9.4 -------------------------------------------------------------------
+
+# Wi-Fi with a user name and password (eduroam and other WPA2/WPA3
+# Enterprise networks): wpa_supplicant's EAP methods (PEAP, TTLS, ...)
+BR2_PACKAGE_WPA_SUPPLICANT_EAP=y
+
+# VPN: the wg tool sets up WireGuard tunnels (kernel part in linux-gui.fragment).
+# iproute2's ip command, because BusyBox's ip can't make a WireGuard interface.
+BR2_PACKAGE_WIREGUARD_TOOLS=y
+BR2_PACKAGE_IPROUTE2=y
+
+# Screen recording (my-record): FFmpeg reads the screen over XCB. Webcams
+# (my-camera) come in through FFmpeg's video4linux input, which is in already.
+BR2_PACKAGE_FFMPEG_XCBGRAB=y

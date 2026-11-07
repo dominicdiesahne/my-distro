@@ -8,6 +8,11 @@ PIDFILE=/run/desktop.keepalive
 
 case "$1" in
 start)
+	# Recovery mode (boot menu): the text console only
+	if grep -qw my-recovery /proc/cmdline; then
+		echo "Recovery mode: no desktop."
+		exit 0
+	fi
 	printf "Starting login screen: "
 	PATH=/sbin:/bin:/usr/sbin:/usr/bin LANG=en_US.UTF-8 \
 		/usr/bin/my-keepalive -a xinit /usr/bin/my-login -- /usr/bin/Xorg :0 vt7 \

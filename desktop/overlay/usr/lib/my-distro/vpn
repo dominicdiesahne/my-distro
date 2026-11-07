@@ -1,0 +1,145 @@
+#!/bin/sh
+# vpn up NAME | down | status: connects the WireGuard VPN saved as
+# /etc/my-distro/vpn/NAME.conf (by the VPN window, see my-vpnctl), as root.
+#
+# What wg-quick does, in a few lines of sh: the interface wg0 with the
+# config's addresses, routes to what the VPN covers (AllowedIPs) and its DNS
+# servers. "All traffic" (AllowedIPs 0.0.0.0/0) uses two half routes,
+# 0.0.0.0/1 and 128.0.0.0/1: they win over the normal default route without
+# replacing it, and a route to the VPN server itself keeps going the
+# normal way.
+#
+# State while connected: /run/my-vpn (the name, the extra routes, DNS).
+# The DHCP client's hook (/usr/share/udhcpc/default.script.d/my-vpn) puts
+# the VPN's DNS servers back when a new DHCP lease rewrites resolv.conf.
+PATH=/usr/sbin:/usr/bin:/sbin:/bin
+IF=wg0
+RUN=/run/my-vpn
+DIR=/etc/my-distro/vpn
+
+# The values of one setting in one kind of section, comma-separated values
+# one per line: setting Interface Address  ->  10.0.0.2/32 (newline) fd00::2/128
+setting() {
+	awk -v sec="[$1]" -v key="$2" '
+		/^\[/ { in_sec = ($0 == sec); next }
+		in_sec {
+			split($0, kv, "=")
+			k = kv[1]; gsub(/[ \t]/, "", k)
+			if (k != key) next
+			v = substr($0, index($0, "=") + 1)
+			n = split(v, parts, ",")
+			for (i = 1; i <= n; i++) { gsub(/[ \t]/, "", parts[i]); if (parts[i] != "") print parts[i] }
+		}' "$CONF"
+}
+
+down() {
+	[ -d "$RUN" ] || { ip link del "$IF" 2>/dev/null; return 0; }
+	ip link del "$IF" 2>/dev/null      # its addresses and routes go with it
+	if [ -f "$RUN/routes" ]; then
+		while read -r r; do ip route del $r 2>/dev/null; done <"$RUN/routes"
+	fi
+	[ -f "$RUN/resolv.saved" ] && cat "$RUN/resolv.saved" >/etc/resolv.conf
+	rm -rf "$RUN"
+	logger -t my-vpn "disconnected"
+}
+
+# The route to HOST the normal way (before the VPN): "via GW dev IF" or "dev IF"
+normal_route() {
+	ip route get "$1" 2>/dev/null | awk '{
+		for (i = 1; i < NF; i++) {
+			if ($i == "via") via = $(i + 1)
+			if ($i == "dev") dev = $(i + 1)
+		}
+		if (dev != "") print (via != "" ? "via " via " " : "") "dev " dev
+		exit }'
+}
+
+up() {
+	NAME=$1
+	CONF=$DIR/$NAME.conf
+	[ -f "$CONF" ] || { echo "No VPN called $NAME."; exit 1; }
+	down
+	mkdir -p -m 700 "$RUN"
+
+	# wg wants only its own settings (no Address, DNS, MTU)
+	grep -viE '^[[:space:]]*(Address|DNS|MTU)[[:space:]]*=' "$CONF" >"$RUN/wg.conf"
+	if ! ip link add "$IF" type wireguard; then
+		echo "Could not make the VPN interface."; rm -rf "$RUN"; exit 1
+	fi
+	if ! err=$(wg setconf "$IF" "$RUN/wg.conf" 2>&1); then
+		echo "The VPN settings were not accepted: $err"
+		ip link del "$IF"; rm -rf "$RUN"; exit 1
+	fi
+	rm -f "$RUN/wg.conf"
+	for a in $(setting Interface Address); do
+		ip address add "$a" dev "$IF" || { echo "Bad address $a."; down; exit 1; }
+	done
+	mtu=$(setting Interface MTU | head -n 1)
+	ip link set dev "$IF" mtu "${mtu:-1420}" up
+
+	: >"$RUN/routes"
+	full4=; full6=
+	for net in $(setting Peer AllowedIPs); do
+		case "$net" in
+		0.0.0.0/0) full4=1 ;;
+		::/0) full6=1 ;;
+		*) ip route add "$net" dev "$IF" 2>/dev/null ;;
+		esac
+	done
+	if [ -n "$full4$full6" ]; then
+		# the VPN servers themselves: keep reaching them without the VPN
+		for ep in $(wg show "$IF" endpoints | awk '{ print $2 }'); do
+			host=${ep%:*}; host=${host#[}; host=${host%]}
+			r=$(normal_route "$host")
+			[ -n "$r" ] || continue
+			case "$host" in *:*) net=$host/128 ;; *) net=$host/32 ;; esac
+			ip route add $net $r 2>/dev/null && echo "$net $r" >>"$RUN/routes"
+		done
+		if [ -n "$full4" ]; then
+			ip route add 0.0.0.0/1 dev "$IF"
+			ip route add 128.0.0.0/1 dev "$IF"
+		fi
+		if [ -n "$full6" ]; then
+			ip -6 route add ::/1 dev "$IF" 2>/dev/null
+			ip -6 route add 8000::/1 dev "$IF" 2>/dev/null
+		fi
+	fi
+
+	# DNS: IP addresses are servers, anything else a search domain
+	servers=; search=
+	for d in $(setting Interface DNS); do
+		case "$d" in *[!0-9a-fA-F.:]*) search="$search $d" ;; *) servers="$servers $d" ;; esac
+	done
+	if [ -n "$servers" ]; then
+		cat /etc/resolv.conf >"$RUN/resolv.saved" 2>/dev/null
+		{
+			echo "# DNS of the VPN $NAME (my-vpn); the normal one comes back when it disconnects"
+			[ -n "$search" ] && echo "search$search"
+			for s in $servers; do echo "nameserver $s"; done
+		} >"$RUN/resolv.conf"
+		cat "$RUN/resolv.conf" >/etc/resolv.conf
+	fi
+	echo "$NAME" >"$RUN/active"
+	logger -t my-vpn "connected to $NAME"
+	echo "Connected to $NAME."
+}
+
+status() {
+	if [ ! -f "$RUN/active" ] || ! ip link show "$IF" >/dev/null 2>&1; then
+		echo "disconnected"
+		return
+	fi
+	echo "connected $(cat "$RUN/active")"
+	echo "address $(ip -o address show dev "$IF" | awk '{ print $4 }' | tr '\n' ' ')"
+	now=$(date +%s)
+	last=$(wg show "$IF" latest-handshakes | awk '$2 > m { m = $2 } END { print m + 0 }')
+	[ "$last" -gt 0 ] && echo "handshake $((now - last))" || echo "handshake never"
+	wg show "$IF" transfer | awk '{ rx += $2; tx += $3 } END { print "received " rx + 0; print "sent " tx + 0 }'
+}
+
+case "$1" in
+up) [ -n "$2" ] || exit 1; up "$2" ;;
+down) down; echo "Disconnected." ;;
+status) status ;;
+*) echo "usage: $0 up NAME | down | status"; exit 1 ;;
+esac

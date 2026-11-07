@@ -1,0 +1,59 @@
+#!/bin/sh
+# my-record: starts a screen recording, or stops the one that is running.
+# Start menu: "Record screen"; keyboard: Super+Shift+R. The video goes to
+# your Videos folder as "Screen recording DATE TIME.mp4".
+#
+# FFmpeg reads the screen (x11grab over XCB) and packs it as MPEG-4 video,
+# which every player and Windows play. No sound is recorded.
+# Log of the last recording: /tmp/my-record-UID.log
+ME=$(id -u)
+PIDFILE=/tmp/my-record-$ME.pid
+LOG=/tmp/my-record-$ME.log
+
+running() {
+	[ -f "$PIDFILE" ] || return 1
+	pid=$(sed -n 1p "$PIDFILE")       # line 1: ffmpeg's PID, line 2: the file
+	[ -n "$pid" ] && [ "$(cat /proc/"$pid"/comm 2>/dev/null)" = ffmpeg ]
+}
+
+if running; then
+	file=$(sed -n 2p "$PIDFILE")
+	kill -INT "$pid"                  # ffmpeg finishes the file and stops
+	i=0
+	while [ $i -lt 20 ] && kill -0 "$pid" 2>/dev/null; do sleep 1; i=$((i + 1)); done
+	kill "$pid" 2>/dev/null
+	rm -f "$PIDFILE"
+	if [ -s "$file" ]; then
+		my-notify -i media-record "Screen recording saved" "${file##*/} is in ${file%/*}."
+	else
+		my-notify -i dialog-error "Screen recording failed" "See $LOG."
+	fi
+	exit 0
+fi
+
+[ -n "$DISPLAY" ] || { echo "my-record: no screen (DISPLAY is not set)"; exit 1; }
+
+# The Videos folder: from ~/.config/user-dirs.dirs, else ~/Videos
+dir=
+if [ -f "$HOME/.config/user-dirs.dirs" ]; then
+	dir=$(sed -n 's/^XDG_VIDEOS_DIR="\(.*\)"/\1/p' "$HOME/.config/user-dirs.dirs" |
+		sed "s|\$HOME|$HOME|")
+fi
+[ -n "$dir" ] || dir=$HOME/Videos
+mkdir -p "$dir"
+file="$dir/Screen recording $(date '+%Y-%m-%d %H.%M.%S').mp4"
+
+# 25 pictures a second, the whole screen; video sizes must be even numbers
+ffmpeg -nostdin -y -f x11grab -framerate 25 -draw_mouse 1 -i "$DISPLAY" \
+	-vf 'crop=trunc(iw/2)*2:trunc(ih/2)*2' -c:v mpeg4 -q:v 4 -pix_fmt yuv420p \
+	"$file" >"$LOG" 2>&1 &
+printf '%s\n%s\n' "$!" "$file" >"$PIDFILE"
+sleep 1
+if running; then
+	my-notify -i media-record "Recording the screen" \
+		"To stop, choose Record screen in the Start menu again, or press Super+Shift+R."
+else
+	rm -f "$PIDFILE"
+	my-notify -i dialog-error "Could not record the screen" "See $LOG."
+	exit 1
+fi

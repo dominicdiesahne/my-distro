@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Camera
+Comment=Show the webcam and take photos
+Icon=camera-web
+Exec=my-camera
+Terminal=false
+Categories=AudioVideo;Video;

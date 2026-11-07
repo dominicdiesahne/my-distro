@@ -1,23 +1,29 @@
 # The Start menu of my-panel. One entry per line: Label|command|icon
 # The icon is a name from the Adwaita icon theme (/usr/share/icons/Adwaita)
 # or a full path to a PNG. A line with only "-" draws a separator.
+# When the menu is taller than the screen, it is shown in two columns.
 Terminal|xterm|utilities-terminal
 Files|pcmanfm ~|system-file-manager
 Web browser|netsurf-gtk3|web-browser
 Code editor (LazyVim)|my-ide|/usr/lib/nvim/share/icons/hicolor/128x128/apps/nvim.png
 Text editor|xterm -name editor -T "Text editor" -e nano|accessories-text-editor
-System monitor|xterm -name monitor -T "System monitor" -e htop|computer
 Media player|mpv --player-operation-mode=pseudo-gui|/usr/share/icons/hicolor/64x64/apps/mpv.png
+Camera|my-camera|camera-web
 Calculator|xcalc|accessories-calculator
 Clock|my-clock|my-clock
 Search files|my-search-gui|system-search
 File history|my-history|document-open-recent
 Screenshot|my-screenshot --delay 1|camera-photo
-Eject USB stick|my-eject|media-eject
+Record screen|my-record|media-record
+-
 Wi-Fi|my-wifi|network-wireless
+VPN|my-vpn|network-vpn
+Eject USB stick|my-eject|media-eject
 Settings|my-settings|preferences-desktop
 Users and system|my-setup|system-users
 System update|my-setup --update|software-update-available
+System monitor|xterm -name monitor -T "System monitor" -e htop|computer
+System logs|my-logs|text-x-generic
 Install to disk|xterm -name my-install -T "Install my-distro" -e /usr/sbin/my-install|drive-harddisk
 -
 Lock screen|my-lock|system-lock-screen

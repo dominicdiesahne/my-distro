@@ -1,0 +1,2 @@
+  <!-- my-distro 0.9.4: screen recording -->
+  <keybind key="W-S-r"><action name="Execute"><command>my-record</command></action></keybind>

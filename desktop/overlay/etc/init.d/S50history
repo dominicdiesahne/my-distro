@@ -6,6 +6,8 @@ PIDFILE=/run/my-historyd.keepalive
 
 case "$1" in
 start)
+	# Recovery mode (boot menu): only what is needed to repair the system
+	grep -qw my-recovery /proc/cmdline && exit 0
 	printf "Starting file history: "
 	/usr/bin/my-keepalive -a /usr/sbin/my-historyd </dev/null >/var/log/my-history.log 2>&1 &
 	echo $! > $PIDFILE

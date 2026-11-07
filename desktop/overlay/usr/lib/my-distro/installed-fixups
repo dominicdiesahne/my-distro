@@ -19,12 +19,14 @@ for f in "$R/root/Documents/welcome.txt" "$R/etc/skel/Documents/welcome.txt" \
 	       -e '/Install to disk/d' "$f"
 done
 # Every normal user may choose Wi-Fi networks (group netdev, systems before
-# 0.9 didn't add them) and play sound (group audio, before 0.9.2).
+# 0.9 didn't add them), play sound (group audio, before 0.9.2) and use the
+# webcam (group video, before 0.9.4).
 G="$R/etc/group"
 grep -q '^netdev:' "$G" || echo 'netdev:x:82:' >>"$G"
 grep -q '^audio:' "$G" || echo 'audio:x:29:' >>"$G"
+grep -q '^video:' "$G" || echo 'video:x:28:' >>"$G"
 for u in $(awk -F: '$3 >= 1000 && $3 < 60000 { print $1 }' "$R/etc/passwd"); do
-	for grp in netdev audio; do
+	for grp in netdev audio video; do
 		awk -F: -v OFS=: -v u="$u" -v g="$grp" '
 			$1 == g {
 				n = split($4, m, ","); found = 0
@@ -35,6 +37,16 @@ for u in $(awk -F: '$3 >= 1000 && $3 < 60000 { print $1 }' "$R/etc/passwd"); do
 	done
 done
 chmod 644 "$G"
+
+# The boot menu of systems installed before 0.9.4 has no recovery mode yet:
+# add it, with the same kernel line as the first entry
+B="$R/boot/grub/grub.cfg"
+if [ -f "$B" ] && ! grep -q my-recovery "$B"; then
+	line=$(grep -m 1 '^[[:space:]]*linux /boot/bzImage' "$B" | sed -e 's/^[[:space:]]*//' -e 's/ quiet$//')
+	if [ -n "$line" ]; then
+		printf '\n# Text console only, no desktop: to undo an update or reset the system\nmenuentry "my-distro (recovery mode)" {\n\t%s my-recovery\n}\n' "$line" >>"$B"
+	fi
+fi
 
 # --- Desktop sessions from older versions ----------------------------------------
 # Home folders are never replaced by an update, so the session files there

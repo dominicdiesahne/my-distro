@@ -1,0 +1,15 @@
+#!/bin/sh
+# Runs after the DHCP client wrote /etc/resolv.conf (new or renewed lease).
+# While a VPN with its own DNS servers is connected (/usr/lib/my-distro/vpn),
+# keep using those: remember the new normal DNS for when the VPN disconnects,
+# and put the VPN's back.
+RUN=/run/my-vpn
+case "$1" in
+bound|renew)
+	if [ -f "$RUN/resolv.conf" ]; then
+		cat /etc/resolv.conf >"$RUN/resolv.saved"
+		cat "$RUN/resolv.conf" >/etc/resolv.conf
+	fi
+	;;
+esac
+exit 0

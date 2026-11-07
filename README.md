@@ -71,6 +71,14 @@ the taskbar, the login screen, the file history daemon and the search indexer.
 - **Wi-Fi** (`settings/my-wifi.c`): bars in the taskbar show the signal; a
   click lists the networks around, asks for the password and connects
   (wpa_supplicant underneath; started by a udev rule when an adapter appears).
+  Networks with a user name and password (eduroam, WPA2/WPA3 Enterprise:
+  PEAP or TTLS, with the server's certificate checked against its domain) and
+  hidden networks (*Other network…*) work too.
+- **VPN** (`settings/my-vpn.c`, Start menu *VPN*): import a WireGuard config
+  file (`.conf`) from your VPN service or router, then connect and
+  disconnect. `login/my-vpnctl.c` does the root part (for members of
+  `netdev`, like Wi-Fi) and never runs commands from the file (PostUp & co
+  are left out).
 - **Installer** (`my-install`): copies the live system onto a hard disk with
   GRUB for BIOS and UEFI, so your files and settings survive a reboot.
 - **Sound**: a speaker in the taskbar shows the volume. Scroll on it for
@@ -116,6 +124,24 @@ the taskbar, the login screen, the file history daemon and the search indexer.
 - **Parts restart themselves** (`my-keepalive`): if the taskbar,
   notifications, file history, lid switch or the login screen crash, they
   start again.
+- **Start menu on the Windows key**: press and release Super on its own
+  (`panel/my-panel.c` listens with XInput 2, so Super+L and the other
+  shortcuts still work). On small screens the menu has two columns.
+- **Clipboard that stays** (`panel/my-clipd.c`): copied text can still be
+  pasted after the program you copied it from is closed.
+- **Screen recording** (`my-record`): Start menu *Record screen* or
+  Super+Shift+R starts it, the same again stops it. The video (MPEG-4, no
+  sound) goes to `~/Videos`.
+- **Camera** (`my-camera`): USB webcams and laptop cameras (UVC) in an mpv
+  window; S takes a photo into `~/Pictures`.
+- **System logs** (`settings/my-logs.c`): system messages, kernel messages
+  and the services' logs in one window, with a search that keeps only the
+  matching lines.
+- **Recovery mode and factory reset**: the installed system's boot menu has
+  *recovery mode* (text console only, no desktop) to undo an update or
+  reset. The factory reset (*Users and system* → *Factory reset*, or
+  `my-reset`) deletes all users, files and settings and keeps the system;
+  the setup starts again.
 
 ## Try it
 
@@ -244,12 +270,13 @@ the rest is the system (ext4). It boots with BIOS and UEFI alike.
 
 | Shortcut | Does |
 |---|---|
-| Super+Space or Alt+F1 | Start menu |
+| Super (alone), Super+Space or Alt+F1 | Start menu |
 | Super+S | Search files |
 | Super+T or Ctrl+Alt+T | Terminal |
 | Super+E | File manager |
 | Super+Up / Super+Down | Maximise / minimise |
 | Print / Alt+Print / Shift+Print | Screenshot: screen / window / area |
+| Super+Shift+R | Start / stop recording the screen |
 | Super+L | Lock the screen |
 | Volume keys, brightness keys, Sleep key | Louder, quieter, mute; brighter, darker; lock and suspend |
 | Alt+Tab, Alt+F4 | Switch / close windows |
@@ -264,6 +291,7 @@ The keyboard layout is German (`desktop/overlay/etc/X11/xorg.conf.d/00-keyboard.
 1. GRUB loads the kernel and the whole root filesystem into RAM (initrd).
 2. The kernel starts our init, `/sbin/my-init` (`init/init.c`).
 3. init mounts `/proc`, `/sys`, `/dev`, `/tmp` and runs `/etc/init.d/rcS`:
+   `S00reset` (a factory reset, if one was asked for),
    udev, `S20zram` (compressed swap), `S35firewall`, network (DHCP),
    `S45sound`, `S46power` (lid switch), `S48time` (clock from the internet),
    `S50history` (file history), `S90desktop`. Daemons run under
@@ -282,6 +310,22 @@ The keyboard layout is German (`desktop/overlay/etc/X11/xorg.conf.d/00-keyboard.
 On an installed system GRUB starts the kernel from `/boot/bzImage` on the
 ext4 partition with `root=PARTUUID=... init=/sbin/my-init`, so step 1 loads
 no initrd: the kernel mounts the disk itself and the rest is the same.
+
+Its boot menu also has **recovery mode** (`my-recovery` on the kernel line):
+`S50history` and `S90desktop` don't start, so there is only the text console.
+After logging in as root it lists what helps: `my-update rollback` (undo the
+last update), `my-reset` (factory reset), `passwd`.
+
+### Factory reset
+
+`my-update keep-list` lists everything system updates keep: users and
+passwords, home folders, `/var`, the computer name, Wi-Fi networks, VPNs, the
+time zone and other settings. While the image is built,
+`desktop/post-fakeroot.sh` copies the fresh state of these into
+`/usr/share/my-distro/factory` (root only). `my-reset` marks a reset and
+restarts; at the next start `S00reset` deletes all of them, puts the factory
+copies back and runs `installed-fixups`. Then the setup runs as after
+installing. The system's own files stay in the version they have.
 
 ### System-wide undo
 
@@ -390,11 +434,14 @@ or `my-update rollback`.
 |---|---|
 | `Makefile` | `make desktop` (ISO and update package), `make release-files` (signature), `make run-iso`; `make` / `make run` for the minimal version |
 | `init/init.c` | PID 1 |
-| `login/` | Login screen `my-login`, screen lock `my-lock` with `my-checkpass`, lid switch `my-lidd`, `my-power` (reboot, power off, suspend, brightness, eject USB sticks for normal users), `my-admin` (root password check for Users and system) |
+| `login/` | Login screen `my-login`, screen lock `my-lock` with `my-checkpass`, lid switch `my-lidd`, `my-power` (reboot, power off, suspend, brightness, eject USB sticks for normal users), `my-admin` (root password check for Users and system), `my-vpnctl` (the VPN window's root part) |
+| `desktop/overlay/usr/lib/my-distro/vpn` | Connects and disconnects a WireGuard VPN (run by `my-vpnctl`) |
+| `desktop/overlay/usr/sbin/my-reset`, `etc/init.d/S00reset`, `desktop/post-fakeroot.sh` | Factory reset, and the factory copy it puts back |
+| `desktop/overlay/usr/bin/my-record`, `my-camera` | Screen recording, webcam |
 | `desktop/overlay/usr/sbin/my-install` | Installer (shell script) |
 | `desktop/overlay/usr/bin/my-update` | System updates (Python), settings in `desktop/overlay/etc/my-distro/update.conf`, public key `update-key.pem` |
 | `desktop/overlay/etc/my-distro/version` | The version number (the welcome text and `my-update` read it) |
-| `panel/` | Taskbar `my-panel` (with volume and battery), `my-screenshot` |
+| `panel/` | Taskbar `my-panel` (with volume and battery), `my-screenshot`, `my-clipd` (keeps copied text) |
 | `settings/my-notifyd.c`, `settings/my-notify.c` | Notifications: the daemon that shows them, and the command that sends one |
 | `desktop/overlay/usr/lib/my-distro/automount` | Opens USB sticks and SD cards (started by a udev rule) |
 | `desktop/overlay/usr/lib/my-distro/autostart` | The desktop's own parts at login (users' autostart runs it first) |
@@ -403,7 +450,7 @@ or `my-update rollback`.
 | `desktop/overlay/etc/init.d/S35firewall`, `S45sound`, `S48time` | Firewall, sound start values, time sync |
 | `desktop/busybox.fragment` | BusyBox options on top of Buildroot's (ntpd) |
 | `desktop/lazyvim/`, `desktop/package/my-ide/` | The IDE: LazyVim config, and how Neovim and the plugins get into the image |
-| `settings/` | Settings app, Clock app, setup / Users and system (`my-setup`), and `settings.c` / `dial.c` that the taskbar and login screen share with them |
+| `settings/` | Settings app, Clock app, setup / Users and system (`my-setup`), Wi-Fi (`my-wifi`), VPN (`my-vpn`) and log viewer (`my-logs`) windows, and `settings.c` / `dial.c` that the taskbar and login screen share with them |
 | `history/` | `my-historyd`, `my-undo`, the File history window |
 | `search/` | `my-indexd`, `my-search`, the Search files window |
 | `desktop/buildroot.fragment` | Packages and settings on top of Buildroot's `qemu_x86_64_defconfig` |
@@ -476,8 +523,11 @@ make run    # boots in the terminal; quit with Ctrl-A, then X
 - NetSurf has limited JavaScript; big web apps (YouTube, Google Docs) don't work.
 - Only x86-64. Tested in VirtualBox and QEMU; the drivers for real PCs are
   in, but not yet tried on one (see [On a real PC](#on-a-real-pc)).
-- Wi-Fi: no hidden networks and no enterprise Wi-Fi (eduroam) in the
-  Wi-Fi window yet.
+- Enterprise Wi-Fi (eduroam) knows PEAP and TTLS with a password; logins
+  with a certificate instead of a password (EAP-TLS) are not in the window.
+- VPN: WireGuard only (no OpenVPN). When you change networks while a VPN
+  with "all traffic" is connected, disconnect and connect it again.
+- Screen recordings have no sound.
 - Graphics drivers set the screen up, but there is no 3D acceleration
   (Mesa's software renderer only).
 - Sound plays on one card at a time (ALSA, no sound server). The digital

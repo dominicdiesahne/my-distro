@@ -256,13 +256,16 @@ static const char *save_user(const char *name, const char *fullname,
 
 	if (set_password(name, password) != 0)
 		return "Could not set the password.";
-	/* netdev: may choose Wi-Fi networks (wpa_supplicant's control socket);
-	 * audio: may use the sound card (/dev/snd) */
+	/* netdev: may choose Wi-Fi networks (wpa_supplicant's control socket)
+	 * and connect VPNs; audio: may use the sound card (/dev/snd); video: the
+	 * webcam (/dev/video*) */
 	const char *netdev[] = { "/usr/sbin/addgroup", name, "netdev", NULL };
 	const char *audio[] = { "/usr/sbin/addgroup", name, "audio", NULL };
+	const char *video[] = { "/usr/sbin/addgroup", name, "video", NULL };
 
 	run(netdev);
 	run(audio);
+	run(video);
 	if (theme)
 		set_theme(home, theme);
 	give_home(home, uid, gid);
@@ -1437,6 +1440,40 @@ static void on_restart(GtkButton *b, gpointer d)
 	kill(1, SIGTERM);                 /* our init: TERM = reboot */
 }
 
+/* Factory reset: my-reset marks it for the next start, then we restart.
+ * It runs at the start (S00reset) before anything has the files open. */
+static void on_reset(GtkButton *b, gpointer d)
+{
+	const char *argv[] = { "/usr/sbin/my-reset", "--schedule", NULL };
+	GtkWidget *ask, *yes;
+	int answer, st = 1;
+
+	(void)b; (void)d;
+	ask = gtk_message_dialog_new(GTK_WINDOW(mg_win), GTK_DIALOG_MODAL, GTK_MESSAGE_WARNING,
+		GTK_BUTTONS_NONE, "Delete all users, files and settings?");
+	gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(ask),
+		"Every user and everything in their home folders (documents, pictures, browser "
+		"data) is deleted, and all settings: passwords, computer name, Wi-Fi networks, "
+		"VPNs, time zone. Only the system stays. This can't be undone.\n\n"
+		"The computer restarts now; the reset takes a few seconds, then the setup "
+		"starts as after installing.");
+	gtk_dialog_add_button(GTK_DIALOG(ask), "Cancel", GTK_RESPONSE_CANCEL);
+	yes = gtk_dialog_add_button(GTK_DIALOG(ask), "Reset and restart", GTK_RESPONSE_ACCEPT);
+	gtk_style_context_add_class(gtk_widget_get_style_context(yes), "destructive-action");
+	gtk_dialog_set_default_response(GTK_DIALOG(ask), GTK_RESPONSE_CANCEL);
+	answer = gtk_dialog_run(GTK_DIALOG(ask));
+	gtk_widget_destroy(ask);
+	if (answer != GTK_RESPONSE_ACCEPT)
+		return;
+	if (!g_spawn_sync(NULL, (char **)argv, NULL, G_SPAWN_STDOUT_TO_DEV_NULL |
+	                  G_SPAWN_STDERR_TO_DEV_NULL, NULL, NULL, NULL, NULL, &st, NULL) ||
+	    !g_spawn_check_wait_status(st, NULL)) {
+		status("Could not start the factory reset.", NULL);
+		return;
+	}
+	kill(1, SIGTERM);                 /* our init: TERM = reboot */
+}
+
 static GtkWidget *mg_page(GtkWidget *stack, const char *name, const char *title)
 {
 	GtkWidget *box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
@@ -1558,6 +1595,24 @@ static int manage(int open_update)
 	gtk_box_pack_start(GTK_BOX(row), up_undo, FALSE, FALSE, 0);
 	gtk_box_pack_end(GTK_BOX(row), up_restart, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(p), row, FALSE, FALSE, 0);
+
+	/* Factory reset */
+	p = mg_page(stack, "reset", "Factory reset");
+	gtk_box_pack_start(GTK_BOX(p), label("Puts this computer back to how it was right after "
+		"installing my-distro: all users, their files and all settings are deleted. "
+		"The system itself stays, in the version it has now. Then the setup starts.",
+		NULL), FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(p), label("If the desktop doesn't start any more: choose "
+		"\"recovery mode\" in the boot menu and run my-reset there.", "dim"), FALSE, FALSE, 0);
+	row = button("Reset this computer…", G_CALLBACK(on_reset));
+	gtk_style_context_add_class(gtk_widget_get_style_context(row), "destructive-action");
+	gtk_widget_set_halign(row, GTK_ALIGN_START);
+	gtk_box_pack_start(GTK_BOX(p), row, FALSE, FALSE, 8);
+	if (live_system()) {
+		gtk_widget_set_sensitive(row, FALSE);
+		gtk_box_pack_start(GTK_BOX(p), label("Not needed on the live system: it starts "
+			"fresh every time.", "dim"), FALSE, FALSE, 0);
+	}
 
 	side = gtk_stack_sidebar_new();
 	gtk_stack_sidebar_set_stack(GTK_STACK_SIDEBAR(side), GTK_STACK(stack));

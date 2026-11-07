@@ -15,6 +15,8 @@ come from the maintainer get installed, even if a download is tampered with.
     my-update install           download, verify and install it (root)
     my-update rollback          undo the last update: back to the version
                                 before it (root)
+    my-update keep-list         the paths updates never replace (the
+                                factory reset, my-reset, resets them)
 
 Installing replaces the system's programs, libraries, kernel and default
 settings with the new version's. It keeps what belongs to you and this
@@ -78,6 +80,7 @@ KEEP = [
     "etc/sudoers.d/local",                       # your own sudo rules
     "etc/localtime", "etc/timezone",             # the time zone
     "etc/my-distro/power.conf",                  # what closing the lid does
+    "etc/my-distro/vpn",                         # imported VPNs
 ]
 
 
@@ -510,12 +513,20 @@ def cmd_rollback(args):
     return 0
 
 
+def cmd_keep_list(args):
+    """What updates keep, one path per line: the factory reset (my-reset)
+    resets exactly these, and the build saves their first state for it."""
+    for k in KEEP:
+        say(k)
+    return 0
+
+
 def main():
     args = sys.argv[1:]
     cmds = {"check": cmd_check, "watch": cmd_watch, "install": cmd_install,
-            "rollback": cmd_rollback}
+            "rollback": cmd_rollback, "keep-list": cmd_keep_list}
     if not args or args[0] not in cmds:
-        say("usage: my-update check [--notes] | watch | install | rollback")
+        say("usage: my-update check [--notes] | watch | install | rollback | keep-list")
         return 2
     try:
         return cmds[args[0]](args[1:])

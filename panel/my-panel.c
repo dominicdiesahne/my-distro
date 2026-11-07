@@ -7,6 +7,11 @@
  * - Start button opens the app menu. The entries come from /etc/my-panel/menu,
  *   one "Label|command|icon" per line, "-" for a separator line.
  *   `killall -USR1 my-panel` opens it too (Openbox binds that to Super+Space).
+ *   Pressing and releasing the Windows key (Super) on its own opens and
+ *   closes it as well: XInput 2 reports every key to us, even while Openbox
+ *   holds the keyboard, so Super+L and the other shortcuts still work (another
+ *   key between press and release means it was a shortcut, not the menu).
+ *   When the menu is taller than the screen it gets two columns.
  * - One button per open window, with the app's icon. Click: bring it to the
  *   front; click the window that is already in front: minimise it. The x on
  *   the button (shown under the mouse and on the active window) closes it.
@@ -42,6 +47,7 @@
 #include <X11/Xutil.h>
 #include <X11/keysym.h>
 #include <X11/Xft/Xft.h>
+#include <X11/extensions/XInput2.h>
 #include <Imlib2.h>
 #include <alsa/asoundlib.h>
 #include <cairo.h>
@@ -72,7 +78,7 @@
 #define ITEM_H      30
 #define SEP_H       11
 #define MAX_TASKS   64
-#define MAX_ITEMS   32
+#define MAX_ITEMS   48
 #define TITLE_MAX   200
 #define ICON_SIZE   20
 #define MAX_CACHE   64
@@ -104,7 +110,7 @@ struct task {
 struct item {
 	char label[64];
 	char cmd[256];         /* empty for a separator line */
-	int y, h;              /* position inside the menu window */
+	int x, y, h;           /* position inside the menu window (x: its column) */
 	Imlib_Image icon;
 };
 
@@ -132,8 +138,14 @@ static int hover = HOVER_NONE;
 static int hover_close;      /* the mouse is on the x of button `hover` */
 
 static struct item items[MAX_ITEMS];
-static int nitems, menu_h, menu_open, menu_hover = -1, item_h = ITEM_H;
+static int nitems, menu_w = MENU_W, menu_h, menu_open, menu_hover = -1, item_h = ITEM_H;
 static XftDraw *menu_draw;
+
+/* The Windows key alone (XInput 2 raw key events) */
+static int xi_opcode = -1;        /* -1: the X server has no XInput 2 */
+static KeyCode super_l, super_r;
+static int super_armed;           /* Super is down and nothing else was pressed */
+static Atom A_LOCK;               /* owned by the screen lock while it is on */
 
 static char clock_text[64], date_text[64];
 static int clock_x, clock_w;  /* clock area on the panel */
@@ -1117,28 +1129,32 @@ static void draw_panel(void)
 
 static void draw_menu(void)
 {
-	XftDrawRect(menu_draw, &c_bg, 0, 0, MENU_W, menu_h);
-	XftDrawRect(menu_draw, &c_button, 0, 0, MENU_W, HEADER_H);
-	XftDrawRect(menu_draw, &c_accent, 0, HEADER_H - 2, MENU_W, 2);
+	XftDrawRect(menu_draw, &c_bg, 0, 0, menu_w, menu_h);
+	XftDrawRect(menu_draw, &c_button, 0, 0, menu_w, HEADER_H);
+	XftDrawRect(menu_draw, &c_accent, 0, HEADER_H - 2, menu_w, 2);
 	text(menu_draw, bold, &c_accent, 16, 0, HEADER_H, "my-distro");
+	if (menu_w > MENU_W)          /* line between the two columns */
+		XftDrawRect(menu_draw, &c_sep, MENU_W, HEADER_H + 6, 1, menu_h - HEADER_H - 12);
 
 	for (int i = 0; i < nitems; i++) {
 		struct item *it = &items[i];
 
 		if (!it->cmd[0]) {
-			XftDrawRect(menu_draw, &c_sep, 12, it->y + it->h / 2, MENU_W - 24, 1);
+			if (it->h)
+				XftDrawRect(menu_draw, &c_sep, it->x + 12, it->y + it->h / 2,
+				            MENU_W - 24, 1);
 			continue;
 		}
 		if (i == menu_hover)
-			XftDrawRect(menu_draw, &c_hover, 0, it->y, MENU_W, it->h);
-		draw_icon(menu_buf, it->icon, 16, it->y + (it->h - ICON_SIZE) / 2);
-		text(menu_draw, font, &c_text, 16 + ICON_SIZE + 12, it->y, it->h,
+			XftDrawRect(menu_draw, &c_hover, it->x, it->y, MENU_W, it->h);
+		draw_icon(menu_buf, it->icon, it->x + 16, it->y + (it->h - ICON_SIZE) / 2);
+		text(menu_draw, font, &c_text, it->x + 16 + ICON_SIZE + 12, it->y, it->h,
 		     it->label);
 	}
 	/* 1-pixel border */
-	XftDrawRect(menu_draw, &c_accent, 0, 0, MENU_W, 1);
+	XftDrawRect(menu_draw, &c_accent, 0, 0, menu_w, 1);
 	XftDrawRect(menu_draw, &c_accent, 0, 0, 1, menu_h);
-	XftDrawRect(menu_draw, &c_accent, MENU_W - 1, 0, 1, menu_h);
+	XftDrawRect(menu_draw, &c_accent, menu_w - 1, 0, 1, menu_h);
 }
 
 static void add_item(const char *label, const char *cmd, const char *icon)
@@ -1157,7 +1173,6 @@ static void load_menu(void)
 {
 	FILE *f = fopen(MENU_FILE, "r");
 	char line[400];
-	int y = HEADER_H + 6;
 
 	if (f) {
 		while (fgets(line, sizeof line, f)) {
@@ -1184,13 +1199,66 @@ static void load_menu(void)
 	}
 	if (nitems == 0)
 		add_item("Terminal", "xterm", "utilities-terminal");
+}
+
+/* Places the entries: one column, or two when one doesn't fit on the screen
+ * (above or below the panel). Sets menu_w and menu_h. */
+static void layout_menu(void)
+{
+	int y = HEADER_H + 6, split = -1, max_h = sh - panel_h - 2 * PAD;
 
 	for (int i = 0; i < nitems; i++) {
+		items[i].x = 0;
 		items[i].y = y;
 		items[i].h = items[i].cmd[0] ? item_h : SEP_H;
 		y += items[i].h;
 	}
+	menu_w = MENU_W;
 	menu_h = y + 6;
+	if (menu_h <= max_h || nitems < 2)
+		return;
+
+	/* The second column starts about halfway; at a separator if there is
+	 * one close by (it is then not drawn) */
+	for (int i = 0; i < nitems && split < 0; i++)
+		if (items[i].y + items[i].h > (menu_h + HEADER_H) / 2)
+			split = i;
+	for (int d = 0; d <= 4; d++) {
+		if (split + d < nitems && !items[split + d].cmd[0]) {
+			split += d;
+			break;
+		}
+		if (split - d > 0 && !items[split - d].cmd[0]) {
+			split -= d;
+			break;
+		}
+	}
+	y = HEADER_H + 6;
+	for (int i = split; i < nitems; i++) {
+		items[i].x = MENU_W;
+		items[i].y = y;
+		if (i == split && !items[i].cmd[0])
+			items[i].h = 0;
+		y += items[i].h;
+	}
+	menu_w = 2 * MENU_W;
+	menu_h = (split > 0 ? items[split - 1].y + items[split - 1].h : 0);
+	if (y > menu_h)
+		menu_h = y;
+	menu_h += 6;
+}
+
+/* (Re)makes the menu's picture in its current size */
+static void size_menu_window(void)
+{
+	if (menu_draw)
+		XftDrawDestroy(menu_draw);
+	if (menu_buf)
+		XFreePixmap(dpy, menu_buf);
+	XResizeWindow(dpy, menu, menu_w, menu_h);
+	menu_buf = XCreatePixmap(dpy, menu, menu_w, menu_h, DefaultDepth(dpy, scr));
+	menu_draw = XftDrawCreate(dpy, menu_buf, vis, cmap);
+	XSetWindowBackgroundPixmap(dpy, menu, menu_buf);
 }
 
 static void run(const char *cmd)
@@ -1238,10 +1306,9 @@ static void close_menu(void)
 
 static int menu_item_at(int x, int y)
 {
-	if (x < 0 || x >= MENU_W)
-		return -1;
 	for (int i = 0; i < nitems; i++)
-		if (items[i].cmd[0] && y >= items[i].y && y < items[i].y + items[i].h)
+		if (items[i].cmd[0] && x >= items[i].x && x < items[i].x + MENU_W &&
+		    y >= items[i].y && y < items[i].y + items[i].h)
 			return i;
 	return -1;
 }
@@ -1535,13 +1602,12 @@ static void create_windows(void)
 	a.save_under = True;
 	a.event_mask = ExposureMask | ButtonPressMask | ButtonReleaseMask |
 	               PointerMotionMask | KeyPressMask;
-	menu = XCreateWindow(dpy, root, 0, 0, MENU_W, menu_h, 0, CopyFromParent,
+	layout_menu();
+	menu = XCreateWindow(dpy, root, 0, 0, menu_w, menu_h, 0, CopyFromParent,
 	                     InputOutput, CopyFromParent,
 	                     CWBackPixel | CWOverrideRedirect | CWSaveUnder |
 	                     CWEventMask, &a);
-	menu_buf = XCreatePixmap(dpy, menu, MENU_W, menu_h, DefaultDepth(dpy, scr));
-	menu_draw = XftDrawCreate(dpy, menu_buf, vis, cmap);
-	XSetWindowBackgroundPixmap(dpy, menu, menu_buf);
+	size_menu_window();
 
 	/* The calendar popup, made the same way */
 	cal_h = CAL_GRID_Y + 6 * CAL_CELL + 10;
@@ -1564,12 +1630,78 @@ static void redraw_menu(void)
 	XClearWindow(dpy, menu);     /* the menu's background *is* its pixmap */
 }
 
+/* --- The Windows key alone ------------------------------------------------- */
+
+static void watch_super_key(void)
+{
+	int ev, err, major = 2, minor = 2;
+	unsigned char bits[XIMaskLen(XI_LASTEVENT)] = { 0 };
+	XIEventMask mask = { XIAllDevices, sizeof bits, bits };
+
+	if (!XQueryExtension(dpy, "XInputExtension", &xi_opcode, &ev, &err) ||
+	    XIQueryVersion(dpy, &major, &minor) != Success || major * 10 + minor < 21) {
+		xi_opcode = -1;           /* raw events reach us during grabs from 2.1 on */
+		return;
+	}
+	super_l = XKeysymToKeycode(dpy, XK_Super_L);
+	super_r = XKeysymToKeycode(dpy, XK_Super_R);
+	XISetMask(bits, XI_RawKeyPress);
+	XISetMask(bits, XI_RawKeyRelease);
+	XISetMask(bits, XI_RawButtonPress);
+	XISelectEvents(dpy, root, &mask, 1);
+}
+
+static int is_super(int keycode)
+{
+	return keycode && (keycode == super_l || keycode == super_r);
+}
+
+static void raw_event(XGenericEventCookie *c)
+{
+	XIRawEvent *r;
+
+	if (c->extension != xi_opcode || !XGetEventData(dpy, c))
+		return;
+	r = c->data;
+	/* Each key comes twice: from the keyboard itself and from the "master"
+	 * keyboard that X merges all keyboards into. Count the first only. */
+	if (r->deviceid == r->sourceid) {
+		switch (c->evtype) {
+		case XI_RawKeyPress:
+			if (is_super(r->detail)) {
+				if (!(r->flags & XIKeyRepeat))
+					super_armed = 1;
+			} else {
+				super_armed = 0;      /* Super+L & co: a shortcut */
+			}
+			break;
+		case XI_RawButtonPress:
+			super_armed = 0;          /* Super + click (moving windows) */
+			break;
+		case XI_RawKeyRelease:
+			if (is_super(r->detail) && super_armed) {
+				super_armed = 0;
+				/* not while the screen is locked: the menu would open
+				 * behind the lock screen */
+				if (XGetSelectionOwner(dpy, A_LOCK) == None)
+					menu_requested = 1;
+			}
+			break;
+		}
+	}
+	XFreeEventData(dpy, c);
+}
+
 static void handle(XEvent *e)
 {
 	KeySym key;
 	int i;
 
 	switch (e->type) {
+	case GenericEvent:
+		raw_event(&e->xcookie);
+		break;
+
 	case Expose:
 		if (e->xexpose.window == panel && e->xexpose.count == 0)
 			draw_panel();
@@ -1578,9 +1710,17 @@ static void handle(XEvent *e)
 	case ConfigureNotify:        /* screen size changed, e.g. VM window resized */
 		if (e->xconfigure.window == root &&
 		    (e->xconfigure.width != sw || e->xconfigure.height != sh)) {
+			int old_w = menu_w, old_h = menu_h;
+
 			sw = e->xconfigure.width;
 			sh = e->xconfigure.height;
 			place_panel();
+			/* a smaller screen may need the menu's second column */
+			if (menu_open)
+				close_menu();
+			layout_menu();
+			if (menu_w != old_w || menu_h != old_h)
+				size_menu_window();
 			draw_panel();
 		}
 		break;
@@ -1813,6 +1953,7 @@ int main(int argc, char **argv)
 	A_ABOVE         = atom("_NET_WM_STATE_ABOVE");
 	A_DESKTOP       = atom("_NET_WM_DESKTOP");
 	A_CLOSE         = atom("_NET_CLOSE_WINDOW");
+	A_LOCK          = atom("MY_LOCK_SCREEN");
 
 	font  = open_font("", cfg.font_size);
 	bold  = open_font(":bold", cfg.font_size);
@@ -1848,6 +1989,7 @@ int main(int argc, char **argv)
 
 	/* Root window: window list changes and screen size changes */
 	XSelectInput(dpy, root, PropertyChangeMask | StructureNotifyMask);
+	watch_super_key();
 
 	update_clock();
 	refresh_tasks();
@@ -1869,9 +2011,12 @@ int main(int argc, char **argv)
 			handle(&e);
 		}
 
-		/* Sleep until an X event arrives or a second has passed. */
+		/* Sleep until an X event arrives or a second has passed (not at
+		 * all when the Windows key just asked for the menu). */
 		FD_ZERO(&fds);
 		FD_SET(fd, &fds);
+		if (menu_requested)
+			tv.tv_sec = 0;
 		select(fd + 1, &fds, NULL, NULL, &tv);
 
 		if (menu_requested) {

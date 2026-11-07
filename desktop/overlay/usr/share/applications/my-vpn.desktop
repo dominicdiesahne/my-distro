@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=VPN
+Comment=Connect to a WireGuard VPN
+Icon=network-vpn
+Exec=my-vpn
+Terminal=false
+Categories=Settings;Network;
