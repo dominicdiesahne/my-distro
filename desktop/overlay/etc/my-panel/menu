@@ -5,6 +5,7 @@
 Terminal|xterm|utilities-terminal
 Files|pcmanfm ~|system-file-manager
 Web browser|netsurf-gtk3|web-browser
+Web browser (sandbox)|my-sandbox netsurf-gtk3|web-browser
 Code editor (LazyVim)|my-ide|/usr/lib/nvim/share/icons/hicolor/128x128/apps/nvim.png
 Text editor|xterm -name editor -T "Text editor" -e nano|accessories-text-editor
 Media player|mpv --player-operation-mode=pseudo-gui|/usr/share/icons/hicolor/64x64/apps/mpv.png
@@ -18,6 +19,7 @@ Record screen|my-record|media-record
 -
 Wi-Fi|my-wifi|network-wireless
 VPN|my-vpn|network-vpn
+Network share|my-share|folder-remote
 Eject USB stick|my-eject|media-eject
 Settings|my-settings|preferences-desktop
 Users and system|my-setup|system-users
@@ -27,6 +29,7 @@ System logs|my-logs|text-x-generic
 Install to disk|xterm -name my-install -T "Install my-distro" -e /usr/sbin/my-install|drive-harddisk
 -
 Lock screen|my-lock|system-lock-screen
+Switch user|my-switch-user|system-users
 Log out|openbox --exit|system-log-out
 Suspend|my-suspend|weather-clear-night
 Reboot|my-power reboot|view-refresh

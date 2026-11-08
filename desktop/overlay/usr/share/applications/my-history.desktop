@@ -1,7 +1,9 @@
 [Desktop Entry]
 Type=Application
 Name=File history
+Name[de]=Dateiverlauf
 Comment=Undo file changes
+Comment[de]=Dateiänderungen rückgängig machen
 Icon=document-open-recent
 Exec=my-history
 Terminal=false

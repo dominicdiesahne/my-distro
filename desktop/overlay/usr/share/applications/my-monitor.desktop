@@ -1,6 +1,7 @@
 [Desktop Entry]
 Type=Application
 Name=System monitor
+Name[de]=Systemmonitor
 Icon=utilities-system-monitor
 Exec=xterm -name monitor -T "System monitor" -e htop
 Terminal=false

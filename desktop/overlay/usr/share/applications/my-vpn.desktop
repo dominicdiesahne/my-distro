@@ -1,7 +1,9 @@
 [Desktop Entry]
 Type=Application
 Name=VPN
+Name[de]=VPN
 Comment=Connect to a WireGuard VPN
+Comment[de]=Mit einem WireGuard-VPN verbinden
 Icon=network-vpn
 Exec=my-vpn
 Terminal=false

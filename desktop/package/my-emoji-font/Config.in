@@ -1,0 +1,5 @@
+config BR2_PACKAGE_MY_EMOJI_FONT
+	bool "my-emoji-font"
+	help
+	  Noto Color Emoji (SIL Open Font License), so emoji show up in
+	  colour in GTK apps, the browser and the terminal.

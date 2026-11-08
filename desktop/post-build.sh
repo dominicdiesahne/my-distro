@@ -7,6 +7,14 @@ T="$1"
 # S90desktop runs, and S90desktop's X server would then fail with
 # "Server is already active for display 0".
 rm -f "$T/etc/init.d/S40xorg"
+# The audit package's own start script: ours (S03audit) runs auditd under
+# my-keepalive and loads our rules.
+rm -f "$T/etc/init.d/S02auditd"
+
+# Crontabs: only root may look into the folder (crontab -e works through
+# BusyBox's setuid crontab); root's own one has to be private too.
+mkdir -p "$T/etc/cron/crontabs"
+chmod 700 "$T/etc/cron/crontabs"
 
 # Desktop icons are launchers; the file manager wants them executable.
 chmod 755 "$T"/root/Desktop/*.desktop

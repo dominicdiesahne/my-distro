@@ -1,0 +1,8 @@
+#!/bin/sh
+# my-switch-user: lets someone else log in while your desktop keeps running
+# (Start menu, "Switch user", or the lock screen's button). Your screen is
+# locked, then a second login screen appears on another console (my-power
+# switch-user). Back to your desktop: Ctrl+Alt+F7 (the next ones are F8, F9,
+# F10), or log out of the other one.
+my-lock --background || echo "my-switch-user: the screen could not be locked" >&2
+exec my-power switch-user

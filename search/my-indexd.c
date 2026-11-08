@@ -6,7 +6,8 @@
  * compares each file's modification time and size with the index:
  *   - new or changed file: cut into chunks, one vector per chunk
  *   - deleted file: its chunks are removed
- * Binary files (pictures, programs) are indexed by their name only.
+ * PDFs (pdftotext) and office files (.odt, .docx, ...: unzip) by their text,
+ * like text files; other binary files (pictures, programs) by name only.
  * Progress goes to ~/.cache/my-search/status for the search window.
  */
 #define _GNU_SOURCE
@@ -68,8 +69,12 @@ static void index_file(const struct file *fl)
 {
 	char words[256], piece[CHUNK_CHARS + 1], *input;
 	size_t len = 0, pos = 0;
-	char *text = fl->size <= MAX_FILE_SIZE ? read_text(fl->path, &len) : NULL;
+	/* PDFs and office files through their converters, then plain text */
+	char *text = fl->size <= MAX_DOC_SIZE ? read_document(fl->path, &len) : NULL;
 	int chunks = 0;
+
+	if (!text && fl->size <= MAX_FILE_SIZE)
+		text = read_text(fl->path, &len);
 
 	name_words(fl->path, words, sizeof words);
 	input = malloc(sizeof words + sizeof piece + 16);

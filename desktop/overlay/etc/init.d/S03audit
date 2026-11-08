@@ -1,0 +1,39 @@
+#!/bin/sh
+# Audit log: the kernel's audit system reports changes to users, passwords
+# and sudo rules, kernel modules being loaded and every sudo, and auditd
+# writes them to /var/lib/audit/audit.log (root only; at most 3 files of
+# 4 MB, settings in /etc/audit/auditd.conf). Read it with
+#   ausearch -k users -i     (or System logs, "Audit", as root)
+# The rules: /etc/audit/rules.d/my-distro.rules. auditd is restarted if it
+# crashes. (Replaces the start script of Buildroot's audit package.)
+PIDFILE=/run/auditd.keepalive
+
+case "$1" in
+start)
+	printf "Starting audit log: "
+	command -v auditd >/dev/null || { echo "no auditd"; exit 0; }
+	mkdir -p /var/lib/audit
+	chmod 700 /var/lib/audit
+	# -n: stay in the foreground (my-keepalive watches it)
+	/usr/bin/my-keepalive -a /usr/sbin/auditd -n </dev/null >/dev/null 2>&1 &
+	echo $! > $PIDFILE
+	sleep 1
+	auditctl -R /etc/audit/rules.d/my-distro.rules >/dev/null 2>&1
+	echo "OK"
+	;;
+stop)
+	printf "Stopping audit log: "
+	[ -f $PIDFILE ] && kill "$(cat $PIDFILE)" 2>/dev/null
+	rm -f $PIDFILE
+	killall auditd 2>/dev/null
+	echo "OK"
+	;;
+restart)
+	"$0" stop
+	"$0" start
+	;;
+*)
+	echo "Usage: $0 {start|stop|restart}"
+	exit 1
+	;;
+esac

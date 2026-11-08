@@ -1,7 +1,9 @@
 [Desktop Entry]
 Type=Application
 Name=Settings
+Name[de]=Einstellungen
 Comment=Colors, wallpaper, clock and taskbar
+Comment[de]=Farben, Hintergrund, Uhr und Taskleiste
 Icon=preferences-desktop
 Exec=my-settings
 Terminal=false

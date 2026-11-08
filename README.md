@@ -142,6 +142,41 @@ the taskbar, the login screen, the file history daemon and the search indexer.
   reset. The factory reset (*Users and system* → *Factory reset*, or
   `my-reset`) deletes all users, files and settings and keeps the system;
   the setup starts again.
+- **Scheduled tasks**: BusyBox `crond` runs under `my-keepalive`; every user
+  edits their own timetable with `crontab -e` (nano). The timetables are in
+  `/etc/cron/crontabs` and system updates keep them.
+- **Fonts for more languages**: Chinese, Japanese and Korean (WenQuanYi Zen
+  Hei) and colour emoji (Noto Color Emoji), next to DejaVu.
+- **Power**: CPU speed follows the load (intel_pstate, amd-pstate or
+  acpi-cpufreq with schedutil); `cpu = balanced | performance | powersave`
+  in `/etc/my-distro/power.conf`. Installed systems get a swap file and can
+  **hibernate** (Start menu, *Hibernate*: the memory goes to the disk, the
+  computer switches off and continues where it was at the next start).
+- **Full-disk encryption** (optional in the installer, LUKS2): the computer
+  asks for the passphrase at every start, in the desktop's keyboard layout.
+- **Crash reports**: when a program crashes, a notification says so; *System
+  logs*, *Crashes* shows which program, the signal and a backtrace (gdb).
+  Core dumps are not kept, the log stays under ~512 KB.
+- **Developer tools**: gdb, strace, ltrace, perf; KVM in the kernel, so
+  virtual machines run at full speed if you add QEMU.
+- **Sandbox** (`my-sandbox PROGRAM`, bubblewrap): the program sees the system
+  read-only, its own home folder and your `~/Downloads` only. Start menu,
+  *Web browser (sandbox)*. Kernel hardening (Yama ptrace scope, Landlock,
+  hidden kernel addresses, protected links in `/tmp`) and an **audit log**
+  (auditd: changes to users, passwords, sudo rules, every sudo; *System
+  logs*, *Audit*, as root).
+- **Proxy** (Settings, *Network*): for the whole session (web browser,
+  system updates, pip, git). **Windows shares** (Start menu, *Network share*,
+  `my-share`): opens a shared folder of a PC or NAS (SMB) in the file
+  manager. Sharing from this PC stays off.
+- **Switch user**: Start menu or lock screen; another person logs in on a
+  second screen while your desktop stays locked (Ctrl+Alt+F7 goes back).
+- **Parental controls** (*Users and system*, *Parental controls…*): the hours
+  a user may use the computer and minutes per day; the login screen enforces
+  them and warns 5 minutes before the end.
+- **Languages**: my-distro's own programs in English and German (gettext,
+  `po/de.po`). Choose in the setup (for everyone), in *Users and system*,
+  or per user in Settings, *Language*.
 
 ## Try it
 
@@ -264,7 +299,18 @@ install it onto a hard disk:
 
 It now boots from the disk, and changes stay. The disk gets three
 partitions: 1 MB for GRUB on BIOS PCs, 256 MB EFI system partition for UEFI,
-the rest is the system (ext4). It boots with BIOS and UEFI alike.
+the rest is the system (ext4). It boots with BIOS and UEFI alike. A swap
+file `/swapfile` (half the RAM, 1-8 GB) is for hibernating.
+
+**Encrypt the disk** (the installer asks): the system partition becomes a
+LUKS2 volume (AES-XTS, the passphrase stretched with Argon2id) with the ext4
+filesystem inside. GRUB can't read that, so the kernel, a small start-up
+system (initramfs, made by `my-mkinitramfs`) and GRUB's own files go onto the
+EFI partition. At the start the initramfs (`/usr/lib/my-distro/initramfs-init`)
+asks for the passphrase, opens the volume, wakes the system from hibernation
+if there is an image, and starts `/sbin/my-init` from it. After every system
+update `installed-fixups` puts the new kernel there and makes the initramfs
+again. If you forget the passphrase, the files are gone.
 
 ### Keyboard shortcuts
 
@@ -292,9 +338,11 @@ The keyboard layout is German (`desktop/overlay/etc/X11/xorg.conf.d/00-keyboard.
 2. The kernel starts our init, `/sbin/my-init` (`init/init.c`).
 3. init mounts `/proc`, `/sys`, `/dev`, `/tmp` and runs `/etc/init.d/rcS`:
    `S00reset` (a factory reset, if one was asked for),
+   `S02sysctl` (kernel settings, crash reports), `S03audit` (audit log),
    udev, `S20zram` (compressed swap), `S35firewall`, network (DHCP),
-   `S45sound`, `S46power` (lid switch), `S48time` (clock from the internet),
-   `S50history` (file history), `S90desktop`. Daemons run under
+   `S45sound`, `S46power` (lid switch, CPU speed, swap file), `S48time`
+   (clock from the internet), `S50crond` (scheduled tasks), `S50history`
+   (file history), `S90desktop`. Daemons run under
    `my-keepalive`, which starts them again if they crash.
 4. `S90desktop` starts the X server with **`my-login`** as its only client.
 5. After login, `my-login` drops root rights and runs `~/.xinitrc` as you,
@@ -358,8 +406,11 @@ files are indexed by name. It picks up new, changed and deleted files every
 similarity, plus a small bonus for exact word matches.
 
 Use the **Search files** window (Super+S) or `my-search what you are looking for`.
-The model is English; German text works poorly. PDFs and office files are found
-by name only.
+The model is English; German text works poorly. PDFs are read with `pdftotext`
+(the first 30 pages), office files (`.odt`, `.ods`, `.odp`, `.docx`, `.xlsx`,
+`.pptx`) by unzipping their XML; like text files, at most 30 sections of a
+file go into the index. PDFs that are only scanned pictures are found by
+name.
 
 ## IDE (LazyVim)
 
@@ -439,6 +490,12 @@ or `my-update rollback`.
 | `desktop/overlay/usr/sbin/my-reset`, `etc/init.d/S00reset`, `desktop/post-fakeroot.sh` | Factory reset, and the factory copy it puts back |
 | `desktop/overlay/usr/bin/my-record`, `my-camera` | Screen recording, webcam |
 | `desktop/overlay/usr/sbin/my-install` | Installer (shell script) |
+| `desktop/overlay/usr/sbin/my-mkinitramfs`, `usr/lib/my-distro/initramfs-init` | Start-up system of encrypted installations |
+| `desktop/overlay/usr/lib/my-distro/crash`, `etc/sysctl.d/50-my-distro.conf` | Crash reports, kernel settings (hardening) |
+| `desktop/overlay/usr/bin/my-sandbox`, `my-hibernate`, `my-switch-user` | Sandbox, hibernate, switch user |
+| `desktop/overlay/etc/init.d/S03audit`, `S50crond`, `etc/audit/` | Audit log, scheduled tasks |
+| `desktop/overlay/usr/lib/my-distro/session-env`, `second-login` | The session's language and proxy; the second login screen for Switch user |
+| `po/de.po`, `settings/i18n.h`, `desktop/package/my-locale` | German translation and how the programs find it |
 | `desktop/overlay/usr/bin/my-update` | System updates (Python), settings in `desktop/overlay/etc/my-distro/update.conf`, public key `update-key.pem` |
 | `desktop/overlay/etc/my-distro/version` | The version number (the welcome text and `my-update` read it) |
 | `panel/` | Taskbar `my-panel` (with volume and battery), `my-screenshot`, `my-clipd` (keeps copied text) |
@@ -534,6 +591,12 @@ make run    # boots in the terminal; quit with Ctrl-A, then X
   microphones of some new laptops (Intel SOF) don't work yet.
 - mpv decodes videos on the CPU (no graphics acceleration): HD video is
   fine on most PCs, 4K is too much.
+- Secure Boot must be off: the boot loader is not signed (no shim). Firmware
+  updates (fwupd) are not in.
+- Containers: bubblewrap only; no podman/docker (they need Go and Rust and
+  about 100 MB).
+- Shares open through `mount.cifs` (Network share), not as `smb://` in the
+  file manager (that needs gvfs with Samba, too big).
 
 ## License
 

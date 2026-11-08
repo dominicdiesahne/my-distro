@@ -1,6 +1,7 @@
 [Desktop Entry]
 Type=Action
 Name=Eject
+Name[de]=Auswerfen
 Tooltip=Eject (safely remove)
 Icon=media-eject
 Profiles=media;
@@ -9,6 +10,7 @@ Profiles=media;
 # crashes at start with "Folders=/media;"; "/media/*" works.
 [X-Action-Profile media]
 Name=Eject
+Name[de]=Auswerfen
 MimeTypes=inode/directory;
 SelectionCount==1
 Folders=/media/*;

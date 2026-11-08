@@ -25,6 +25,10 @@ BUILDROOT_VERSION := 2026.08.1
 # and case-insensitive, which breaks the kernel source tree.
 BUILD ?= $(HOME)/my-distro-build
 JOBS  ?= $(shell nproc)
+# "make desktop BUILD=/some/path": make hands variables from the command line
+# down to every make below it, and NetSurf's build system has a variable
+# BUILD of its own (the build machine's type). Keep ours out of theirs.
+MAKEOVERRIDES := $(filter-out BUILD=%,$(MAKEOVERRIDES))
 
 KERNEL_TAR  := $(BUILD)/linux-$(KERNEL_VERSION).tar.xz
 KERNEL_DIR  := $(BUILD)/linux-$(KERNEL_VERSION)
@@ -135,7 +139,7 @@ $(BR_DIR)/Makefile: $(BR_TAR)
 desktop: $(BR_DIR)/Makefile
 > rm -rf $(BR_SRC)
 > mkdir -p $(BR_SRC)
-> cp -r desktop init panel login history search settings $(BR_SRC)/
+> cp -r desktop init panel login history search settings po $(BR_SRC)/
 > chmod -R u=rwX,go=rX $(BR_SRC)
 > # Programs and scripts: everything in these folders is one
 > chmod 755 $(BR_SRC)/desktop/overlay/etc/init.d/* $(BR_SRC)/desktop/overlay/root/.xinitrc \
@@ -146,7 +150,7 @@ desktop: $(BR_DIR)/Makefile
 > $(BR_MAKE) qemu_x86_64_defconfig
 > cd $(BR_OUT) && $(BR_DIR)/support/kconfig/merge_config.sh -m .config $(BR_SRC)/desktop/buildroot.fragment
 > $(BR_MAKE) olddefconfig
-> $(BR_MAKE) my-init-dirclean my-panel-dirclean my-login-dirclean my-history-dirclean my-search-dirclean my-settings-dirclean my-ide-dirclean
+> $(BR_MAKE) my-init-dirclean my-panel-dirclean my-login-dirclean my-history-dirclean my-search-dirclean my-settings-dirclean my-ide-dirclean my-locale-dirclean
 > # Buildroot doesn't notice changes to the kernel fragment by itself.
 > if ls -d $(BR_OUT)/build/linux-[0-9]* >/dev/null 2>&1 && \
 >    ! cmp -s desktop/linux-gui.fragment $(BR_OUT)/.linux-gui.fragment; then \

@@ -1,6 +1,7 @@
 [Desktop Entry]
 Type=Application
 Name=Calculator
+Name[de]=Rechner
 Icon=accessories-calculator
 Exec=xcalc
 Terminal=false

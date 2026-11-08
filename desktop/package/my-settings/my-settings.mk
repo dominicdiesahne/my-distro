@@ -2,7 +2,8 @@
 #
 # my-settings: the Settings app, the Clock app, the setup / "Users and
 # system" window (my-setup), the Wi-Fi window (my-wifi), the VPN window
-# (my-vpn) and the log viewer (my-logs) from settings/. settings.c and
+# (my-vpn), the log viewer (my-logs) and the network share dialog
+# (my-share) from settings/. settings.c and
 # dial.c are also compiled into my-panel and my-login.
 #
 ################################################################################
@@ -25,6 +26,7 @@ define MY_SETTINGS_BUILD_CMDS
 	$(MY_SETTINGS_CC) -o $(@D)/my-wifi $(@D)/my-wifi.c $(MY_SETTINGS_GTK)
 	$(MY_SETTINGS_CC) -o $(@D)/my-vpn $(@D)/my-vpn.c $(MY_SETTINGS_GTK)
 	$(MY_SETTINGS_CC) -o $(@D)/my-logs $(@D)/my-logs.c $(MY_SETTINGS_GTK)
+	$(MY_SETTINGS_CC) -o $(@D)/my-share $(@D)/my-share.c $(MY_SETTINGS_GTK)
 	$(MY_SETTINGS_CC) -o $(@D)/my-notifyd $(@D)/my-notifyd.c $(@D)/settings.c \
 		$(MY_SETTINGS_GTK) $$($(PKG_CONFIG_HOST_BINARY) --cflags --libs x11)
 	$(MY_SETTINGS_CC) -o $(@D)/my-notify $(@D)/my-notify.c \
@@ -38,6 +40,7 @@ define MY_SETTINGS_INSTALL_TARGET_CMDS
 	$(INSTALL) -D -m 0755 $(@D)/my-wifi $(TARGET_DIR)/usr/bin/my-wifi
 	$(INSTALL) -D -m 0755 $(@D)/my-vpn $(TARGET_DIR)/usr/bin/my-vpn
 	$(INSTALL) -D -m 0755 $(@D)/my-logs $(TARGET_DIR)/usr/bin/my-logs
+	$(INSTALL) -D -m 0755 $(@D)/my-share $(TARGET_DIR)/usr/bin/my-share
 	$(INSTALL) -D -m 0755 $(@D)/my-notifyd $(TARGET_DIR)/usr/bin/my-notifyd
 	$(INSTALL) -D -m 0755 $(@D)/my-notify $(TARGET_DIR)/usr/bin/my-notify
 	ln -sf my-notify $(TARGET_DIR)/usr/bin/notify-send

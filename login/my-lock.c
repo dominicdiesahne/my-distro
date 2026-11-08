@@ -43,6 +43,7 @@
 #include <unistd.h>
 
 #include "settings.h"
+#include "i18n.h"
 
 #define PASS_MAX   128
 #define CARD_W     380
@@ -144,8 +145,25 @@ static int update_clock(void)
 	snprintf(old, sizeof old, "%s", clock_text);
 	c.clock_seconds = 0;
 	settings_format_time(&c, &tm, clock_text, sizeof clock_text);
-	strftime(date_text, sizeof date_text, "%A, %d %B %Y", &tm);
+	/* TRANSLATORS: the date on the login screen, see "man strftime" */
+	strftime(date_text, sizeof date_text, _("%A, %d %B %Y"), &tm);
 	return strcmp(old, clock_text) != 0;
+}
+
+/* "Switch user" below the card: someone else logs in on a second screen
+ * while this desktop stays locked (my-power switch-user) */
+static int sw_x, sw_y, sw_w, sw_h;
+
+static void switch_user(void)
+{
+	pid_t pid = fork();
+
+	if (pid == 0) {
+		execl("/usr/bin/my-power", "my-power", "switch-user", (char *)NULL);
+		_exit(127);
+	}
+	if (pid > 0)
+		waitpid(pid, NULL, 0);
 }
 
 static void redraw(void)
@@ -161,7 +179,7 @@ static void redraw(void)
 
 	shade(cx - CARD_W / 2, y, CARD_W, 200, 220);
 	XftDrawRect(draw, &c_accent, cx - CARD_W / 2, y, CARD_W, 2);
-	text_c(bold, &c_text, cx, y + 20, 34, "Locked");
+	text_c(bold, &c_text, cx, y + 20, 34, _("Locked"));
 	text_c(small, &c_dim, cx, y + 54, 22, who);
 
 	XftDrawRect(draw, &c_field, fx, y + 92, CARD_W - 60, FIELD_H);
@@ -174,12 +192,19 @@ static void redraw(void)
 		text_c(font, &c_text, cx, y + 92, FIELD_H, dots);
 	else
 		text_c(small, &c_dim, cx, y + 92, FIELD_H,
-		       checking ? "" : "Type your password and press Enter");
+		       checking ? "" : _("Type your password and press Enter"));
 
 	if (checking)
-		text_c(small, &c_dim, cx, y + 150, 30, "Checking…");
+		text_c(small, &c_dim, cx, y + 150, 30, _("Checking…"));
 	else if (message[0])
 		text_c(small, &c_error, cx, y + 150, 30, message);
+
+	sw_w = text_width(font, _("Switch user")) + 40;
+	sw_h = 38;
+	sw_x = cx - sw_w / 2;
+	sw_y = y + 200 + 24;
+	shade(sw_x, sw_y, sw_w, sw_h, 200);
+	text_c(font, &c_text, cx, sw_y, sw_h, _("Switch user"));
 
 	XCopyArea(dpy, buf, win, DefaultGC(dpy, scr), 0, 0, sw, sh, 0, 0);
 	XFlush(dpy);
@@ -248,7 +273,7 @@ static int key(XKeyEvent *e)
 		}
 		checking = 0;
 		memset(pass, 0, sizeof pass);
-		snprintf(message, sizeof message, "Wrong password");
+		snprintf(message, sizeof message, "%s", _("Wrong password"));
 		break;
 	case XK_BackSpace:
 		if (len)
@@ -340,6 +365,10 @@ static int lock(int ready_fd)
 				redraw();
 			else if (e.type == KeyPress && key(&e.xkey))
 				return 0;
+			else if (e.type == ButtonPress && e.xbutton.x >= sw_x &&
+			         e.xbutton.x < sw_x + sw_w && e.xbutton.y >= sw_y &&
+			         e.xbutton.y < sw_y + sw_h)
+				switch_user();
 			else if (e.type == VisibilityNotify &&
 			         e.xvisibility.state != VisibilityUnobscured)
 				XRaiseWindow(dpy, win);
@@ -396,6 +425,7 @@ int main(int argc, char **argv)
 	 * apps are reaped by themselves), we would inherit that, and waitpid()
 	 * for my-checkpass would fail: every password would look wrong. */
 	signal(SIGCHLD, SIG_DFL);
+	i18n_init();
 
 	dpy = XOpenDisplay(NULL);
 	if (!dpy) {

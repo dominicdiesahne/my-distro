@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 #define MAGIC "MYSEARCH1"
@@ -167,6 +168,132 @@ char *read_text(const char *path, size_t *len)
 	buf[total] = '\0';
 	*len = total;
 	return buf;
+}
+
+/* --- Documents: PDFs and office files -------------------------------------- */
+
+/* Runs a program and returns what it prints, at most MAX_FILE_SIZE bytes
+ * (NULL if it failed or printed nothing). No shell: the file name can't be
+ * mistaken for a command. */
+static char *capture(char *const argv[], size_t *len)
+{
+	int fd[2], st;
+	pid_t pid;
+	char *buf;
+	ssize_t r;
+	size_t total = 0;
+
+	if (pipe(fd) != 0)
+		return NULL;
+	pid = fork();
+	if (pid == 0) {
+		int null = open("/dev/null", O_RDWR);
+
+		dup2(null, 0);
+		dup2(fd[1], 1);
+		dup2(null, 2);
+		close(fd[0]);
+		close(fd[1]);
+		execvp(argv[0], argv);
+		_exit(127);
+	}
+	close(fd[1]);
+	buf = pid > 0 ? malloc(MAX_FILE_SIZE + 1) : NULL;
+	while (buf && total < MAX_FILE_SIZE && (r = read(fd[0], buf + total, MAX_FILE_SIZE - total)) > 0)
+		total += r;
+	close(fd[0]);                       /* more than that: the program stops */
+	if (pid > 0)
+		waitpid(pid, &st, 0);
+	if (!buf || total == 0) {
+		free(buf);
+		return NULL;
+	}
+	buf[total] = '\0';
+	*len = total;
+	return buf;
+}
+
+/* The text of office XML: tags become spaces (a paragraph's end a line
+ * break), &amp; and friends their characters. In place. */
+static size_t strip_xml(char *s)
+{
+	char *in = s, *out = s;
+	static const struct { const char *ent, *ch; } ents[] = {
+		{ "&amp;", "&" }, { "&lt;", "<" }, { "&gt;", ">" }, { "&quot;", "\"" },
+		{ "&apos;", "'" }, { NULL, NULL } };
+
+	while (*in) {
+		if (*in == '<') {
+			int para = strncmp(in, "</w:p>", 6) == 0 || strncmp(in, "</text:p", 8) == 0 ||
+			           strncmp(in, "</text:h", 8) == 0 || strncmp(in, "</a:p>", 6) == 0;
+			char *end = strchr(in, '>');
+
+			if (!end)
+				break;
+			in = end + 1;
+			if (out > s && out[-1] != ' ' && out[-1] != '\n')
+				*out++ = para ? '\n' : ' ';
+			else if (para && out > s)
+				out[-1] = '\n';
+			continue;
+		}
+		if (*in == '&') {
+			int done = 0;
+
+			for (int i = 0; ents[i].ent; i++)
+				if (strncmp(in, ents[i].ent, strlen(ents[i].ent)) == 0) {
+					*out++ = ents[i].ch[0];
+					in += strlen(ents[i].ent);
+					done = 1;
+					break;
+				}
+			if (done)
+				continue;
+		}
+		*out++ = *in++;
+	}
+	*out = '\0';
+	return out - s;
+}
+
+/*
+ * Text of documents the search understands besides plain text:
+ *   .pdf                  pdftotext (poppler), the first 30 pages
+ *   .odt .ods .odp        LibreOffice: content.xml in the zip file
+ *   .docx .xlsx .pptx     Microsoft Office: the XML with the text in the zip
+ * Others: NULL. Each program gets 20 seconds (timeout), so a broken
+ * file can't stop the indexer.
+ */
+char *read_document(const char *path, size_t *len)
+{
+	const char *dot = strrchr(path, '.');
+	char ext[8] = "";
+	char *text;
+
+	if (!dot || strchr(dot, '/') || strlen(dot) > 6)
+		return NULL;
+	for (int i = 0; dot[i + 1] && i < 7; i++)
+		ext[i] = tolower((unsigned char)dot[i + 1]);
+
+	if (strcmp(ext, "pdf") == 0) {
+		char *const argv[] = { "timeout", "20", "pdftotext", "-l", "30", "-enc", "UTF-8",
+		                       "-q", (char *)path, "-", NULL };
+
+		return capture(argv, len);
+	}
+	const char *member =
+		!strcmp(ext, "odt") || !strcmp(ext, "ods") || !strcmp(ext, "odp") ? "content.xml" :
+		!strcmp(ext, "docx") ? "word/document.xml" :
+		!strcmp(ext, "xlsx") ? "xl/sharedStrings.xml" :
+		!strcmp(ext, "pptx") ? "ppt/slides/slide*.xml" : NULL;
+	if (!member)
+		return NULL;
+	char *const argv[] = { "timeout", "20", "unzip", "-p", (char *)path, (char *)member, NULL };
+
+	text = capture(argv, len);
+	if (text)
+		*len = strip_xml(text);
+	return text;
 }
 
 void name_words(const char *path, char *out, size_t n)

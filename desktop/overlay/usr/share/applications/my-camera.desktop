@@ -1,7 +1,9 @@
 [Desktop Entry]
 Type=Application
 Name=Camera
+Name[de]=Kamera
 Comment=Show the webcam and take photos
+Comment[de]=Die Webcam zeigen und Fotos machen
 Icon=camera-web
 Exec=my-camera
 Terminal=false

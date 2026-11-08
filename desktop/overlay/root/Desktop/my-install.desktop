@@ -1,7 +1,9 @@
 [Desktop Entry]
 Type=Application
 Name=Install to disk
+Name[de]=Auf Festplatte installieren
 Comment=Install my-distro onto a hard disk, so changes are kept
+Comment[de]=my-distro auf eine Festplatte installieren, damit Änderungen bleiben
 Icon=drive-harddisk
 Exec=xterm -name my-install -T "Install my-distro" -e /usr/sbin/my-install
 Terminal=false

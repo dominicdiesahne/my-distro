@@ -1,7 +1,9 @@
 [Desktop Entry]
 Type=Application
 Name=System logs
+Name[de]=Systemprotokolle
 Comment=See and search what the system wrote down
+Comment[de]=Ansehen und durchsuchen, was das System aufgeschrieben hat
 Icon=text-x-generic
 Exec=my-logs
 Terminal=false

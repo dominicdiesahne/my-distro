@@ -2,6 +2,7 @@
  * settings.c - reads and writes the look-and-feel settings (see settings.h).
  */
 #include "settings.h"
+#include "i18n.h"
 
 #include <errno.h>
 #include <stdio.h>
@@ -11,12 +12,12 @@
 
 /*                name      label     dark bg         button     hover      active     text       dim        accent     sep        on_accent */
 const struct palette themes[] = {
-	{ "teal",   "Teal",   1, "#0b2a2b", "#134e4f", "#1d6466", "#2c7a7b", "#d8f3f0", "#7fa9a6", "#4fd1c5", "#2c5a5b", "#062022" },
-	{ "ocean",  "Ocean",  1, "#0b1a2e", "#14304f", "#1d4466", "#2c5a85", "#dce9f8", "#8aa3c0", "#5aa9ff", "#2c4460", "#04121f" },
-	{ "violet", "Violet", 1, "#1a1230", "#2d2152", "#3d2e6b", "#503d8a", "#ece6fb", "#a497c6", "#b48cff", "#3b3160", "#160b2b" },
-	{ "ember",  "Ember",  1, "#26110e", "#4a1f1a", "#622a22", "#7d3a2e", "#fbe7e2", "#c49a90", "#ff7a59", "#5a2e28", "#2a0c06" },
-	{ "forest", "Forest", 1, "#0f2417", "#1b3d29", "#255236", "#316a46", "#e1f4e7", "#8fb79c", "#6ee7a0", "#2a4a35", "#06200f" },
-	{ "light",  "Light",  0, "#eef3f3", "#dce7e7", "#cddede", "#b9d2d1", "#12302f", "#5c7a78", "#138a80", "#c3d3d2", "#ffffff" },
+	{ "teal",   N_("Teal"),   1, "#0b2a2b", "#134e4f", "#1d6466", "#2c7a7b", "#d8f3f0", "#7fa9a6", "#4fd1c5", "#2c5a5b", "#062022" },
+	{ "ocean",  N_("Ocean"),  1, "#0b1a2e", "#14304f", "#1d4466", "#2c5a85", "#dce9f8", "#8aa3c0", "#5aa9ff", "#2c4460", "#04121f" },
+	{ "violet", N_("Violet"), 1, "#1a1230", "#2d2152", "#3d2e6b", "#503d8a", "#ece6fb", "#a497c6", "#b48cff", "#3b3160", "#160b2b" },
+	{ "ember",  N_("Ember"),  1, "#26110e", "#4a1f1a", "#622a22", "#7d3a2e", "#fbe7e2", "#c49a90", "#ff7a59", "#5a2e28", "#2a0c06" },
+	{ "forest", N_("Forest"), 1, "#0f2417", "#1b3d29", "#255236", "#316a46", "#e1f4e7", "#8fb79c", "#6ee7a0", "#2a4a35", "#06200f" },
+	{ "light",  N_("Light"),  0, "#eef3f3", "#dce7e7", "#cddede", "#b9d2d1", "#12302f", "#5c7a78", "#138a80", "#c3d3d2", "#ffffff" },
 	{ NULL }
 };
 
@@ -103,6 +104,12 @@ static void apply(struct settings *s, const char *key, const char *v)
 		s->lock_minutes = clamp(atoi(v), 0, 240);
 	else if (strcmp(key, "scale") == 0)
 		s->scale = clamp(atoi(v), 100, 200);
+	else if (strcmp(key, "language") == 0)
+		SET(s->language, v);
+	else if (strcmp(key, "proxy") == 0)
+		SET(s->proxy, v);
+	else if (strcmp(key, "no_proxy") == 0)
+		SET(s->no_proxy, v);
 }
 
 /* Reads one file of "key = value" lines; '#' starts a comment line. */
@@ -214,14 +221,20 @@ int settings_save(const struct settings *s)
 		"# Lock the screen after this many minutes without use (0 = never)\n"
 		"lock_minutes = %d\n"
 		"# Size of text and icons in percent, 100-200 (at the next login)\n"
-		"scale = %d\n",
+		"scale = %d\n\n"
+		"# Language, e.g. de_DE.UTF-8 (empty = the system's; at the next login)\n"
+		"language = %s\n"
+		"# Proxy for the web browser, updates and other downloads, e.g.\n"
+		"# http://proxy.example.com:3128 (empty = none; at the next login)\n"
+		"proxy = %s\nno_proxy = %s\n",
 		s->theme, s->accent, s->wallpaper, s->wallpaper_mode,
 		s->panel_clock == CLOCK_ANALOG ? "analog" : "digital",
 		s->clock_app == CLOCK_ANALOG ? "analog" : "digital",
 		s->clock_24h ? "yes" : "no", s->clock_seconds ? "yes" : "no",
 		s->clock_date ? "yes" : "no", s->date_format,
 		s->panel_position == PANEL_TOP ? "top" : "bottom",
-		s->panel_height, s->font_size, s->lock_minutes, s->scale);
+		s->panel_height, s->font_size, s->lock_minutes, s->scale,
+		s->language, s->proxy, s->no_proxy);
 	if (fclose(f) != 0)
 		return -1;
 	return rename(tmp, path);

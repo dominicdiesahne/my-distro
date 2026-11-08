@@ -1,6 +1,7 @@
 [Desktop Entry]
 Type=Application
 Name=Files
+Name[de]=Dateien
 Icon=system-file-manager
 Exec=sh -c "pcmanfm ~"
 Terminal=false

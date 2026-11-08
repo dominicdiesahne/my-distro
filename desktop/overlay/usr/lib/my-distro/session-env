@@ -1,0 +1,31 @@
+# session-env: the session's language and proxy, read by ~/.xinitrc at
+# login (". /usr/lib/my-distro/session-env"), so every program of the
+# session has them. Updated by system updates; the values come from the
+# Settings app (~/.config/my-distro/settings) and the system's language
+# (/etc/my-distro/language, set in the setup and in "Users and system").
+
+# setting KEY: the last non-empty value, the user's file after the system's
+_my_setting() {
+	sed -n "s/^[[:space:]]*$1[[:space:]]*=[[:space:]]*//p" \
+		/etc/my-distro/settings "$HOME/.config/my-distro/settings" 2>/dev/null |
+		sed -e 's/[[:space:]]*$//' -e '/^$/d' | tail -n 1
+}
+
+# Language: LANG for the formats (dates, numbers) and LANGUAGE for the
+# translations (de_DE.UTF-8 -> de_DE, with English for what isn't translated)
+_my_lang=$(_my_setting language)
+[ -n "$_my_lang" ] || _my_lang=$(head -n 1 /etc/my-distro/language 2>/dev/null)
+export LANG="${_my_lang:-en_US.UTF-8}"
+export LANGUAGE="${LANG%%.*}:en"
+
+# Proxy: programs that download (my-update, pip, wget, curl, git, NetSurf)
+# read these variables. The Settings app also tells NetSurf directly.
+_my_proxy=$(_my_setting proxy)
+if [ -n "$_my_proxy" ]; then
+	_my_noproxy=$(_my_setting no_proxy)
+	export http_proxy="$_my_proxy" https_proxy="$_my_proxy" ftp_proxy="$_my_proxy"
+	export HTTP_PROXY="$_my_proxy" HTTPS_PROXY="$_my_proxy"
+	export no_proxy="${_my_noproxy:-localhost,127.0.0.1,::1}"
+	export NO_PROXY="$no_proxy"
+fi
+unset _my_lang _my_proxy _my_noproxy

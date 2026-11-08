@@ -1,0 +1,91 @@
+#!/bin/sh
+# crash PID UID SIGNAL TIME NAME: the kernel runs this when a program
+# crashes (kernel.core_pattern in /etc/sysctl.d/50-my-distro.conf), as root,
+# with the program's memory image (core dump) on standard input.
+#
+# It writes a short report to /var/crash/crashes.log (System logs app,
+# "Crashes"): which program, signal, user, command line and, with gdb, a
+# backtrace (where in the program it happened). The core dump itself is
+# only kept while gdb reads it, then deleted, so crashes don't fill the
+# disk; the log keeps the newest ~512 KB. A notification "NAME crashed"
+# appears on the desktop of the user it happened to (or whoever is logged
+# in, for system programs). Keep a core dump for yourself: ulimit -c
+# unlimited does nothing here; run the program in gdb instead.
+PATH=/usr/sbin:/usr/bin:/sbin:/bin
+pid=$1 uid=$2 sig=$3 when=$4 name=$5
+D=/var/crash
+LOG=$D/crashes.log
+MAX=524288
+
+mkdir -p "$D"
+chmod 755 "$D"
+
+# Read what we need from /proc before the core dump is read: the process
+# stays until then.
+exe=$(readlink "/proc/$pid/exe" 2>/dev/null)
+cmd=$(tr '\0' ' ' <"/proc/$pid/cmdline" 2>/dev/null | cut -c 1-300)
+user=$(awk -F: -v u="$uid" '$3 == u { print $1; exit }' /etc/passwd)
+case "$sig" in
+4) signame="SIGILL, illegal instruction" ;;
+5) signame="SIGTRAP" ;;
+6) signame="SIGABRT, the program stopped itself (abort)" ;;
+7) signame="SIGBUS, bad memory access" ;;
+8) signame="SIGFPE, arithmetic error" ;;
+11) signame="SIGSEGV, invalid memory access" ;;
+31) signame="SIGSYS, forbidden system call" ;;
+*) signame="signal $sig" ;;
+esac
+
+# Too many crashes in a row (a program crashing in a loop): count only
+now=$(date +%s)
+recent=$(awk -v t="$now" '/^=== / && $NF + 0 > t - 60 { n++ } END { print n + 0 }' "$LOG" 2>/dev/null)
+if [ "${recent:-0}" -ge 10 ]; then
+	cat >/dev/null
+	logger -t crash "$name ($pid) crashed ($signame); too many crashes, no report"
+	exit 0
+fi
+
+# Backtrace: gdb reads the program and its core dump (at most 256 MB of it;
+# bigger ones are skipped, there is no room to keep them anyway)
+bt=""
+if command -v gdb >/dev/null && [ -n "$exe" ] && [ "$(df -m "$D" | awk 'NR == 2 { print $4 }')" -gt 1024 ]; then
+	core=$(mktemp "$D/core.XXXXXX")
+	head -c 268435456 >"$core"
+	cat >/dev/null                         # the rest, if it was bigger
+	bt=$(timeout 30 gdb -batch -n -ex "set pagination off" -ex "thread apply all bt 20" \
+		"$exe" "$core" 2>/dev/null | grep -E '^(#|Thread)' | head -n 80)
+	rm -f "$core"
+else
+	cat >/dev/null
+fi
+
+{
+	echo "=== $(date '+%Y-%m-%d %H:%M:%S')  $name crashed  $when"
+	echo "program: ${exe:-$name}"
+	echo "command: $cmd"
+	echo "user:    ${user:-$uid}, process $pid"
+	echo "signal:  $signame"
+	if [ -n "$bt" ]; then
+		echo "backtrace (gdb):"
+		echo "$bt"
+	fi
+	echo
+} >>"$LOG"
+chmod 644 "$LOG"
+# Only the newest part when it grows too big
+if [ "$(wc -c <"$LOG")" -gt "$MAX" ]; then
+	tail -c $((MAX / 2)) "$LOG" | sed '1,/^$/d' >"$LOG.new" && mv "$LOG.new" "$LOG"
+fi
+logger -t crash "$name ($pid, $user) crashed: $signame; details in System logs, Crashes"
+
+# The notification, on the desktop of that user (system programs: whoever
+# is logged in)
+if [ "$uid" -ge 1000 ] 2>/dev/null; then
+	who="--uid $uid"
+else
+	who=""
+fi
+# shellcheck disable=SC2086
+/usr/lib/my-distro/in-session $who /usr/bin/my-notify -i dialog-warning -a crash \
+	"$name crashed" "Details: Start menu, System logs, Crashes" >/dev/null 2>&1 &
+exit 0

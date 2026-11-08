@@ -1,7 +1,9 @@
 [Desktop Entry]
 Type=Application
 Name=Wi-Fi
+Name[de]=WLAN
 Comment=Connect to a wireless network
+Comment[de]=Mit einem WLAN verbinden
 Icon=network-wireless
 Exec=my-wifi
 Terminal=false

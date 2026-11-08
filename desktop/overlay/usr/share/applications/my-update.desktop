@@ -1,7 +1,9 @@
 [Desktop Entry]
 Type=Application
 Name=System update
+Name[de]=Systemupdate
 Comment=Install the newest version of my-distro
+Comment[de]=Die neueste Version von my-distro installieren
 Icon=software-update-available
 Exec=my-setup --update
 Terminal=false

@@ -1,0 +1,12 @@
+#!/bin/sh
+# my-hibernate: lock the screen, then hibernate (Start menu, Hibernate):
+# everything in the memory is written to the swap file and the computer
+# switches off completely. At the next start it continues where it was, and
+# the lock screen asks for your password. Installed systems only (my-install
+# makes the swap file); encrypted ones ask for the passphrase first.
+my-lock --background || echo "my-hibernate: the screen could not be locked" >&2
+my-power hibernate && exit 0
+# It didn't work (no swap file, not enough room): say so on the desktop
+my-notify -i dialog-warning "Hibernate did not work" \
+	"$(my-power hibernate --check 2>&1)"
+exit 1

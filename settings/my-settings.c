@@ -31,6 +31,7 @@
 #include <unistd.h>
 
 #include "settings.h"
+#include "i18n.h"
 
 static struct settings cfg;
 static int building;               /* 1 while filling in the widgets */
@@ -496,11 +497,11 @@ static GtkWidget *bind(GtkWidget *w)
 
 static void build_appearance(GtkWidget *stack)
 {
-	GtkWidget *g = page(stack, "appearance", "Colors");
+	GtkWidget *g = page(stack, "appearance", _("Colors"));
 	GtkWidget *flow = gtk_flow_box_new();
 	GSList *group = NULL;
 
-	heading(g, 0, "Theme");
+	heading(g, 0, _("Theme"));
 	gtk_flow_box_set_selection_mode(GTK_FLOW_BOX(flow), GTK_SELECTION_NONE);
 	gtk_flow_box_set_min_children_per_line(GTK_FLOW_BOX(flow), 3);
 	gtk_flow_box_set_max_children_per_line(GTK_FLOW_BOX(flow), 3);
@@ -517,7 +518,7 @@ static void build_appearance(GtkWidget *stack)
 		gtk_widget_set_size_request(sw, 110, 62);
 		g_signal_connect(sw, "draw", G_CALLBACK(draw_swatch), (gpointer)&themes[i]);
 		gtk_box_pack_start(GTK_BOX(box), sw, FALSE, FALSE, 0);
-		gtk_box_pack_start(GTK_BOX(box), gtk_label_new(themes[i].label), FALSE, FALSE, 0);
+		gtk_box_pack_start(GTK_BOX(box), gtk_label_new(_(themes[i].label)), FALSE, FALSE, 0);
 		gtk_container_add(GTK_CONTAINER(b), box);
 		g_signal_connect(b, "toggled", G_CALLBACK(on_theme), (gpointer)themes[i].name);
 		gtk_container_add(GTK_CONTAINER(flow), b);
@@ -525,33 +526,33 @@ static void build_appearance(GtkWidget *stack)
 	}
 	gtk_grid_attach(GTK_GRID(g), flow, 0, 1, 2, 1);
 
-	heading(g, 2, "Accent color");
+	heading(g, 2, _("Accent color"));
 	accent_switch = gtk_switch_new();
 	g_signal_connect(accent_switch, "notify::active", G_CALLBACK(on_accent_switch), NULL);
-	row(g, 3, "Own accent color", accent_switch);
+	row(g, 3, _("Own accent color"), accent_switch);
 	accent_button = gtk_color_button_new();
 	g_signal_connect(accent_button, "color-set", G_CALLBACK(on_accent), NULL);
-	row(g, 4, "Color", accent_button);
+	row(g, 4, _("Color"), accent_button);
 }
 
 static void build_wallpaper(GtkWidget *stack)
 {
-	GtkWidget *g = page(stack, "wallpaper", "Wallpaper");
+	GtkWidget *g = page(stack, "wallpaper", _("Wallpaper"));
 	GtkFileFilter *images = gtk_file_filter_new();
 
-	heading(g, 0, "Wallpaper");
-	wall_radio[0] = gtk_radio_button_new_with_label(NULL, "Matching the theme");
+	heading(g, 0, _("Wallpaper"));
+	wall_radio[0] = gtk_radio_button_new_with_label(NULL, _("Matching the theme"));
 	wall_radio[1] = gtk_radio_button_new_with_label_from_widget(
-		GTK_RADIO_BUTTON(wall_radio[0]), "Plain color");
+		GTK_RADIO_BUTTON(wall_radio[0]), _("Plain color"));
 	wall_radio[2] = gtk_radio_button_new_with_label_from_widget(
-		GTK_RADIO_BUTTON(wall_radio[0]), "Picture:");
+		GTK_RADIO_BUTTON(wall_radio[0]), _("Picture:"));
 	for (int i = 0; i < 3; i++) {
 		g_signal_connect(wall_radio[i], "toggled", G_CALLBACK(on_wallpaper), NULL);
 		gtk_grid_attach(GTK_GRID(g), wall_radio[i], 0, 1 + i, 1, 1);
 	}
-	wall_file = gtk_file_chooser_button_new("Choose a picture",
+	wall_file = gtk_file_chooser_button_new(_("Choose a picture"),
 	                                        GTK_FILE_CHOOSER_ACTION_OPEN);
-	gtk_file_filter_set_name(images, "Pictures");
+	gtk_file_filter_set_name(images, _("Pictures"));
 	gtk_file_filter_add_mime_type(images, "image/*");
 	gtk_file_chooser_add_filter(GTK_FILE_CHOOSER(wall_file), images);
 	gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(wall_file),
@@ -560,13 +561,13 @@ static void build_wallpaper(GtkWidget *stack)
 	gtk_grid_attach(GTK_GRID(g), wall_file, 1, 3, 1, 1);
 
 	wall_mode = gtk_combo_box_text_new();
-	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(wall_mode), "crop", "Fill the screen");
-	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(wall_mode), "fit", "Fit, keep all of it");
-	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(wall_mode), "stretch", "Stretch");
-	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(wall_mode), "center", "Centre");
-	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(wall_mode), "tile", "Tile");
+	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(wall_mode), "crop", _("Fill the screen"));
+	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(wall_mode), "fit", _("Fit, keep all of it"));
+	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(wall_mode), "stretch", _("Stretch"));
+	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(wall_mode), "center", _("Centre"));
+	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(wall_mode), "tile", _("Tile"));
 	g_signal_connect(wall_mode, "changed", G_CALLBACK(on_combo_text), cfg.wallpaper_mode);
-	row(g, 4, "Size", wall_mode);
+	row(g, 4, _("Size"), wall_mode);
 
 	wall_preview = gtk_image_new();
 	gtk_widget_set_halign(wall_preview, GTK_ALIGN_START);
@@ -575,28 +576,28 @@ static void build_wallpaper(GtkWidget *stack)
 
 static void build_clock(GtkWidget *stack)
 {
-	GtkWidget *g = page(stack, "clock", "Clock");
+	GtkWidget *g = page(stack, "clock", _("Clock"));
 
-	heading(g, 0, "Style");
-	row(g, 1, "Taskbar clock", bind(new_choice(&cfg.panel_clock, "Digital", "Analog")));
-	row(g, 2, "Clock app", bind(new_choice(&cfg.clock_app, "Digital", "Analog")));
-	heading(g, 3, "Format");
-	row(g, 4, "24-hour time", bind(new_switch(&cfg.clock_24h)));
-	row(g, 5, "Show seconds", bind(new_switch(&cfg.clock_seconds)));
-	row(g, 6, "Show the date", bind(new_switch(&cfg.clock_date)));
+	heading(g, 0, _("Style"));
+	row(g, 1, _("Taskbar clock"), bind(new_choice(&cfg.panel_clock, _("Digital"), _("Analog"))));
+	row(g, 2, _("Clock app"), bind(new_choice(&cfg.clock_app, _("Digital"), _("Analog"))));
+	heading(g, 3, _("Format"));
+	row(g, 4, _("24-hour time"), bind(new_switch(&cfg.clock_24h)));
+	row(g, 5, _("Show seconds"), bind(new_switch(&cfg.clock_seconds)));
+	row(g, 6, _("Show the date"), bind(new_switch(&cfg.clock_date)));
 	date_combo = gtk_combo_box_text_new();
 	g_signal_connect(date_combo, "changed", G_CALLBACK(on_combo_text), cfg.date_format);
-	row(g, 7, "Date format", date_combo);
+	row(g, 7, _("Date format"), date_combo);
 }
 
 static void build_taskbar(GtkWidget *stack)
 {
-	GtkWidget *g = page(stack, "taskbar", "Taskbar");
+	GtkWidget *g = page(stack, "taskbar", _("Taskbar"));
 
-	heading(g, 0, "Taskbar");
-	row(g, 1, "Position", bind(new_choice(&cfg.panel_position, "Bottom", "Top")));
-	row(g, 2, "Height (pixels)", bind(new_spin(&cfg.panel_height, 28, 56)));
-	row(g, 3, "Text size", bind(new_spin(&cfg.font_size, 8, 16)));
+	heading(g, 0, _("Taskbar"));
+	row(g, 1, _("Position"), bind(new_choice(&cfg.panel_position, _("Bottom"), _("Top"))));
+	row(g, 2, _("Height (pixels)"), bind(new_spin(&cfg.panel_height, 28, 56)));
+	row(g, 3, _("Text size"), bind(new_spin(&cfg.font_size, 8, 16)));
 }
 
 /* --- Display: screens with xrandr ------------------------------------------ */
@@ -736,7 +737,7 @@ static void fill_display_page(void)
 		if (!gtk_combo_box_set_active_id(GTK_COMBO_BOX(c), outputs[i].mode))
 			gtk_combo_box_set_active(GTK_COMBO_BOX(c), 0);    /* off: its best mode */
 		gtk_label_set_text(GTK_LABEL(g_object_get_data(G_OBJECT(mode_combo[i]), "label")),
-			i == 0 ? (noutputs > 1 ? "Main screen" : "Resolution") : "Second screen");
+			i == 0 ? (noutputs > 1 ? _("Main screen") : _("Resolution")) : _("Second screen"));
 		gtk_widget_set_tooltip_text(mode_combo[i], outputs[i].name);
 	}
 	gtk_widget_set_visible(arrange_combo, noutputs > 1);
@@ -772,7 +773,7 @@ static gboolean countdown(gpointer dlg)
 		gtk_dialog_response(GTK_DIALOG(dlg), GTK_RESPONSE_REJECT);
 		return G_SOURCE_REMOVE;
 	}
-	t = g_strdup_printf("Going back to the old settings in %d seconds.", keep_seconds);
+	t = g_strdup_printf(_("Going back to the old settings in %d seconds."), keep_seconds);
 	gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(dlg), "%s", t);
 	g_free(t);
 	return G_SOURCE_CONTINUE;
@@ -787,14 +788,14 @@ static void on_display_apply(GtkButton *b, gpointer d)
 
 	(void)d;
 	if (!run_xrandr(after)) {
-		gtk_label_set_text(GTK_LABEL(display_status), "The screen can't show that.");
+		gtk_label_set_text(GTK_LABEL(display_status), _("The screen can't show that."));
 		run_xrandr(before);
 		goto out;
 	}
 	dlg = gtk_message_dialog_new(GTK_WINDOW(win), GTK_DIALOG_MODAL, GTK_MESSAGE_QUESTION,
-	                             GTK_BUTTONS_NONE, "Keep these display settings?");
-	gtk_dialog_add_buttons(GTK_DIALOG(dlg), "Go back", GTK_RESPONSE_REJECT,
-	                       "Keep", GTK_RESPONSE_ACCEPT, NULL);
+	                             GTK_BUTTONS_NONE, _("Keep these display settings?"));
+	gtk_dialog_add_buttons(GTK_DIALOG(dlg), _("Go back"), GTK_RESPONSE_REJECT,
+	                       _("Keep"), GTK_RESPONSE_ACCEPT, NULL);
 	keep_seconds = 16;
 	countdown(dlg);
 	timer = g_timeout_add_seconds(1, countdown, dlg);
@@ -814,11 +815,11 @@ static void on_display_apply(GtkButton *b, gpointer d)
 			fprintf(f, "%s\n", after);
 			fclose(f);
 		}
-		gtk_label_set_text(GTK_LABEL(display_status), "Saved: also at the next login.");
+		gtk_label_set_text(GTK_LABEL(display_status), _("Saved: also at the next login."));
 		apply_desktop(&cfg);            /* the wallpaper for the new size */
 	} else {
 		run_xrandr(before);
-		gtk_label_set_text(GTK_LABEL(display_status), "The old settings are back.");
+		gtk_label_set_text(GTK_LABEL(display_status), _("The old settings are back."));
 	}
 out:
 	g_free(before);
@@ -840,7 +841,7 @@ static void on_display_reset(GtkButton *b, gpointer d)
 		run_xrandr(s->str);
 	display_file(path, sizeof path);
 	unlink(path);
-	gtk_label_set_text(GTK_LABEL(display_status), "Back to what the screens prefer.");
+	gtk_label_set_text(GTK_LABEL(display_status), _("Back to what the screens prefer."));
 	g_string_free(s, TRUE);
 	g_free(opts);
 	read_outputs();
@@ -864,7 +865,7 @@ static GtkWidget *number_choice(int *field, const char *const items[][2])
 	GtkWidget *c = gtk_combo_box_text_new();
 
 	for (int i = 0; items[i][0]; i++)
-		gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(c), items[i][0], items[i][1]);
+		gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(c), items[i][0], _(items[i][1]));
 	g_signal_connect(c, "changed", G_CALLBACK(on_combo_number), field);
 	return c;
 }
@@ -884,29 +885,29 @@ static void build_display(GtkWidget *stack)
 {
 	static const char *const scales[][2] = {
 		{ "100", "100 %" }, { "125", "125 %" }, { "150", "150 %" },
-		{ "175", "175 %" }, { "200", "200 % (for very sharp screens)" }, { NULL, NULL } };
-	GtkWidget *g = page(stack, "display", "Display");
+		{ "175", "175 %" }, { "200", N_("200 % (for very sharp screens)") }, { NULL, NULL } };
+	GtkWidget *g = page(stack, "display", _("Display"));
 	GtkWidget *buttons = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8), *apply, *reset;
 
-	heading(g, 0, "Screens");
+	heading(g, 0, _("Screens"));
 	for (int i = 0; i < 2; i++) {
 		mode_combo[i] = gtk_combo_box_text_new();
-		labeled_row(g, 1 + i, i == 0 ? "Resolution" : "Second screen", mode_combo[i]);
+		labeled_row(g, 1 + i, i == 0 ? _("Resolution") : _("Second screen"), mode_combo[i]);
 	}
 	arrange_combo = gtk_combo_box_text_new();
-	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(arrange_combo), "right-of", "Right of the main screen");
-	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(arrange_combo), "left-of", "Left of the main screen");
-	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(arrange_combo), "above", "Above the main screen");
-	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(arrange_combo), "below", "Below the main screen");
-	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(arrange_combo), "mirror", "Same picture on both");
-	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(arrange_combo), "only-main", "Only the main screen");
-	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(arrange_combo), "only-second", "Only the second screen");
-	labeled_row(g, 3, "Second screen is", arrange_combo);
+	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(arrange_combo), "right-of", _("Right of the main screen"));
+	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(arrange_combo), "left-of", _("Left of the main screen"));
+	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(arrange_combo), "above", _("Above the main screen"));
+	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(arrange_combo), "below", _("Below the main screen"));
+	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(arrange_combo), "mirror", _("Same picture on both"));
+	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(arrange_combo), "only-main", _("Only the main screen"));
+	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(arrange_combo), "only-second", _("Only the second screen"));
+	labeled_row(g, 3, _("Second screen is"), arrange_combo);
 
-	apply = gtk_button_new_with_label("Apply");
+	apply = gtk_button_new_with_label(_("Apply"));
 	gtk_style_context_add_class(gtk_widget_get_style_context(apply), "suggested-action");
 	g_signal_connect(apply, "clicked", G_CALLBACK(on_display_apply), NULL);
-	reset = gtk_button_new_with_label("Automatic");
+	reset = gtk_button_new_with_label(_("Automatic"));
 	g_signal_connect(reset, "clicked", G_CALLBACK(on_display_reset), NULL);
 	gtk_box_pack_start(GTK_BOX(buttons), apply, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(buttons), reset, FALSE, FALSE, 0);
@@ -916,12 +917,12 @@ static void build_display(GtkWidget *stack)
 	gtk_style_context_add_class(gtk_widget_get_style_context(display_status), "dim-label");
 	gtk_grid_attach(GTK_GRID(g), display_status, 1, 5, 1, 1);
 
-	heading(g, 6, "Size");
+	heading(g, 6, _("Size"));
 	scale_combo = number_choice(&cfg.scale, scales);
-	row(g, 7, "Text and icons", scale_combo);
+	row(g, 7, _("Text and icons"), scale_combo);
 	{
-		GtkWidget *l = gtk_label_new("Programs you open from now on use the new size; "
-		                             "all of the desktop after the next login.");
+		GtkWidget *l = gtk_label_new(_("Programs you open from now on use the new size; "
+		                             "all of the desktop after the next login."));
 
 		gtk_label_set_line_wrap(GTK_LABEL(l), TRUE);
 		gtk_label_set_xalign(GTK_LABEL(l), 0);
@@ -941,24 +942,164 @@ static void on_lock_now(GtkButton *b, gpointer d)
 static void build_lock(GtkWidget *stack)
 {
 	static const char *const times[][2] = {
-		{ "1", "1 minute" }, { "2", "2 minutes" }, { "5", "5 minutes" },
-		{ "10", "10 minutes" }, { "15", "15 minutes" }, { "30", "30 minutes" },
-		{ "60", "1 hour" }, { "0", "Never" }, { NULL, NULL } };
-	GtkWidget *g = page(stack, "lock", "Screen lock");
-	GtkWidget *now = gtk_button_new_with_label("Lock now");
-	GtkWidget *l = gtk_label_new("The lock screen asks for your password. Lock it yourself "
+		{ "1", N_("1 minute") }, { "2", N_("2 minutes") }, { "5", N_("5 minutes") },
+		{ "10", N_("10 minutes") }, { "15", N_("15 minutes") }, { "30", N_("30 minutes") },
+		{ "60", N_("1 hour") }, { "0", N_("Never") }, { NULL, NULL } };
+	GtkWidget *g = page(stack, "lock", _("Screen lock"));
+	GtkWidget *now = gtk_button_new_with_label(_("Lock now"));
+	GtkWidget *l = gtk_label_new(_("The lock screen asks for your password. Lock it yourself "
 	                             "with Super+L or Start menu, Lock screen. It also locks "
-	                             "before the computer goes to sleep.");
+	                             "before the computer goes to sleep."));
 
-	heading(g, 0, "Screen lock");
+	heading(g, 0, _("Screen lock"));
 	lock_combo = number_choice(&cfg.lock_minutes, times);
-	row(g, 1, "Lock after no use for", lock_combo);
+	row(g, 1, _("Lock after no use for"), lock_combo);
 	g_signal_connect(now, "clicked", G_CALLBACK(on_lock_now), NULL);
 	row(g, 2, "", now);
 	gtk_label_set_line_wrap(GTK_LABEL(l), TRUE);
 	gtk_label_set_xalign(GTK_LABEL(l), 0);
 	gtk_style_context_add_class(gtk_widget_get_style_context(l), "dim-label");
 	gtk_grid_attach(GTK_GRID(g), l, 0, 3, 2, 1);
+}
+
+/* --- Language ------------------------------------------------------------- */
+
+static GtkWidget *lang_combo, *proxy_entry, *noproxy_entry, *proxy_status;
+
+static void on_language(GtkComboBox *c, gpointer d)
+{
+	const char *id = gtk_combo_box_get_active_id(c);
+
+	(void)d;
+	if (!id)
+		return;
+	g_strlcpy(cfg.language, strcmp(id, "system") == 0 ? "" : id, sizeof cfg.language);
+	changed();
+}
+
+static void build_language(GtkWidget *stack)
+{
+	static const struct { const char *id, *label; } langs[] = { LANGUAGES };
+	GtkWidget *g = page(stack, "language", _("Language"));
+	GtkWidget *l = gtk_label_new(_("The language of the menus and windows, and the format "
+		"of dates and numbers. It applies from the next login. Programs that "
+		"aren't translated stay in English."));
+
+	heading(g, 0, _("Language"));
+	lang_combo = gtk_combo_box_text_new();
+	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(lang_combo), "system",
+	                          _("The system's language (Users and system)"));
+	for (size_t i = 0; i < sizeof langs / sizeof langs[0]; i++)
+		gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(lang_combo), langs[i].id, langs[i].label);
+	g_signal_connect(lang_combo, "changed", G_CALLBACK(on_language), NULL);
+	row(g, 1, _("Language"), lang_combo);
+	gtk_label_set_line_wrap(GTK_LABEL(l), TRUE);
+	gtk_label_set_xalign(GTK_LABEL(l), 0);
+	gtk_style_context_add_class(gtk_widget_get_style_context(l), "dim-label");
+	gtk_grid_attach(GTK_GRID(g), l, 0, 2, 2, 1);
+}
+
+/* --- Network: proxy -------------------------------------------------------- */
+/*
+ * The proxy goes into the settings file; /usr/lib/my-distro/session-env
+ * turns it into http_proxy & co for the whole session at login (my-update,
+ * pip, wget, git read those). NetSurf has its own settings
+ * (~/.config/netsurf/Choices): we write the proxy there too.
+ */
+static void netsurf_proxy(const char *host, int port)
+{
+	char *path = g_build_filename(g_get_home_dir(), ".config", "netsurf", "Choices", NULL);
+	char *text = NULL, **lines;
+	GString *out = g_string_new(NULL);
+
+	if (g_file_get_contents(path, &text, NULL, NULL)) {
+		lines = g_strsplit(text, "\n", -1);
+		for (int i = 0; lines[i]; i++)
+			if (lines[i][0] && !g_str_has_prefix(lines[i], "http_proxy"))
+				g_string_append_printf(out, "%s\n", lines[i]);
+		g_strfreev(lines);
+		g_free(text);
+	}
+	if (host && host[0])
+		g_string_append_printf(out, "http_proxy:1\nhttp_proxy_host:%s\n"
+		                       "http_proxy_port:%d\nhttp_proxy_auth:0\n", host, port);
+	else
+		g_string_append(out, "http_proxy:0\n");
+	{
+		char *dir = g_path_get_dirname(path);
+
+		make_dirs(dir);
+		g_free(dir);
+	}
+	g_file_set_contents(path, out->str, -1, NULL);
+	g_string_free(out, TRUE);
+	g_free(path);
+}
+
+static void on_proxy_save(GtkButton *b, gpointer d)
+{
+	char *p = g_strstrip(g_strdup(gtk_entry_get_text(GTK_ENTRY(proxy_entry))));
+	char *np = g_strstrip(g_strdup(gtk_entry_get_text(GTK_ENTRY(noproxy_entry))));
+	char host[160] = "", *url;
+	int port = 8080;
+
+	(void)b; (void)d;
+	if (strpbrk(p, " \t\"'") || strpbrk(np, " \t\"'")) {
+		gtk_label_set_text(GTK_LABEL(proxy_status), _("No spaces or quotes, please."));
+		goto out;
+	}
+	/* "proxy:3128" -> "http://proxy:3128" */
+	url = p[0] && !strstr(p, "://") ? g_strdup_printf("http://%s", p) : g_strdup(p);
+	if (url[0] && sscanf(strstr(url, "://") + 3, "%159[^:/]:%d", host, &port) < 1) {
+		gtk_label_set_text(GTK_LABEL(proxy_status), _("Write the proxy as NAME:PORT, "
+		                   "e.g. proxy.example.com:3128."));
+		g_free(url);
+		goto out;
+	}
+	g_strlcpy(cfg.proxy, url, sizeof cfg.proxy);
+	g_strlcpy(cfg.no_proxy, np, sizeof cfg.no_proxy);
+	changed();
+	netsurf_proxy(host, port);
+	gtk_label_set_text(GTK_LABEL(proxy_status), url[0]
+		? _("Saved. Log out and in again so that all programs use it.")
+		: _("No proxy. Log out and in again so that all programs know."));
+	g_free(url);
+out:
+	g_free(p);
+	g_free(np);
+}
+
+static void build_network(GtkWidget *stack)
+{
+	GtkWidget *g = page(stack, "network", _("Network"));
+	GtkWidget *save = gtk_button_new_with_label(_("Save"));
+	GtkWidget *l = gtk_label_new(_("Some networks (schools, companies) only reach the "
+		"internet through a proxy. It is used by the web browser, system updates and "
+		"other programs that download. Leave it empty for none."));
+
+	heading(g, 0, _("Proxy"));
+	gtk_label_set_line_wrap(GTK_LABEL(l), TRUE);
+	gtk_label_set_xalign(GTK_LABEL(l), 0);
+	gtk_style_context_add_class(gtk_widget_get_style_context(l), "dim-label");
+	gtk_grid_attach(GTK_GRID(g), l, 0, 1, 2, 1);
+	proxy_entry = gtk_entry_new();
+	gtk_entry_set_placeholder_text(GTK_ENTRY(proxy_entry), "proxy.example.com:3128");
+	row(g, 2, _("HTTP and HTTPS proxy"), proxy_entry);
+	noproxy_entry = gtk_entry_new();
+	gtk_entry_set_placeholder_text(GTK_ENTRY(noproxy_entry), "localhost,127.0.0.1,.local");
+	row(g, 3, _("Without proxy for"), noproxy_entry);
+	g_signal_connect(save, "clicked", G_CALLBACK(on_proxy_save), NULL);
+	row(g, 4, "", save);
+	proxy_status = gtk_label_new("");
+	gtk_label_set_xalign(GTK_LABEL(proxy_status), 0);
+	gtk_label_set_line_wrap(GTK_LABEL(proxy_status), TRUE);
+	gtk_grid_attach(GTK_GRID(g), proxy_status, 0, 5, 2, 1);
+	l = gtk_label_new(_("Sharing files from this computer is off: the firewall lets "
+		"nobody in. To open a shared folder of another PC: Start menu, Network share."));
+	gtk_label_set_line_wrap(GTK_LABEL(l), TRUE);
+	gtk_label_set_xalign(GTK_LABEL(l), 0);
+	gtk_style_context_add_class(gtk_widget_get_style_context(l), "dim-label");
+	gtk_grid_attach(GTK_GRID(g), l, 0, 6, 2, 1);
 }
 
 /* Puts the values of cfg into the widgets (without reacting to it). */
@@ -1045,6 +1186,13 @@ static void update_widgets(void)
 		gtk_combo_box_set_active_id(GTK_COMBO_BOX(scale_combo), example);
 	}
 
+	/* language and proxy */
+	if (!gtk_combo_box_set_active_id(GTK_COMBO_BOX(lang_combo),
+	                                 cfg.language[0] ? cfg.language : "system"))
+		gtk_combo_box_set_active_id(GTK_COMBO_BOX(lang_combo), "system");
+	gtk_entry_set_text(GTK_ENTRY(proxy_entry), cfg.proxy);
+	gtk_entry_set_text(GTK_ENTRY(noproxy_entry), cfg.no_proxy);
+
 	building = 0;
 }
 
@@ -1060,11 +1208,12 @@ int main(int argc, char **argv)
 		return 0;
 	}
 
+	i18n_init();
 	gtk_init(&argc, &argv);
 	settings_load(&cfg, NULL);
 
 	win = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-	gtk_window_set_title(GTK_WINDOW(win), "Settings");
+	gtk_window_set_title(GTK_WINDOW(win), _("Settings"));
 	gtk_window_set_default_size(GTK_WINDOW(win), 640, 560);
 	gtk_window_set_icon_name(GTK_WINDOW(win), "preferences-desktop");
 	g_signal_connect(win, "destroy", G_CALLBACK(gtk_main_quit), NULL);
@@ -1078,17 +1227,19 @@ int main(int argc, char **argv)
 	build_taskbar(stack);
 	build_display(stack);
 	build_lock(stack);
+	build_language(stack);
+	build_network(stack);
 
 	side = gtk_stack_sidebar_new();
 	gtk_stack_sidebar_set_stack(GTK_STACK_SIDEBAR(side), GTK_STACK(stack));
 	gtk_widget_set_size_request(side, 150, -1);
 
-	reset = gtk_button_new_with_label("Reset to defaults");
+	reset = gtk_button_new_with_label(_("Reset to defaults"));
 	g_signal_connect(reset, "clicked", G_CALLBACK(on_reset), NULL);
 	bottom = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
 	gtk_container_set_border_width(GTK_CONTAINER(bottom), 12);
 	gtk_box_pack_end(GTK_BOX(bottom), reset, FALSE, FALSE, 0);
-	users = gtk_button_new_with_label("Users and system…");
+	users = gtk_button_new_with_label(_("Users and system…"));
 	g_signal_connect(users, "clicked", G_CALLBACK(on_users), NULL);
 	gtk_box_pack_start(GTK_BOX(bottom), users, FALSE, FALSE, 0);
 

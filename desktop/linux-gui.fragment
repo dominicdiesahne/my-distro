@@ -283,3 +283,78 @@ CONFIG_VIDEO_DEV=y
 CONFIG_USB_VIDEO_CLASS=m
 CONFIG_V4L_TEST_DRIVERS=y
 CONFIG_VIDEO_VIVID=m
+
+# --- 0.9.5 -------------------------------------------------------------------
+
+# CPU speed: intel_pstate, amd-pstate and the schedutil governor are in the
+# QEMU config already. acpi-cpufreq covers older CPUs (and AMD ones whose
+# firmware lacks CPPC); the other governors can be picked in power.conf
+# (S46power sets them); cpufreq-stats shows the time spent at each speed.
+CONFIG_X86_ACPI_CPUFREQ=y
+CONFIG_CPU_FREQ_GOV_POWERSAVE=y
+CONFIG_CPU_FREQ_GOV_ONDEMAND=y
+CONFIG_CPU_FREQ_GOV_CONSERVATIVE=y
+CONFIG_CPU_FREQ_STAT=y
+
+# Hibernate: the RAM is written to the swap file the installer makes, the
+# computer switches off, and the next start continues where it was
+CONFIG_HIBERNATION=y
+
+# Full-disk encryption (LUKS2, my-install): the device mapper with dm-crypt,
+# AES-XTS (with the CPU's AES instructions), and the kernel's crypto API for
+# programs (cryptsetup uses it to encrypt its key slots)
+CONFIG_MD=y
+CONFIG_BLK_DEV_DM=y
+CONFIG_DM_CRYPT=y
+CONFIG_CRYPTO_AES=y
+CONFIG_CRYPTO_AES_NI_INTEL=y
+CONFIG_CRYPTO_XTS=y
+CONFIG_CRYPTO_SHA256=y
+CONFIG_CRYPTO_SHA512=y
+CONFIG_CRYPTO_USER_API_HASH=y
+CONFIG_CRYPTO_USER_API_SKCIPHER=y
+
+# Virtual machines: KVM, so QEMU runs at full speed on this system too, and
+# tun/tap devices for their networks
+CONFIG_KVM=m
+CONFIG_KVM_INTEL=m
+CONFIG_KVM_AMD=m
+CONFIG_TUN=m
+
+# Sandboxes (bubblewrap, my-sandbox) need user namespaces: a normal user
+# gets a private view of files, processes and network without root
+CONFIG_USER_NS=y
+
+# Hardening:
+#  - Yama: a program may only debug (ptrace) its own children, not any other
+#    program of the same user (ptrace_scope 1; gdb ./program and strace
+#    still work, attaching to a running program needs sudo)
+#  - Landlock: programs can lock themselves out of files they don't need
+#  - Lockdown is built in but off: its "integrity" mode would also switch
+#    off hibernation; switch it on with lockdown=integrity on the kernel line
+#  - hardened copies between kernel and programs, randomised and checked
+#    kernel memory lists
+CONFIG_SECURITY=y
+CONFIG_SECURITYFS=y
+CONFIG_SECURITY_YAMA=y
+CONFIG_SECURITY_LANDLOCK=y
+CONFIG_SECURITY_LOCKDOWN_LSM=y
+CONFIG_SECURITY_LOCKDOWN_LSM_EARLY=y
+CONFIG_LOCK_DOWN_KERNEL_FORCE_NONE=y
+CONFIG_LSM="landlock,lockdown,yama"
+CONFIG_HARDENED_USERCOPY=y
+CONFIG_FORTIFY_SOURCE=y
+CONFIG_SLAB_FREELIST_RANDOM=y
+CONFIG_SLAB_FREELIST_HARDENED=y
+
+# Audit: the kernel reports logins, permission changes and watched files
+# to auditd (/var/log/audit/audit.log)
+CONFIG_AUDIT=y
+
+# Windows shares (SMB 2/3) mounted with mount.cifs (my-share)
+CONFIG_CIFS=m
+
+# Profiling with perf: probes on kernel and program functions
+CONFIG_KPROBES=y
+CONFIG_UPROBE_EVENTS=y
+CONFIG_FTRACE=y

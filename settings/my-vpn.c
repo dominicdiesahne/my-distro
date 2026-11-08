@@ -10,6 +10,8 @@
  */
 #include <ctype.h>
 #include <gtk/gtk.h>
+
+#include "i18n.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -157,18 +159,18 @@ static gboolean refresh_status(gpointer d)
 
 		if (strcmp(old, connected) != 0)
 			connected_since = g_get_monotonic_time();
-		text = g_strdup_printf("Connected to %s", connected);
+		text = g_strdup_printf(_("Connected to %s"), connected);
 		/* WireGuard talks to the server at least every 2 minutes while
 		 * something is sent; no answer at all means a wrong config or a
 		 * blocked network */
 		if (secs < 0 && g_get_monotonic_time() - connected_since > 15 * G_USEC_PER_SEC)
-			detail = g_strdup_printf("Address %s\nNo answer from the VPN server yet. Is the "
-			                         "config right, and does this network allow VPNs?", addr);
+			detail = g_strdup_printf(_("Address %s\nNo answer from the VPN server yet. Is the "
+			                         "config right, and does this network allow VPNs?"), addr);
 		else if (secs < 0)
-			detail = g_strdup_printf("Address %s\nWaiting for the VPN server…", addr);
+			detail = g_strdup_printf(_("Address %s\nWaiting for the VPN server…"), addr);
 		else
-			detail = g_strdup_printf("Address %s\nLast answer from the server %d s ago · "
-			                         "received %s · sent %s", addr, secs, rx, tx);
+			detail = g_strdup_printf(_("Address %s\nLast answer from the server %d s ago · "
+			                         "received %s · sent %s"), addr, secs, rx, tx);
 	} else {
 		text = g_strdup("Not connected.");
 		detail = g_strdup("Import the WireGuard config file (.conf) from your VPN service "
@@ -249,11 +251,11 @@ static void on_remove(GtkButton *b, gpointer d)
 	if (!n)
 		return;
 	ask = gtk_message_dialog_new(GTK_WINDOW(win), GTK_DIALOG_MODAL, GTK_MESSAGE_QUESTION,
-	                             GTK_BUTTONS_NONE, "Remove the VPN \"%s\"?", n);
+	                             GTK_BUTTONS_NONE, _("Remove the VPN \"%s\"?"), n);
 	gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(ask),
-		"To use it again you need its config file.");
-	gtk_dialog_add_buttons(GTK_DIALOG(ask), "Cancel", GTK_RESPONSE_CANCEL,
-	                       "Remove", GTK_RESPONSE_ACCEPT, NULL);
+		_("To use it again you need its config file."));
+	gtk_dialog_add_buttons(GTK_DIALOG(ask), _("Cancel"), GTK_RESPONSE_CANCEL,
+	                       _("Remove"), GTK_RESPONSE_ACCEPT, NULL);
 	answer = gtk_dialog_run(GTK_DIALOG(ask));
 	gtk_widget_destroy(ask);
 	if (answer == GTK_RESPONSE_ACCEPT) {
@@ -305,9 +307,9 @@ static void on_import(GtkButton *b, gpointer d)
 	int ok;
 
 	(void)b; (void)d;
-	fc = gtk_file_chooser_dialog_new("Import a WireGuard config", GTK_WINDOW(win),
-		GTK_FILE_CHOOSER_ACTION_OPEN, "Cancel", GTK_RESPONSE_CANCEL,
-		"Import", GTK_RESPONSE_ACCEPT, NULL);
+	fc = gtk_file_chooser_dialog_new(_("Import a WireGuard config"), GTK_WINDOW(win),
+		GTK_FILE_CHOOSER_ACTION_OPEN, _("Cancel"), GTK_RESPONSE_CANCEL,
+		_("Import"), GTK_RESPONSE_ACCEPT, NULL);
 	gtk_file_filter_set_name(f, "WireGuard configs (*.conf)");
 	gtk_file_filter_add_pattern(f, "*.conf");
 	gtk_file_chooser_add_filter(GTK_FILE_CHOOSER(fc), f);
@@ -326,11 +328,11 @@ static void on_import(GtkButton *b, gpointer d)
 	name_from_file(path, name, sizeof name);
 	if (exists(name)) {
 		GtkWidget *ask = gtk_message_dialog_new(GTK_WINDOW(win), GTK_DIALOG_MODAL,
-			GTK_MESSAGE_QUESTION, GTK_BUTTONS_NONE, "Replace the VPN \"%s\"?", name);
+			GTK_MESSAGE_QUESTION, GTK_BUTTONS_NONE, _("Replace the VPN \"%s\"?"), name);
 		int answer;
 
-		gtk_dialog_add_buttons(GTK_DIALOG(ask), "Cancel", GTK_RESPONSE_CANCEL,
-		                       "Replace", GTK_RESPONSE_ACCEPT, NULL);
+		gtk_dialog_add_buttons(GTK_DIALOG(ask), _("Cancel"), GTK_RESPONSE_CANCEL,
+		                       _("Replace"), GTK_RESPONSE_ACCEPT, NULL);
 		answer = gtk_dialog_run(GTK_DIALOG(ask));
 		gtk_widget_destroy(ask);
 		if (answer != GTK_RESPONSE_ACCEPT) {
@@ -381,9 +383,10 @@ int main(int argc, char **argv)
 	int ok;
 	char *out;
 
+	i18n_init();
 	gtk_init(&argc, &argv);
 	win = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-	gtk_window_set_title(GTK_WINDOW(win), "VPN");
+	gtk_window_set_title(GTK_WINDOW(win), _("VPN"));
 	gtk_window_set_default_size(GTK_WINDOW(win), 480, 400);
 	gtk_window_set_icon_name(GTK_WINDOW(win), "network-vpn");
 	g_signal_connect(win, "destroy", G_CALLBACK(gtk_main_quit), NULL);
@@ -412,11 +415,11 @@ int main(int argc, char **argv)
 	gtk_box_pack_start(GTK_BOX(box), scroll, TRUE, TRUE, 0);
 
 	row = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
-	btn_connect = button("Connect", G_CALLBACK(on_connect));
+	btn_connect = button(_("Connect"), G_CALLBACK(on_connect));
 	gtk_style_context_add_class(gtk_widget_get_style_context(btn_connect), "suggested-action");
-	btn_disconnect = button("Disconnect", G_CALLBACK(on_disconnect));
-	btn_remove = button("Remove…", G_CALLBACK(on_remove));
-	gtk_box_pack_start(GTK_BOX(row), button("Import…", G_CALLBACK(on_import)), FALSE, FALSE, 0);
+	btn_disconnect = button(_("Disconnect"), G_CALLBACK(on_disconnect));
+	btn_remove = button(_("Remove…"), G_CALLBACK(on_remove));
+	gtk_box_pack_start(GTK_BOX(row), button(_("Import…"), G_CALLBACK(on_import)), FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(row), btn_remove, FALSE, FALSE, 0);
 	gtk_box_pack_end(GTK_BOX(row), btn_connect, FALSE, FALSE, 0);
 	gtk_box_pack_end(GTK_BOX(row), btn_disconnect, FALSE, FALSE, 0);
@@ -426,9 +429,9 @@ int main(int argc, char **argv)
 	/* Not allowed (not in netdev): say so instead of an empty window */
 	out = ctl("list", NULL, NULL, &ok);
 	if (!ok) {
-		gtk_label_set_text(GTK_LABEL(status_label), "VPN not available");
+		gtk_label_set_text(GTK_LABEL(status_label), _("VPN not available"));
 		gtk_label_set_text(GTK_LABEL(detail_label), out && out[0] ? out :
-			"my-vpnctl is missing.");
+			_("my-vpnctl is missing."));
 		gtk_widget_set_sensitive(row, FALSE);
 	} else {
 		fill_list(NULL);
