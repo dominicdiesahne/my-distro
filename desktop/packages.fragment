@@ -26,7 +26,6 @@ BR2_PACKAGE_OPENSSH_CLIENT=y
 # no SSH server: it would need its own user, host keys and a start script
 # BR2_PACKAGE_OPENSSH_SERVER is not set
 BR2_PACKAGE_OPENSSH_KEY_UTILS=y
-BR2_PACKAGE_RSYNC=y
 
 # --- Programming ---------------------------------------------------------------
 BR2_PACKAGE_VIM=y
@@ -80,6 +79,3 @@ BR2_PACKAGE_DOOM_WAD=y
 BR2_PACKAGE_OPENTYRIAN=y
 BR2_PACKAGE_SL=y
 
-# --- Sound ---------------------------------------------------------------------
-BR2_PACKAGE_ESPEAK=y
-BR2_PACKAGE_ESPEAK_AUDIO_BACKEND_ALSA=y

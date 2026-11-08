@@ -94,12 +94,6 @@ description = Log in to other computers and copy files over an encrypted
   connection: ssh, scp, sftp, and ssh-keygen for your own keys. (Only the
   client: nobody can log in to this computer with it.)
 
-[rsync]
-title = rsync
-category = Tools
-description = Copies and synchronizes folders, also to other computers over
-  SSH; it only copies what changed. Example: rsync -av ~/Documents /media/USB/
-
 # --- Programming --------------------------------------------------------------------
 
 [vim]
@@ -248,11 +242,3 @@ terminal = yes
 icon = utilities-terminal
 description = A joke for people who type sl instead of ls: a steam train
   drives across the terminal.
-
-# --- Sound --------------------------------------------------------------------------
-
-[espeak]
-title = Text to speech (eSpeak)
-category = Sound
-description = Reads text aloud, in English, German and many other languages:
-  espeak "Hello", espeak -v de "Hallo", espeak -f file.txt.

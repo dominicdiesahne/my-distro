@@ -548,11 +548,11 @@ From a terminal: `my-pkg search pdf`, `my-pkg info vim`, `my-pkg list`
 |---|---|---|---|---|
 | MuPDF (PDF viewer) | Office | | Ruby, PHP, Perl | Programming |
 | gnuplot | Office | | GDB, strace, jq | Programming |
-| feh (image viewer) | Graphics | | tmux, ncdu, rsync | Tools |
+| feh (image viewer) | Graphics | | tmux, ncdu | Tools |
 | ImageMagick | Graphics | | 7-Zip, zip, Bash, Zsh, neofetch | Tools |
 | Dillo (web browser) | Internet | | LBreakout2, LTris | Games |
 | Lynx, irssi, OpenSSH client | Internet | | Doom (shareware), OpenTyrian, sl | Games |
-| Vim | Programming | | eSpeak (text to speech) | Sound |
+| Vim | Programming | | | |
 
 ### How it works
 
