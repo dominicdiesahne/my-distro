@@ -1,0 +1,5 @@
+config BR2_PACKAGE_MY_LOCALE
+	bool "my-locale"
+	help
+	  Translations of my-distro's own programs (po/*.po), compiled
+	  into /usr/share/locale/*/LC_MESSAGES/my-distro.mo.

@@ -38,11 +38,12 @@ BR2_TARGET_LOCALTIME="Europe/Vienna"
 
 # UTF-8 locale and glibc's character converters. Without them Openbox can't
 # decode window titles and shows every window as "Unnamed Window".
-BR2_GENERATE_LOCALE="en_US.UTF-8"
+BR2_GENERATE_LOCALE="en_US.UTF-8 de_DE.UTF-8 de_AT.UTF-8"
 BR2_TOOLCHAIN_GLIBC_GCONV_LIBS_COPY=y
 # Keep Xlib's UTF-8 locale too (its folder is called en_US.UTF-8); without it
 # X programs like xterm fall back to plain ASCII and show icons as garbage.
-BR2_ENABLE_LOCALE_WHITELIST="C en_US en_US.UTF-8 locale.alias locale.dir compose.dir"
+# (0.9.5: German added, see the end of this file)
+BR2_ENABLE_LOCALE_WHITELIST="C en_US en_US.UTF-8 de de_DE de_DE.UTF-8 de_AT de_AT.UTF-8 locale.alias locale.dir compose.dir"
 
 # Bootable ISO (images/rootfs.iso9660): GRUB for BIOS and UEFI, the whole
 # root filesystem is loaded into RAM as an initrd (a live system)
@@ -350,3 +351,48 @@ BR2_PACKAGE_RSYNC=y
 BR2_PACKAGE_XVKBD=y
 BR2_PACKAGE_ESPEAK=y
 BR2_PACKAGE_ESPEAK_AUDIO_BACKEND_NONE=y
+
+# --- 0.9.6 -------------------------------------------------------------------
+
+# Fonts for more of the world's writing: Chinese, Japanese and Korean
+# (WenQuanYi Zen Hei, one file for all three) and colour emoji (Noto Color
+# Emoji, desktop/package/my-emoji-font). DejaVu covers Latin, Greek and
+# Cyrillic; fontconfig takes the others for the characters it lacks.
+BR2_PACKAGE_WQY_ZENHEI=y
+BR2_PACKAGE_MY_EMOJI_FONT=y
+
+# Full-disk encryption in the installer (my-install): cryptsetup makes and
+# opens LUKS2 volumes (kernel part, dm-crypt, in linux-gui.fragment). kbd's
+# keymaps and loadkeys give the passphrase prompt at the start the desktop's
+# keyboard layout (my-mkinitramfs).
+BR2_PACKAGE_CRYPTSETUP=y
+BR2_PACKAGE_KBD=y
+
+# Developer tools: the debugger, system call and library call tracers, and
+# perf (CPU profiling with the kernel's performance counters)
+BR2_PACKAGE_GDB=y
+BR2_PACKAGE_GDB_DEBUGGER=y
+BR2_PACKAGE_STRACE=y
+BR2_PACKAGE_LTRACE=y
+BR2_PACKAGE_LINUX_TOOLS_PERF=y
+
+# Sandboxing: bubblewrap runs a program in its own namespaces with only the
+# files it needs (my-sandbox). The audit daemon writes what the kernel's
+# audit system reports (logins, changes to passwords and sudo rules) to
+# /var/lib/audit/audit.log.
+BR2_PACKAGE_BUBBLEWRAP=y
+BR2_PACKAGE_AUDIT=y
+
+# Semantic search reads the text of PDFs with pdftotext (poppler)
+BR2_PACKAGE_POPPLER=y
+BR2_PACKAGE_POPPLER_UTILS=y
+
+# Windows shares (SMB/CIFS): mount.cifs, used by my-share
+BR2_PACKAGE_CIFS_UTILS=y
+
+# Languages: translations (gettext) for all programs that have them (GTK,
+# the file manager, ...), and msgfmt on the build machine for my-distro's
+# own translations (po/). The German locales and the whitelist that keeps
+# German next to English are further up.
+BR2_SYSTEM_ENABLE_NLS=y
+BR2_PACKAGE_MY_LOCALE=y

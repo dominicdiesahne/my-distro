@@ -62,6 +62,23 @@ if [ -f "$B" ] && ! grep -q my-recovery "$B"; then
 	fi
 fi
 
+# Encrypted systems (my-install, "Encrypt the disk"): GRUB starts the kernel
+# from the EFI partition, so the kernel this system now has goes there, with
+# a new initramfs (only does something when /etc/my-distro/crypt exists)
+if [ -f "$R/etc/my-distro/crypt" ] && [ -x "$R/usr/sbin/my-mkinitramfs" ]; then
+	"$R/usr/sbin/my-mkinitramfs" "$R" || echo "installed-fixups: my-mkinitramfs failed" >&2
+fi
+
+# Hibernate in the Start menu when there is a swap file for it (my-install
+# makes one from 0.9.6 on) and the kernel knows where it is: resume= in the
+# boot menu, or the initramfs of an encrypted system tells it
+M="$R/etc/my-panel/menu"
+if [ -f "$R/swapfile" ] && ! grep -q '^Hibernate|' "$M" &&
+   { [ -f "$R/etc/my-distro/crypt" ] || grep -qs ' resume=' "$R/boot/grub/grub.cfg"; }; then
+	sed -i '/^Suspend|/a\
+Hibernate|my-hibernate|media-floppy' "$M"
+fi
+
 # --- Desktop sessions from older versions ----------------------------------------
 # Home folders are never replaced by an update, so the session files there
 # (copied from /etc/skel when the account was made) are still the old ones.
@@ -80,6 +97,12 @@ if [ -z "$DBUS_SESSION_BUS_ADDRESS" ] && command -v dbus-launch >/dev/null; then
 	eval "$(dbus-launch --sh-syntax --exit-with-session)"\
 fi\
 ' "$x"
+	fi
+	# 0.9.6: the session's language and proxy (Settings app)
+	if [ -f "$x" ] && ! grep -q session-env "$x" && grep -q '^export LANG=' "$x"; then
+		sed -i '/^export LANG=/a\
+# Your language and proxy (Settings app); added by the 0.9.6 update\
+. /usr/lib/my-distro/session-env' "$x"
 	fi
 	a="$h/.config/openbox/autostart"
 	if [ -f "$a" ] && ! grep -q '/usr/lib/my-distro/autostart' "$a"; then

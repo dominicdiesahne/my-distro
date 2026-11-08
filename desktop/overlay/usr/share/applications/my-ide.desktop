@@ -1,7 +1,9 @@
 [Desktop Entry]
 Type=Application
 Name=Code editor (LazyVim)
+Name[de]=Code-Editor (LazyVim)
 Comment=Neovim with LazyVim: an IDE in the terminal
+Comment[de]=Neovim mit LazyVim: eine IDE im Terminal
 Icon=/usr/lib/nvim/share/icons/hicolor/128x128/apps/nvim.png
 Exec=my-ide %F
 Terminal=false

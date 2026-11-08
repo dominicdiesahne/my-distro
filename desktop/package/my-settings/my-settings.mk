@@ -3,9 +3,10 @@
 # my-settings: the Settings app, the Clock app, the setup / "Users and
 # system" window (my-setup), the Wi-Fi window (my-wifi), the VPN window
 # (my-vpn), the log viewer (my-logs), the Software app (my-software) and
-# its file chooser for the Start menu (my-pick-file), and since 0.9.5 the
-# Bluetooth, Printers, Disks and Backup windows from settings/. settings.c
-# and dial.c are also compiled into my-panel and my-login.
+# its file chooser for the Start menu (my-pick-file), since 0.9.5 the
+# Bluetooth, Printers, Disks and Backup windows, and since 0.9.6 the network
+# share dialog (my-share) from settings/. settings.c and dial.c are also
+# compiled into my-panel and my-login.
 #
 ################################################################################
 
@@ -29,6 +30,7 @@ define MY_SETTINGS_BUILD_CMDS
 	$(MY_SETTINGS_CC) -o $(@D)/my-logs $(@D)/my-logs.c $(MY_SETTINGS_GTK)
 	$(MY_SETTINGS_CC) -o $(@D)/my-software $(@D)/my-software.c $(MY_SETTINGS_GTK)
 	$(MY_SETTINGS_CC) -o $(@D)/my-pick-file $(@D)/my-pick-file.c $(MY_SETTINGS_GTK)
+	$(MY_SETTINGS_CC) -o $(@D)/my-share $(@D)/my-share.c $(MY_SETTINGS_GTK)
 	$(MY_SETTINGS_CC) -o $(@D)/my-notifyd $(@D)/my-notifyd.c $(@D)/settings.c \
 		$(MY_SETTINGS_GTK) $$($(PKG_CONFIG_HOST_BINARY) --cflags --libs x11)
 	$(MY_SETTINGS_CC) -o $(@D)/my-notify $(@D)/my-notify.c \
@@ -48,6 +50,7 @@ define MY_SETTINGS_INSTALL_TARGET_CMDS
 	$(INSTALL) -D -m 0755 $(@D)/my-logs $(TARGET_DIR)/usr/bin/my-logs
 	$(INSTALL) -D -m 0755 $(@D)/my-software $(TARGET_DIR)/usr/bin/my-software
 	$(INSTALL) -D -m 0755 $(@D)/my-pick-file $(TARGET_DIR)/usr/bin/my-pick-file
+	$(INSTALL) -D -m 0755 $(@D)/my-share $(TARGET_DIR)/usr/bin/my-share
 	$(INSTALL) -D -m 0755 $(@D)/my-notifyd $(TARGET_DIR)/usr/bin/my-notifyd
 	$(INSTALL) -D -m 0755 $(@D)/my-notify $(TARGET_DIR)/usr/bin/my-notify
 	ln -sf my-notify $(TARGET_DIR)/usr/bin/notify-send

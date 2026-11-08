@@ -58,6 +58,11 @@ void index_free(struct index *ix);
 /* Reads a text file (NULL for binary files). Caller frees. */
 char *read_text(const char *path, size_t *len);
 
+/* The text of a PDF or office file (.pdf, .odt, .docx, ...; NULL for other
+ * files), at most MAX_FILE_SIZE bytes of it. Caller frees. */
+char *read_document(const char *path, size_t *len);
+#define MAX_DOC_SIZE    (64 << 20) /* documents up to 64 MB are read */
+
 /* "my_gym-contract.txt" -> "my gym contract txt": words a model understands */
 void name_words(const char *path, char *out, size_t n);
 

@@ -1,6 +1,7 @@
 [Desktop Entry]
 Type=Application
 Name=Magnifier
+Name[de]=Bildschirmlupe
 Comment=Shows the area around the mouse pointer bigger (Super+Z)
 Icon=zoom-in
 Exec=my-zoom

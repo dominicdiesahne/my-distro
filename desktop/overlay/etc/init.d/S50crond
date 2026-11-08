@@ -1,0 +1,46 @@
+#!/bin/sh
+# Starts BusyBox's crond, which runs commands at set times. Restarted if it
+# crashes. (Replaces Buildroot's own S50crond.)
+#
+#   crontab -e          your own timetable (any user; editor: $EDITOR, nano)
+#   crontab -l          show it
+#   /etc/cron/crontabs/ everyone's timetables, one file per user (root only);
+#                       kept by system updates
+#
+# A line is "minute hour day month weekday command", e.g.
+#   30 18 * * 1-5  python3 ~/scripts/report.py    (weekdays at 18:30)
+#   @reboot        ~/scripts/at-start.sh
+# crond notes each command it starts in the system log (System logs app);
+# what a command prints is not kept: add ">>~/cron.log 2>&1" to the line.
+# Log of crond itself (crashes, restarts): /var/log/cron.log
+PIDFILE=/run/crond.keepalive
+
+case "$1" in
+start)
+	printf "Starting task scheduler (crond): "
+	mkdir -p /etc/cron/crontabs
+	chmod 755 /etc/cron
+	chmod 700 /etc/cron/crontabs
+	# -f: stay in the foreground (my-keepalive watches it), -l 8: log only
+	# what goes wrong and the commands it starts, -c: where the timetables are
+	/usr/bin/my-keepalive -a /usr/sbin/crond -f -l 8 -c /etc/cron/crontabs \
+		</dev/null >>/var/log/cron.log 2>&1 &
+	echo $! > $PIDFILE
+	echo "OK"
+	;;
+stop)
+	printf "Stopping task scheduler: "
+	[ -f $PIDFILE ] && kill "$(cat $PIDFILE)" 2>/dev/null
+	rm -f $PIDFILE
+	killall crond 2>/dev/null
+	echo "OK"
+	;;
+restart|reload)
+	"$0" stop
+	"$0" start
+	;;
+*)
+	echo "Usage: $0 {start|stop|restart}"
+	exit 1
+	;;
+esac

@@ -124,18 +124,6 @@ title = Perl
 category = Programming
 description = The Perl programming language: perl file.pl runs a script.
 
-[gdb]
-title = GDB debugger
-category = Programming
-description = Stops a program while it runs and shows what it is doing: gdb
-  ./program, then run, bt (where it crashed), break, step, print.
-
-[strace]
-title = strace
-category = Programming
-description = Shows every system call a program makes (files it opens,
-  network, ...): strace -f program. Good for finding out why something fails.
-
 [jq]
 title = jq (JSON)
 category = Programming

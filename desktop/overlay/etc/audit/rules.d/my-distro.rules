@@ -1,0 +1,29 @@
+# What the audit log (auditd, /etc/init.d/S03audit) records. The -k name is
+# the key to search for: ausearch -k users -i
+# Format: man auditctl. Loaded at the start with auditctl -R.
+
+# Start fresh, and keep up to 8192 events in the kernel while auditd is busy
+-D
+-b 8192
+
+# Users, groups and passwords (my-setup, passwd, adduser)
+-w /etc/passwd -p wa -k users
+-w /etc/shadow -p wa -k users
+-w /etc/group -p wa -k users
+-w /etc/gshadow -p wa -k users
+
+# Administrator rights: sudo rules, and every use of sudo and su
+-w /etc/sudoers -p wa -k sudo
+-w /etc/sudoers.d -p wa -k sudo
+-w /usr/bin/sudo -p x -k sudo
+-w /bin/su -p x -k sudo
+
+# Start-up scripts, scheduled tasks, firewall, parental controls
+-w /etc/init.d -p wa -k system
+-w /etc/cron -p wa -k cron
+-w /etc/nftables.conf -p wa -k firewall
+-w /etc/nftables.d -p wa -k firewall
+-w /etc/my-distro/parental -p wa -k parental
+
+# Kernel modules being loaded or removed
+-a always,exit -F arch=b64 -S init_module,finit_module,delete_module -k modules

@@ -73,6 +73,7 @@
 
 #include "dial.h"
 #include "settings.h"
+#include "i18n.h"
 
 #define PAD         4
 #define START_W     100
@@ -662,7 +663,7 @@ static void draw_update(void)
 	update_w = 0;
 	if (!update_version[0])
 		return;
-	snprintf(label, sizeof label, "\xe2\x86\x91  Update to %s", update_version);  /* ↑ */
+	snprintf(label, sizeof label, _("\xe2\x86\x91  Update to %s"), update_version);  /* ↑ */
 	update_w = text_width(bold, label) + 24;
 	update_x = clock_x - PAD - update_w;
 	XftDrawRect(draw, hover == HOVER_UPDATE ? &c_active : &c_accent,
@@ -1104,8 +1105,11 @@ static int read_battery(void)
 	if (pct >= 0 && pct <= BATTERY_LOW && !charging && !bat_warned) {
 		char cmd[256];
 
-		snprintf(cmd, sizeof cmd, "my-notify -u critical -i battery-caution "
-		         "'Battery low: %d %%' 'Plug in the charger, or save your work.'", pct);
+		char title[64];
+
+		snprintf(title, sizeof title, _("Battery low: %d %%"), pct);
+		snprintf(cmd, sizeof cmd, "my-notify -u critical -i battery-caution '%s' '%s'",
+		         title, _("Plug in the charger, or save your work."));
 		run(cmd);
 		bat_warned = 1;
 	}
@@ -1197,7 +1201,7 @@ static void draw_panel(void)
 	XftDrawRect(draw, menu_open ? &c_active : hover == HOVER_START ? &c_hover
 	            : &c_button, PAD, PAD, START_W, bh);
 	text(draw, bold, &c_accent, PAD + 12, PAD, bh, "\xe2\x98\xb0");  /* â˜° */
-	text(draw, bold, &c_text, PAD + 34, PAD, bh, "Start");
+	text(draw, bold, &c_text, PAD + 34, PAD, bh, _("Start"));
 
 	/* One button per window */
 	if (ntasks > 0) {
@@ -1267,7 +1271,8 @@ static void add_item(const char *label, const char *cmd, const char *icon)
 	if (nitems == MAX_ITEMS)
 		return;
 	it = &items[nitems++];
-	snprintf(it->label, sizeof it->label, "%s", label);
+	/* the menu file's labels are English; the translation if there is one */
+	snprintf(it->label, sizeof it->label, "%s", label[0] ? _(label) : "");
 	snprintf(it->cmd, sizeof it->cmd, "%s", cmd);
 	it->icon = theme_icon(icon);
 }
@@ -2044,6 +2049,7 @@ int main(int argc, char **argv)
 
 	(void)argc;
 	self_argv = argv;
+	i18n_init();
 	settings_load(&cfg, NULL);
 	settings_time = settings_mtime(NULL);
 	panel_h = cfg.panel_height;

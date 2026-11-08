@@ -1,6 +1,7 @@
 [Desktop Entry]
 Type=Application
 Name=On-screen keyboard
+Name[de]=Bildschirmtastatur
 Comment=Type with the mouse or a touchscreen (Super+K)
 Icon=input-keyboard
 Exec=my-keyboard

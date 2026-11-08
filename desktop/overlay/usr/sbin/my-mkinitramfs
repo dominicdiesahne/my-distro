@@ -1,0 +1,104 @@
+#!/bin/sh
+# my-mkinitramfs [ROOT]: for encrypted installations (my-install, "Encrypt
+# the disk"). Packs the small start-up system (initramfs) that asks for the
+# passphrase, and puts it and the kernel onto the EFI partition, where GRUB
+# can read them (it can't read the encrypted system partition).
+#
+# The initramfs holds BusyBox, cryptsetup with the libraries they need, the
+# keyboard layout for the passphrase and /usr/lib/my-distro/initramfs-init
+# as its /init. At the start the kernel unpacks it into RAM and runs /init:
+# it asks for the passphrase, opens the volume, wakes the system from
+# hibernation if there is an image, and starts /sbin/my-init from the disk.
+#
+# ROOT (default /) is the system to take the files from. my-install runs it
+# for the new disk; installed-fixups after every update and rollback, so
+# the EFI partition always has the kernel the system has.
+# Settings: ROOT/etc/my-distro/crypt (written by my-install). Without it this
+# system is not encrypted and there is nothing to do.
+PATH=/usr/sbin:/usr/bin:/sbin:/bin
+R="${1:-/}"
+R="${R%/}"
+CONF="$R/etc/my-distro/crypt"
+[ -f "$CONF" ] || exit 0
+[ "$(id -u)" = 0 ] || { echo "my-mkinitramfs: needs root" >&2; exit 1; }
+
+conf() { sed -n "s/^[[:space:]]*$1[[:space:]]*=[[:space:]]*//p" "$CONF" | tail -n 1; }
+ESP_UUID=$(conf esp_partuuid)
+LAYOUT=$(conf keyboard)
+
+W=$(mktemp -d /tmp/initramfs.XXXXXX) || exit 1
+MNT=""
+cleanup() {
+	rm -rf "$W"
+	[ -n "$MNT" ] && umount "$MNT" && rmdir "$MNT"
+}
+trap cleanup EXIT
+
+# copy FILE: into the initramfs at the same path, with the libraries it
+# needs. The dynamic linker lists them ("--list", what ldd does).
+copy() {
+	mkdir -p "$W$(dirname "$1")"
+	cp -L "$R$1" "$W$1" || exit 1
+	"$R/lib/ld-linux-x86-64.so.2" --library-path "$R/lib:$R/usr/lib" --list "$R$1" 2>/dev/null |
+	awk '$2 == "=>" && $3 ~ /^\// { print $3 } $1 ~ /^\// { print $1 }' |
+	while read -r lib; do
+		lib=${lib#"$R"}             # the path inside ROOT
+		[ -e "$W$lib" ] && continue
+		mkdir -p "$W$(dirname "$lib")"
+		cp -L "$R$lib" "$W$lib"
+	done
+}
+
+mkdir -p "$W/bin" "$W/dev" "$W/proc" "$W/sys" "$W/run" "$W/newroot" "$W/etc"
+copy /bin/busybox
+copy /usr/sbin/cryptsetup
+# /lib64 -> /lib, where the linker is
+[ -L "$R/lib64" ] && ln -s lib "$W/lib64"
+for app in sh mount umount switch_root sleep cat ls mkdir loadkmap echo; do
+	ln -s busybox "$W/bin/$app"
+done
+cp "$R/usr/lib/my-distro/initramfs-init" "$W/init"
+chmod 755 "$W/init"
+# The kernel gives /init the console as input and output: the device must exist
+mknod -m 600 "$W/dev/console" c 5 1
+mknod -m 666 "$W/dev/null" c 1 3
+
+# The keyboard for the passphrase: the same layout as on the desktop. The
+# console's own format ("bkeymap") is made from kbd's keymap of that name;
+# BusyBox's loadkmap loads it at the start.
+case "$LAYOUT" in
+de|at) km=de-latin1-nodeadkeys ;;
+ch)    km=de_CH-latin1 ;;
+gb)    km=uk ;;
+fr)    km=fr-latin1 ;;
+tr)    km=trq ;;
+us|"") km="" ;;
+*)     km=$LAYOUT ;;
+esac
+if [ -n "$km" ] && command -v loadkeys >/dev/null; then
+	loadkeys -b "$km" >"$W/etc/keymap" 2>/dev/null || rm -f "$W/etc/keymap"
+fi
+[ -s "$W/etc/keymap" ] || rm -f "$W/etc/keymap"
+
+(cd "$W" && find . | cpio -o -H newc 2>/dev/null | gzip -9) >"$W.gz" || exit 1
+
+# The EFI partition: mounted at ROOT/boot/efi while installing; else mount it
+dest="$R/boot/efi"
+if ! grep -q " $dest " /proc/mounts; then
+	dev=$(blkid -t PARTUUID="$ESP_UUID" -o device | head -n 1)
+	[ -n "$dev" ] || { echo "my-mkinitramfs: EFI partition $ESP_UUID not found" >&2; rm -f "$W.gz"; exit 1; }
+	MNT=$(mktemp -d /tmp/esp.XXXXXX)
+	mount -t vfat "$dev" "$MNT" || { rm -f "$W.gz"; exit 1; }
+	dest=$MNT
+fi
+mkdir -p "$dest/my-distro"
+# New files under a temporary name first: a half-written kernel would not boot
+cp "$R/boot/bzImage" "$dest/my-distro/bzImage.new" &&
+	cp "$W.gz" "$dest/my-distro/initramfs.gz.new" &&
+	mv "$dest/my-distro/bzImage.new" "$dest/my-distro/bzImage" &&
+	mv "$dest/my-distro/initramfs.gz.new" "$dest/my-distro/initramfs.gz"
+rc=$?
+rm -f "$W.gz"
+sync
+[ "$rc" = 0 ] && echo "my-mkinitramfs: kernel and initramfs ($(du -k "$dest/my-distro/initramfs.gz" | cut -f1) KB) on the EFI partition"
+exit $rc

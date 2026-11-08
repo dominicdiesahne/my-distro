@@ -1,6 +1,7 @@
 [Desktop Entry]
 Type=Application
 Name=Web browser
+Name[de]=Webbrowser
 Icon=web-browser
 Exec=netsurf-gtk3 %u
 Terminal=false

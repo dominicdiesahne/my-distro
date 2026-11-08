@@ -1,7 +1,9 @@
 [Desktop Entry]
 Type=Application
 Name=Clock
+Name[de]=Uhr
 Comment=Analog or digital clock
+Comment[de]=Analoge oder digitale Uhr
 Icon=my-clock
 Exec=my-clock
 Terminal=false

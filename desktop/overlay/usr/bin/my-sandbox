@@ -1,0 +1,63 @@
+#!/bin/sh
+# my-sandbox [--no-net] [--home] PROGRAM [ARGS]: runs a program in a sandbox
+# (bubblewrap), e.g. the web browser:  my-sandbox netsurf-gtk3
+#
+# Inside, the program sees:
+#   - the system's programs and settings, read-only (it can't change them)
+#   - its own home folder, ~/.local/share/my-sandbox/PROGRAM, shown at your
+#     home folder's place: your real files are out of its reach, but its own
+#     settings (bookmarks, ...) stay from one start to the next
+#   - your ~/Downloads, the one real folder it may read and write
+#   - the desktop (X11), sound, the session D-Bus (notifications)
+#   - its own processes only (a separate PID namespace), its own /tmp
+# --no-net: no network either.  --home: your real home folder (read-write),
+# when the program needs your files; the rest stays protected.
+#
+# It uses the kernel's namespaces (user, mount, PID, IPC), so it needs no
+# root rights. What a sandbox can't stop: what you type into the program,
+# and what it shows you. More: bwrap --help, man bwrap (on another PC).
+set -e
+net="--share-net"
+real_home=0
+while [ $# -gt 0 ]; do
+	case "$1" in
+	--no-net) net="--unshare-net"; shift ;;
+	--home)   real_home=1; shift ;;
+	--)       shift; break ;;
+	-*)       echo "usage: my-sandbox [--no-net] [--home] PROGRAM [ARGS]" >&2; exit 2 ;;
+	*)        break ;;
+	esac
+done
+[ $# -gt 0 ] || { echo "usage: my-sandbox [--no-net] [--home] PROGRAM [ARGS]" >&2; exit 2; }
+command -v bwrap >/dev/null || { echo "my-sandbox: bubblewrap (bwrap) is missing" >&2; exit 1; }
+prog=$(command -v "$1") || { echo "my-sandbox: $1: no such program" >&2; exit 1; }
+name=$(basename "$prog")
+
+# The program's own home folder, and the Downloads folder it shares with you
+box="$HOME/.local/share/my-sandbox/$name"
+mkdir -p "$box" "$HOME/Downloads"
+if [ "$real_home" = 1 ]; then
+	home_args="--bind $HOME $HOME"
+else
+	home_args="--bind $box $HOME --bind $HOME/Downloads $HOME/Downloads"
+fi
+
+# Optional devices: sound cards, graphics (Mesa), webcams
+devs=""
+for d in /dev/snd /dev/dri; do
+	[ -e "$d" ] && devs="$devs --dev-bind $d $d"
+done
+
+# shellcheck disable=SC2086 # the lists above are meant to be split
+exec bwrap \
+	--ro-bind /usr /usr --ro-bind /bin /bin --ro-bind /sbin /sbin \
+	--ro-bind /lib /lib --symlink lib /lib64 \
+	--ro-bind /etc /etc --ro-bind /var /var \
+	--proc /proc --dev /dev $devs \
+	--tmpfs /tmp --ro-bind-try /tmp/.X11-unix /tmp/.X11-unix \
+	--tmpfs /run --tmpfs /media --tmpfs /mnt --tmpfs /home --tmpfs /root \
+	$home_args \
+	--unshare-user-try --unshare-pid --unshare-ipc --unshare-uts --unshare-cgroup-try \
+	$net --die-with-parent \
+	--setenv HOME "$HOME" --chdir "$HOME" \
+	"$prog" "$@"

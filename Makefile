@@ -157,7 +157,7 @@ $(BR_DIR)/Makefile: $(BR_TAR)
 desktop: $(BR_DIR)/Makefile
 > rm -rf $(BR_SRC)
 > mkdir -p $(BR_SRC)
-> cp -r desktop init panel login history search settings $(BR_SRC)/
+> cp -r desktop init panel login history search settings po $(BR_SRC)/
 > chmod -R u=rwX,go=rX $(BR_SRC)
 > # Programs and scripts: everything in these folders is one
 > chmod 755 $(BR_SRC)/desktop/overlay/etc/init.d/* $(BR_SRC)/desktop/overlay/root/.xinitrc \
@@ -171,7 +171,7 @@ desktop: $(BR_DIR)/Makefile
 > # The Software app's programs (make packages) are built in this tree too:
 > # take them out of the root filesystem, they are not part of the image.
 > $(PKG_CLEAN)
-> $(BR_MAKE) my-init-dirclean my-panel-dirclean my-login-dirclean my-history-dirclean my-search-dirclean my-settings-dirclean my-ide-dirclean
+> $(BR_MAKE) my-init-dirclean my-panel-dirclean my-login-dirclean my-history-dirclean my-search-dirclean my-settings-dirclean my-ide-dirclean my-locale-dirclean
 > # Buildroot doesn't notice changes to the kernel fragment by itself.
 > if ls -d $(BR_OUT)/build/linux-[0-9]* >/dev/null 2>&1 && \
 >    ! cmp -s desktop/linux-gui.fragment $(BR_OUT)/.linux-gui.fragment; then \

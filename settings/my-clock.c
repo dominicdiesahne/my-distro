@@ -7,6 +7,8 @@
  * Once a second it redraws, and re-reads the settings if they changed.
  */
 #include <gtk/gtk.h>
+
+#include "i18n.h"
 #include <math.h>
 #include <string.h>
 
@@ -101,7 +103,7 @@ static void draw_analog(cairo_t *cr, double w, double h, const struct tm *tm)
 /* The "Analog | Digital" switch at the bottom */
 static void draw_switch(cairo_t *cr, double w, double h)
 {
-	const char *names[] = { "Digital", "Analog" };
+	const char *names[] = { _("Digital"), _("Analog") };
 	int on = cfg.clock_app;               /* CLOCK_DIGITAL = 0, CLOCK_ANALOG = 1 */
 
 	sw_x = w / 2 - SWITCH_W / 2;
@@ -180,11 +182,12 @@ int main(int argc, char **argv)
 	GtkWidget *win;
 	GdkPixbuf *icon;
 
+	i18n_init();
 	gtk_init(&argc, &argv);
 	load();
 
 	win = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-	gtk_window_set_title(GTK_WINDOW(win), "Clock");
+	gtk_window_set_title(GTK_WINDOW(win), _("Clock"));
 	gtk_window_set_default_size(GTK_WINDOW(win), 340, 400);
 	icon = make_icon();
 	gtk_window_set_icon(GTK_WINDOW(win), icon);

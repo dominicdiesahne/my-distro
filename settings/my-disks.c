@@ -18,6 +18,8 @@
  * a click on "Format".
  */
 #include <gtk/gtk.h>
+
+#include "i18n.h"
 #include <pwd.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -158,10 +160,10 @@ static void fill_tree(void)
 			continue;
 		sys = system_disk(d);
 		size = size_text(d->size);
-		name = g_strdup_printf("%s%s(%s)%s", d->model[0] ? d->model : "Disk",
+		name = g_strdup_printf("%s%s(%s)%s", d->model[0] ? d->model : _("Disk"),
 		                       d->model[0] ? " " : " ", d->name,
-		                       sys ? "  \xe2\x80\x94 my-distro runs from it" :
-		                       removable(d) ? "  \xe2\x80\x94 USB / card" : "  \xe2\x80\x94 internal");
+		                       sys ? _("  \xe2\x80\x94 my-distro runs from it") :
+		                       removable(d) ? _("  \xe2\x80\x94 USB / card") : _("  \xe2\x80\x94 internal"));
 		kind = sys ? K_SYSTEM_DISK : K_DISK;
 		gtk_tree_store_append(store, &it, NULL);
 		gtk_tree_store_set(store, &it, COL_ICON, removable(d) ? "drive-removable-media" : "drive-harddisk",
@@ -179,7 +181,7 @@ static void fill_tree(void)
 			gtk_tree_store_append(store, &child, &it);
 			gtk_tree_store_set(store, &child, COL_ICON, "drive-harddisk",
 				COL_NAME, name, COL_SIZE, size, COL_FS, p->fstype,
-				COL_WHERE, system_used(p) && !p->mount[0] ? "(used by the system)" : p->mount,
+				COL_WHERE, system_used(p) && !p->mount[0] ? _("(used by the system)") : p->mount,
 				COL_PATH, p->path, COL_KIND, system_used(p) ? K_SYSTEM_USED :
 				sys ? K_SYSTEM_DISK : K_PART, -1);
 			g_free(size);
@@ -273,10 +275,10 @@ static void start_tool(const char *const *argv)
 	GIOChannel *ch;
 
 	gtk_text_buffer_set_text(gtk_text_view_get_buffer(GTK_TEXT_VIEW(output)), "", -1);
-	gtk_label_set_text(GTK_LABEL(status_label), "Working… (don't pull out the disk)");
+	gtk_label_set_text(GTK_LABEL(status_label), _("Working… (don't pull out the disk)"));
 	if (!g_spawn_async_with_pipes(NULL, (char **)argv, NULL, G_SPAWN_DO_NOT_REAP_CHILD,
 	                              NULL, NULL, &pid, NULL, &out, NULL, NULL)) {
-		gtk_label_set_text(GTK_LABEL(status_label), "Could not start " TOOL ".");
+		gtk_label_set_text(GTK_LABEL(status_label), _("Could not start /usr/lib/my-distro/disk-tool."));
 		return;
 	}
 	running = 1;
@@ -293,17 +295,17 @@ static void start_tool(const char *const *argv)
 static int dangerous_ok(const char *path, int kind)
 {
 	const char *name = strrchr(path, '/') + 1;
-	GtkWidget *d = gtk_dialog_new_with_buttons("Careful", GTK_WINDOW(win), GTK_DIALOG_MODAL,
-		"Cancel", GTK_RESPONSE_CANCEL, "Delete everything", GTK_RESPONSE_OK, NULL);
+	GtkWidget *d = gtk_dialog_new_with_buttons(_("Careful"), GTK_WINDOW(win), GTK_DIALOG_MODAL,
+		_("Cancel"), GTK_RESPONSE_CANCEL, _("Delete everything"), GTK_RESPONSE_OK, NULL);
 	GtkWidget *box = gtk_dialog_get_content_area(GTK_DIALOG(d)), *l = gtk_label_new(NULL);
 	GtkWidget *e = gtk_entry_new();
 	char *m = g_markup_printf_escaped(
-		"<span size='x-large' weight='bold' foreground='#e5484d'>%s</span>\n\n"
+		_("<span size='x-large' weight='bold' foreground='#e5484d'>%s</span>\n\n"
 		"Everything on <b>%s</b> will be deleted: documents, photos, other systems "
 		"(Windows) that may be on it. This can't be undone.\n\n"
-		"To go on, type its name: <b>%s</b>",
-		kind == K_SYSTEM_DISK ? "This is the disk my-distro runs from!" :
-		                        "This is a disk inside the computer!", path, name);
+		"To go on, type its name: <b>%s</b>"),
+		kind == K_SYSTEM_DISK ? _("This is the disk my-distro runs from!") :
+		                        _("This is a disk inside the computer!"), path, name);
 	int ok = 0;
 
 	gtk_container_set_border_width(GTK_CONTAINER(box), 18);
@@ -351,8 +353,8 @@ static void on_format(GtkButton *b, gpointer d)
 	(void)b; (void)d;
 	if (!chosen(path, sizeof path, &kind, fs, sizeof fs, &disk) || kind == K_SYSTEM_USED)
 		return;
-	dlg = gtk_dialog_new_with_buttons("Format", GTK_WINDOW(win), GTK_DIALOG_MODAL,
-		"Cancel", GTK_RESPONSE_CANCEL, "Format", GTK_RESPONSE_OK, NULL);
+	dlg = gtk_dialog_new_with_buttons(_("Format"), GTK_WINDOW(win), GTK_DIALOG_MODAL,
+		_("Cancel"), GTK_RESPONSE_CANCEL, _("Format"), GTK_RESPONSE_OK, NULL);
 	box = gtk_dialog_get_content_area(GTK_DIALOG(dlg));
 	gtk_container_set_border_width(GTK_CONTAINER(box), 18);
 	gtk_box_set_spacing(GTK_BOX(box), 12);
@@ -360,21 +362,21 @@ static void on_format(GtkButton *b, gpointer d)
 	gtk_grid_set_row_spacing(GTK_GRID(grid), 8);
 	gtk_grid_set_column_spacing(GTK_GRID(grid), 10);
 	type = gtk_combo_box_text_new();
-	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(type), "vfat", "FAT32 (works everywhere; files up to 4 GB)");
-	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(type), "exfat", "exFAT (Windows, Mac, cameras; big files)");
-	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(type), "ext4", "ext4 (Linux only; best for backups)");
-	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(type), "ntfs", "NTFS (Windows disks)");
+	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(type), "vfat", _("FAT32 (works everywhere; files up to 4 GB)"));
+	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(type), "exfat", _("exFAT (Windows, Mac, cameras; big files)"));
+	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(type), "ext4", _("ext4 (Linux only; best for backups)"));
+	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(type), "ntfs", _("NTFS (Windows disks)"));
 	gtk_combo_box_set_active(GTK_COMBO_BOX(type), 1);
 	label = gtk_entry_new();
 	gtk_entry_set_max_length(GTK_ENTRY(label), 16);
 	gtk_entry_set_text(GTK_ENTRY(label), "USB");
-	gtk_grid_attach(GTK_GRID(grid), gtk_label_new("Filesystem"), 0, 0, 1, 1);
+	gtk_grid_attach(GTK_GRID(grid), gtk_label_new(_("Filesystem")), 0, 0, 1, 1);
 	gtk_grid_attach(GTK_GRID(grid), type, 1, 0, 1, 1);
-	gtk_grid_attach(GTK_GRID(grid), gtk_label_new("Name"), 0, 1, 1, 1);
+	gtk_grid_attach(GTK_GRID(grid), gtk_label_new(_("Name")), 0, 1, 1, 1);
 	gtk_grid_attach(GTK_GRID(grid), label, 1, 1, 1, 1);
 	gtk_box_pack_start(GTK_BOX(box), grid, FALSE, FALSE, 0);
-	note = gtk_label_new(disk ? "The whole disk gets one new partition. Everything on it is deleted." :
-	                            "Everything on this partition is deleted.");
+	note = gtk_label_new(disk ? _("The whole disk gets one new partition. Everything on it is deleted.") :
+	                            _("Everything on this partition is deleted."));
 	gtk_label_set_xalign(GTK_LABEL(note), 0);
 	gtk_box_pack_start(GTK_BOX(box), note, FALSE, FALSE, 0);
 	gtk_widget_show_all(dlg);
@@ -432,10 +434,10 @@ static int manage(void)
 	GtkWidget *box, *scroll, *row, *refresh, *oscroll, *hint;
 	GtkCellRenderer *r;
 	GtkTreeViewColumn *col;
-	static const char *titles[] = { NULL, "Disk / partition", "Size", "Filesystem", "Open in" };
+	const char *titles[] = { NULL, _("Disk / partition"), _("Size"), _("Filesystem"), _("Open in") };
 
 	win = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-	gtk_window_set_title(GTK_WINDOW(win), "Disks");
+	gtk_window_set_title(GTK_WINDOW(win), _("Disks"));
 	gtk_window_set_default_size(GTK_WINDOW(win), 720, 520);
 	gtk_window_set_icon_name(GTK_WINDOW(win), "drive-harddisk");
 	g_signal_connect(win, "delete-event", G_CALLBACK(on_close), NULL);
@@ -464,27 +466,27 @@ static int manage(void)
 	gtk_container_add(GTK_CONTAINER(scroll), tree);
 	gtk_box_pack_start(GTK_BOX(box), scroll, TRUE, TRUE, 0);
 
-	hint = gtk_label_new("Partitions the running system uses can't be changed. "
-	                     "Formatting deletes everything on the disk or partition.");
+	hint = gtk_label_new(_("Partitions the running system uses can't be changed. "
+	                     "Formatting deletes everything on the disk or partition."));
 	gtk_label_set_xalign(GTK_LABEL(hint), 0);
 	gtk_label_set_line_wrap(GTK_LABEL(hint), TRUE);
 	gtk_style_context_add_class(gtk_widget_get_style_context(hint), "dim-label");
 	gtk_box_pack_start(GTK_BOX(box), hint, FALSE, FALSE, 0);
 
 	row = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
-	btn_format = gtk_button_new_with_label("Format…");
+	btn_format = gtk_button_new_with_label(_("Format…"));
 	gtk_style_context_add_class(gtk_widget_get_style_context(btn_format), "destructive-action");
 	g_signal_connect(btn_format, "clicked", G_CALLBACK(on_format), NULL);
-	btn_check = gtk_button_new_with_label("Check and repair");
+	btn_check = gtk_button_new_with_label(_("Check and repair"));
 	g_signal_connect(btn_check, "clicked", G_CALLBACK(on_check), NULL);
-	refresh = gtk_button_new_with_label("Refresh");
+	refresh = gtk_button_new_with_label(_("Refresh"));
 	g_signal_connect(refresh, "clicked", G_CALLBACK(on_refresh), NULL);
 	gtk_box_pack_start(GTK_BOX(row), btn_format, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(row), btn_check, FALSE, FALSE, 0);
 	gtk_box_pack_end(GTK_BOX(row), refresh, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(box), row, FALSE, FALSE, 0);
 
-	status_label = gtk_label_new("Choose a disk or partition.");
+	status_label = gtk_label_new(_("Choose a disk or partition."));
 	gtk_label_set_xalign(GTK_LABEL(status_label), 0);
 	gtk_label_set_line_wrap(GTK_LABEL(status_label), TRUE);
 	gtk_box_pack_start(GTK_BOX(box), status_label, FALSE, FALSE, 0);
@@ -519,7 +521,7 @@ static void on_admin_done(GPid pid, gint st, gpointer d)
 	g_spawn_close_pid(pid);
 	if (WIFEXITED(st) && WEXITSTATUS(st) == 2) {
 		ask_root_password();
-		gtk_label_set_text(GTK_LABEL(auth_err), "Wrong password.");
+		gtk_label_set_text(GTK_LABEL(auth_err), _("Wrong password."));
 		return;
 	}
 	gtk_main_quit();
@@ -555,11 +557,11 @@ static void on_auth(GtkDialog *dlg, gint response, gpointer entry)
 
 static void ask_root_password(void)
 {
-	GtkWidget *d = gtk_dialog_new_with_buttons("Disks", NULL, 0,
-		"Cancel", GTK_RESPONSE_CANCEL, "OK", GTK_RESPONSE_OK, NULL);
+	GtkWidget *d = gtk_dialog_new_with_buttons(_("Disks"), NULL, 0,
+		_("Cancel"), GTK_RESPONSE_CANCEL, _("OK"), GTK_RESPONSE_OK, NULL);
 	GtkWidget *box = gtk_dialog_get_content_area(GTK_DIALOG(d));
-	GtkWidget *l = gtk_label_new("Formatting and repairing disks needs the administrator "
-	                             "(root) password.");
+	GtkWidget *l = gtk_label_new(_("Formatting and repairing disks needs the administrator "
+	                             "(root) password."));
 	GtkWidget *e = gtk_entry_new();
 
 	gtk_window_set_icon_name(GTK_WINDOW(d), "drive-harddisk");
@@ -583,6 +585,7 @@ int main(int argc, char **argv)
 {
 	int manage_mode = argc > 1 && !strcmp(argv[1], "--manage");
 
+	i18n_init();
 	gtk_init(&argc, &argv);
 	if (geteuid() == 0)
 		return manage();

@@ -19,6 +19,8 @@
  */
 #include <glib/gstdio.h>
 #include <gtk/gtk.h>
+
+#include "i18n.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -265,7 +267,7 @@ static void follow_audio(void)
 
 	if (d && strcmp(d->address, last_audio) != 0) {
 		const char *argv[] = { "my-notify", "-i", "audio-headphones", d->name,
-			"Sound now plays here. Programs that were already playing: start them again.",
+			_("Sound now plays here. Programs that were already playing: start them again."),
 			NULL };
 
 		set_sound_output(d->address, d->name);
@@ -345,9 +347,9 @@ static gboolean refresh(gpointer d)
 	(void)d;
 	refresh_id = 0;
 	if (!read_state()) {
-		status("No Bluetooth adapter found. This computer has none, it is switched off "
+		status(_("No Bluetooth adapter found. This computer has none, it is switched off "
 		       "(some laptops have a key or switch for it), or my-distro has no driver "
-		       "for it. A USB Bluetooth stick works too.");
+		       "for it. A USB Bluetooth stick works too."));
 		gtk_widget_set_sensitive(power_switch, FALSE);
 		ndevs = 0;
 	} else {
@@ -356,11 +358,11 @@ static gboolean refresh(gpointer d)
 		gtk_switch_set_active(GTK_SWITCH(power_switch), powered);
 		updating_switch = 0;
 		if (!busy)
-			status(!powered ? "Bluetooth is off." :
-			       discovering ? "Looking for devices… Put your device into pairing "
-			                     "mode (see its manual; often: hold its power button)." :
-			       ndevs ? "Choose a device and click Connect." :
-			               "Click Search to find devices nearby.");
+			status(!powered ? _("Bluetooth is off.") :
+			       discovering ? _("Looking for devices… Put your device into pairing "
+			                     "mode (see its manual; often: hold its power button).") :
+			       ndevs ? _("Choose a device and click Connect.") :
+			               _("Click Search to find devices nearby."));
 	}
 	fill_list();
 	update_buttons();
@@ -400,10 +402,10 @@ static void on_power(GObject *o, GParamSpec *ps, gpointer d)
 	err = set_prop(adapter, "org.bluez.Adapter1", "Powered",
 	               g_variant_new_boolean(gtk_switch_get_active(GTK_SWITCH(o))));
 	if (err) {
-		error_box("Bluetooth could not be switched on.",
+		error_box(_("Bluetooth could not be switched on."),
 		          strstr(err, "rfkill") || strstr(err, "Blocked") ?
-		          "It is switched off with a key or a switch on the laptop "
-		          "(often Fn with an aeroplane or Bluetooth sign). Switch it on there." : err);
+		          _("It is switched off with a key or a switch on the laptop "
+		          "(often Fn with an aeroplane or Bluetooth sign). Switch it on there.") : err);
 		g_free(err);
 	}
 	refresh(NULL);
@@ -425,7 +427,7 @@ static void on_search(GtkButton *b, gpointer d)
 	(void)b; (void)d;
 	err = call(adapter, "org.bluez.Adapter1", "StartDiscovery", NULL, 5000);
 	if (err && !strstr(err, "InProgress") && !strstr(err, "progress")) {
-		error_box("Could not search for devices.", err);
+		error_box(_("Could not search for devices."), err);
 		g_free(err);
 		return;
 	}
@@ -464,14 +466,14 @@ static void job_done(GObject *src, GAsyncResult *res, gpointer data)
 	}
 	busy = 0;
 	{
-		char *what = g_strdup_printf(j->step == 0 ? "Could not pair with %s." :
-		                             "Could not connect to %s.", j->name);
+		char *what = g_strdup_printf(j->step == 0 ? _("Could not pair with %s.") :
+		                             _("Could not connect to %s."), j->name);
 
 		error_box(what, strstr(err->message, "AuthenticationFailed") ||
 		                strstr(err->message, "AuthenticationRejected") ?
-		          "Pairing was refused. Put the device into pairing mode and try again." :
+		          _("Pairing was refused. Put the device into pairing mode and try again.") :
 		          strstr(err->message, "Timeout") || strstr(err->message, "Page") ?
-		          "It didn't answer. Is it switched on, nearby and in pairing mode?" :
+		          _("It didn't answer. Is it switched on, nearby and in pairing mode?") :
 		          err->message);
 		g_free(what);
 	}
@@ -486,7 +488,7 @@ static void job_next(struct job *j)
 
 	switch (j->step) {
 	case 0:
-		status("Pairing… If the device shows a number or asks for one, follow it.");
+		status(_("Pairing… If the device shows a number or asks for one, follow it."));
 		g_dbus_connection_call(bus, BLUEZ, j->path, "org.bluez.Device1", "Pair", NULL,
 		                       NULL, G_DBUS_CALL_FLAGS_NONE, 90000, NULL, job_done, j);
 		return;
@@ -494,13 +496,13 @@ static void job_next(struct job *j)
 		/* trusted: may connect by itself next time (headphones, mice) */
 		err = set_prop(j->path, "org.bluez.Device1", "Trusted", g_variant_new_boolean(TRUE));
 		g_free(err);
-		status("Connecting…");
+		status(_("Connecting…"));
 		g_dbus_connection_call(bus, BLUEZ, j->path, "org.bluez.Device1", "Connect", NULL,
 		                       NULL, G_DBUS_CALL_FLAGS_NONE, 30000, NULL, job_done, j);
 		return;
 	default:
 		busy = 0;
-		status("Connected.");
+		status(_("Connected."));
 		g_free(j);
 		refresh(NULL);
 	}
@@ -548,7 +550,7 @@ static void on_forget(GtkButton *b, gpointer d)
 	err = call(adapter, "org.bluez.Adapter1", "RemoveDevice",
 	           g_variant_new("(o)", v->path), 10000);
 	if (err) {
-		error_box("Could not forget the device.", err);
+		error_box(_("Could not forget the device."), err);
 		g_free(err);
 	}
 	refresh(NULL);
@@ -589,7 +591,7 @@ static const char *name_of(const char *path)
 	for (int i = 0; i < ndevs; i++)
 		if (!strcmp(devs[i].path, path))
 			return devs[i].name;
-	return "the device";
+	return _("the device");
 }
 
 static int ask_yes_no(const char *question, const char *detail)
@@ -607,8 +609,8 @@ static int ask_yes_no(const char *question, const char *detail)
 /* Asks for a PIN or passkey. NULL = cancelled. */
 static char *ask_code(const char *question)
 {
-	GtkWidget *d = gtk_dialog_new_with_buttons("Bluetooth", GTK_WINDOW(win), GTK_DIALOG_MODAL,
-		"Cancel", GTK_RESPONSE_CANCEL, "OK", GTK_RESPONSE_OK, NULL);
+	GtkWidget *d = gtk_dialog_new_with_buttons(_("Bluetooth"), GTK_WINDOW(win), GTK_DIALOG_MODAL,
+		_("Cancel"), GTK_RESPONSE_CANCEL, _("OK"), GTK_RESPONSE_OK, NULL);
 	GtkWidget *box = gtk_dialog_get_content_area(GTK_DIALOG(d)), *e = gtk_entry_new();
 	char *code = NULL;
 
@@ -660,13 +662,13 @@ static void agent_call(GDBusConnection *c, const char *sender, const char *path,
 
 	if (!strcmp(method, "RequestConfirmation")) {
 		g_variant_get(p, "(&ou)", &dev, &key);
-		snprintf(text, sizeof text, "Does %s show the number %06u?", name_of(dev), key);
-		if (ask_yes_no(text, "Then click Yes (and confirm on the device, if it asks too)."))
+		snprintf(text, sizeof text, _("Does %s show the number %06u?"), name_of(dev), key);
+		if (ask_yes_no(text, _("Then click Yes (and confirm on the device, if it asks too).")))
 			g_dbus_method_invocation_return_value(inv, NULL);
 		else
 			reject(inv);
 	} else if (!strcmp(method, "RequestPinCode") || !strcmp(method, "RequestPasskey")) {
-		snprintf(text, sizeof text, "PIN for %s (often 0000 or 1234, see its manual):",
+		snprintf(text, sizeof text, _("PIN for %s (often 0000 or 1234, see its manual):"),
 		         name_of(dev));
 		if (!(code = ask_code(text)) || !code[0])
 			reject(inv);
@@ -681,20 +683,20 @@ static void agent_call(GDBusConnection *c, const char *sender, const char *path,
 			guint16 typed;
 
 			g_variant_get(p, "(&ouq)", &dev, &key, &typed);
-			snprintf(text, sizeof text, "Type %06u on %s, then press Enter on it.",
+			snprintf(text, sizeof text, _("Type %06u on %s, then press Enter on it."),
 			         key, name_of(dev));
 		} else {
 			const char *pin;
 
 			g_variant_get(p, "(&o&s)", &dev, &pin);
-			snprintf(text, sizeof text, "Type %s on %s, then press Enter on it.",
+			snprintf(text, sizeof text, _("Type %s on %s, then press Enter on it."),
 			         pin, name_of(dev));
 		}
 		show_code(text);
 		g_dbus_method_invocation_return_value(inv, NULL);
 	} else if (!strcmp(method, "RequestAuthorization")) {
-		snprintf(text, sizeof text, "Pair with %s?", name_of(dev));
-		if (ask_yes_no(text, "It asks to be paired with this computer."))
+		snprintf(text, sizeof text, _("Pair with %s?"), name_of(dev));
+		if (ask_yes_no(text, _("It asks to be paired with this computer.")))
 			g_dbus_method_invocation_return_value(inv, NULL);
 		else
 			reject(inv);
@@ -758,9 +760,10 @@ int main(int argc, char **argv)
 		return 0;
 	}
 
+	i18n_init();
 	gtk_init(&argc, &argv);
 	win = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-	gtk_window_set_title(GTK_WINDOW(win), "Bluetooth");
+	gtk_window_set_title(GTK_WINDOW(win), _("Bluetooth"));
 	gtk_window_set_default_size(GTK_WINDOW(win), 520, 460);
 	gtk_window_set_icon_name(GTK_WINDOW(win), "my-bluetooth");
 	g_signal_connect(win, "destroy", G_CALLBACK(gtk_main_quit), NULL);
@@ -770,7 +773,7 @@ int main(int argc, char **argv)
 	gtk_container_add(GTK_CONTAINER(win), box);
 
 	top = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 10);
-	gtk_box_pack_start(GTK_BOX(top), gtk_label_new("Bluetooth"), FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(top), gtk_label_new(_("Bluetooth")), FALSE, FALSE, 0);
 	power_switch = gtk_switch_new();
 	g_signal_connect(power_switch, "notify::active", G_CALLBACK(on_power), NULL);
 	gtk_box_pack_end(GTK_BOX(top), power_switch, FALSE, FALSE, 0);
@@ -791,11 +794,11 @@ int main(int argc, char **argv)
 	gtk_box_pack_start(GTK_BOX(box), scroll, TRUE, TRUE, 0);
 
 	row = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
-	btn_search = button("Search", G_CALLBACK(on_search));
-	btn_connect = button("Connect", G_CALLBACK(on_connect));
+	btn_search = button(_("Search"), G_CALLBACK(on_search));
+	btn_connect = button(_("Connect"), G_CALLBACK(on_connect));
 	gtk_style_context_add_class(gtk_widget_get_style_context(btn_connect), "suggested-action");
-	btn_disconnect = button("Disconnect", G_CALLBACK(on_disconnect));
-	btn_forget = button("Forget", G_CALLBACK(on_forget));
+	btn_disconnect = button(_("Disconnect"), G_CALLBACK(on_disconnect));
+	btn_forget = button(_("Forget"), G_CALLBACK(on_forget));
 	gtk_box_pack_start(GTK_BOX(row), btn_search, FALSE, FALSE, 0);
 	gtk_box_pack_end(GTK_BOX(row), btn_connect, FALSE, FALSE, 0);
 	gtk_box_pack_end(GTK_BOX(row), btn_disconnect, FALSE, FALSE, 0);
@@ -805,7 +808,7 @@ int main(int argc, char **argv)
 
 	bus = g_bus_get_sync(G_BUS_TYPE_SYSTEM, NULL, &err);
 	if (!bus) {
-		status("The system's message bus (D-Bus) is not running.");
+		status(_("The system's message bus (D-Bus) is not running."));
 		g_clear_error(&err);
 	} else {
 		watch_bluez();

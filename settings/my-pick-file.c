@@ -9,6 +9,8 @@
  * --mime is given), then runs PROGRAM ARGS... FILE. Cancel starts nothing.
  */
 #include <gtk/gtk.h>
+
+#include "i18n.h"
 #include <string.h>
 #include <unistd.h>
 
@@ -21,6 +23,7 @@ int main(int argc, char **argv)
 	const char *folder;
 	int i = 1, n = 0, pictures = 0;
 
+	i18n_init();
 	gtk_init(&argc, &argv);
 	for (; i + 1 < argc && strncmp(argv[i], "--", 2) == 0; i += 2) {
 		if (strcmp(argv[i], "--title") == 0) {
@@ -38,7 +41,7 @@ int main(int argc, char **argv)
 	}
 
 	d = gtk_file_chooser_dialog_new(title, NULL, GTK_FILE_CHOOSER_ACTION_OPEN,
-		"Cancel", GTK_RESPONSE_CANCEL, "Open", GTK_RESPONSE_ACCEPT, NULL);
+		_("Cancel"), GTK_RESPONSE_CANCEL, _("Open"), GTK_RESPONSE_ACCEPT, NULL);
 	gtk_window_set_icon_name(GTK_WINDOW(d), "document-open");
 	if (filter) {
 		GtkFileFilter *all = gtk_file_filter_new();

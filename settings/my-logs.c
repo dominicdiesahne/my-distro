@@ -5,6 +5,9 @@
  *   System messages   /var/log/messages (syslogd: logins, Wi-Fi, VPN, updates…)
  *   Kernel            the kernel's messages (dmesg): hardware, drivers
  *   NAME.log          the other logs in /var/log (desktop, power, …)
+ *   Crashes           programs that crashed (/var/crash/crashes.log, written
+ *                     by /usr/lib/my-distro/crash; "my-logs --crashes")
+ *   Audit             what the kernel's audit system noted (auditd; root only)
  *
  * The search field keeps only the lines with that text in them (upper and
  * lower case don't matter). New lines appear by themselves.
@@ -17,6 +20,8 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
+
+#include "i18n.h"
 
 #define LOG_DIR  "/var/log"
 #define MAX_READ (2 * 1024 * 1024)   /* big logs: only their end */
@@ -37,7 +42,7 @@ static char *read_kernel(void)
 
 	if (!g_spawn_sync(NULL, (char **)argv, NULL, G_SPAWN_STDERR_TO_DEV_NULL,
 	                  NULL, NULL, &out, NULL, NULL, NULL))
-		return g_strdup("Could not read the kernel's messages.");
+		return g_strdup(_("Could not read the kernel's messages."));
 	return out;
 }
 
@@ -60,7 +65,7 @@ static char *read_log(const char *path)
 	fclose(f);
 	if (start > 0) {                  /* begin at a whole line */
 		char *nl = strchr(data, '\n');
-		char *rest = g_strdup_printf("(only the last 2 MB)\n%s", nl ? nl + 1 : data);
+		char *rest = g_strdup_printf("%s\n%s", _("(only the last 2 MB)"), nl ? nl + 1 : data);
 
 		g_free(data);
 		return rest;
@@ -125,9 +130,9 @@ static void show(int keep_bottom)
 			gtk_text_buffer_apply_tag(buf, hit_tag, &s, &e);
 			it = e;
 		}
-		label = g_strdup_printf("%d of %d lines", shown, total);
+		label = g_strdup_printf(_("%d of %d lines"), shown, total);
 	} else {
-		label = g_strdup_printf("%d lines", total);
+		label = g_strdup_printf(ngettext("%d line", "%d lines", total), total);
 	}
 	gtk_label_set_text(GTK_LABEL(info), label);
 	if (bottom)
@@ -147,8 +152,8 @@ static void load(int keep_bottom)
 		text = read_kernel();
 	} else if (!(text = read_log(current))) {
 		text = g_strdup_printf(access(current, F_OK) == 0 ?
-			"Only the administrator (root) may read %s." :
-			"%s doesn't exist (yet).", current);
+			_("Only the administrator (root) may read %s.") :
+			_("%s doesn't exist (yet)."), current);
 	}
 	if (current[0] && stat(current, &st) == 0) {
 		cur_mtime = st.st_mtime;
@@ -217,8 +222,10 @@ static void fill_sources(void)
 	struct dirent *e;
 	GPtrArray *names = g_ptr_array_new_with_free_func(g_free);
 
-	add_source("System messages", LOG_DIR "/messages");
-	add_source("Kernel", NULL);
+	add_source(_("System messages"), LOG_DIR "/messages");
+	add_source(_("Kernel"), NULL);
+	add_source(_("Crashes"), "/var/crash/crashes.log");
+	add_source(_("Audit"), "/var/lib/audit/audit.log");
 	while (dir && (e = readdir(dir))) {
 		char path[300];
 		struct stat st;
@@ -244,11 +251,14 @@ static void fill_sources(void)
 int main(int argc, char **argv)
 {
 	GtkWidget *win, *paned, *left, *right, *top, *refresh;
-	GtkCssProvider *css = gtk_css_provider_new();
+	GtkCssProvider *css;
+	int crashes = argc > 1 && strcmp(argv[1], "--crashes") == 0;
 
+	i18n_init();
 	gtk_init(&argc, &argv);
+	css = gtk_css_provider_new();
 	win = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-	gtk_window_set_title(GTK_WINDOW(win), "System logs");
+	gtk_window_set_title(GTK_WINDOW(win), _("System logs"));
 	gtk_window_set_default_size(GTK_WINDOW(win), 900, 560);
 	gtk_window_set_icon_name(GTK_WINDOW(win), "text-x-generic");
 	g_signal_connect(win, "destroy", G_CALLBACK(gtk_main_quit), NULL);
@@ -269,11 +279,11 @@ int main(int argc, char **argv)
 	gtk_container_set_border_width(GTK_CONTAINER(right), 10);
 	top = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
 	search = gtk_search_entry_new();
-	gtk_entry_set_placeholder_text(GTK_ENTRY(search), "Search (only lines with this text)");
+	gtk_entry_set_placeholder_text(GTK_ENTRY(search), _("Search (only lines with this text)"));
 	g_signal_connect(search, "search-changed", G_CALLBACK(on_search), NULL);
 	info = gtk_label_new("");
 	gtk_style_context_add_class(gtk_widget_get_style_context(info), "dim-label");
-	refresh = gtk_button_new_with_label("Refresh");
+	refresh = gtk_button_new_with_label(_("Refresh"));
 	g_signal_connect(refresh, "clicked", G_CALLBACK(on_refresh), NULL);
 	gtk_box_pack_start(GTK_BOX(top), search, TRUE, TRUE, 0);
 	gtk_box_pack_start(GTK_BOX(top), info, FALSE, FALSE, 0);
@@ -302,7 +312,7 @@ int main(int argc, char **argv)
 	fill_sources();
 	gtk_widget_show_all(win);
 	gtk_list_box_select_row(GTK_LIST_BOX(sources),
-	                        gtk_list_box_get_row_at_index(GTK_LIST_BOX(sources), 0));
+	                        gtk_list_box_get_row_at_index(GTK_LIST_BOX(sources), crashes ? 2 : 0));
 	gtk_widget_grab_focus(search);
 	g_timeout_add_seconds(2, poll_log, NULL);
 	gtk_main();

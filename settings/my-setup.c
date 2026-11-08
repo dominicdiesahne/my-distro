@@ -23,6 +23,11 @@
  *   - computer name: /etc/hostname, /etc/hosts and the `hostname` command
  *   - keyboard: /etc/X11/xorg.conf.d/00-keyboard.conf for the next start of
  *     X, and `setxkbmap` for the X server that runs now
+ *   - language: /etc/my-distro/language, the system's (each user can pick
+ *     their own in Settings); the setup starts again in the new language
+ *   - parental controls: /etc/my-distro/parental, one line per user with
+ *     the hours they may use the computer and minutes per day; my-login
+ *     enforces them
  */
 #define _GNU_SOURCE
 #include <crypt.h>
@@ -39,6 +44,7 @@
 #include <unistd.h>
 
 #include "settings.h"
+#include "i18n.h"
 
 #define SETUP_DONE    "/etc/my-distro/setup-done"
 #define KEYBOARD_CONF "/etc/X11/xorg.conf.d/00-keyboard.conf"
@@ -46,20 +52,20 @@
 #define FIRST_UID     1000             /* normal users have this uid or higher */
 
 static const struct { const char *id, *label; } layouts[] = {
-	{ "de", "German" },
-	{ "at", "German (Austria)" },
-	{ "ch", "German (Switzerland)" },
-	{ "us", "English (US)" },
-	{ "gb", "English (UK)" },
-	{ "fr", "French" },
-	{ "it", "Italian" },
-	{ "es", "Spanish" },
-	{ "nl", "Dutch" },
-	{ "pl", "Polish" },
-	{ "cz", "Czech" },
-	{ "hu", "Hungarian" },
-	{ "ro", "Romanian" },
-	{ "tr", "Turkish" },
+	{ "de", N_("German") },
+	{ "at", N_("German (Austria)") },
+	{ "ch", N_("German (Switzerland)") },
+	{ "us", N_("English (US)") },
+	{ "gb", N_("English (UK)") },
+	{ "fr", N_("French") },
+	{ "it", N_("Italian") },
+	{ "es", N_("Spanish") },
+	{ "nl", N_("Dutch") },
+	{ "pl", N_("Polish") },
+	{ "cz", N_("Czech") },
+	{ "hu", N_("Hungarian") },
+	{ "ro", N_("Romanian") },
+	{ "tr", N_("Turkish") },
 	{ NULL, NULL }
 };
 
@@ -234,9 +240,9 @@ static const char *save_user(const char *name, const char *fullname,
 	char home[300];
 
 	if (pw && pw->pw_uid < FIRST_UID)
-		return "That user name belongs to the system. Choose another one.";
+		return _("That user name belongs to the system. Choose another one.");
 	if (pw && must_be_new)
-		return "That user already exists.";
+		return _("That user already exists.");
 	if (!pw) {
 		snprintf(home, sizeof home, "/home/%s", name);
 		const char *add[] = { "/usr/sbin/adduser", "-D", "-H", "-h", home,
@@ -244,7 +250,7 @@ static const char *save_user(const char *name, const char *fullname,
 		const char *skel[] = { "/bin/cp", "-a", "/etc/skel", home, NULL };
 
 		if (run(add) != 0 || !(pw = getpwnam(name)))
-			return "Could not create the user.";
+			return _("Could not create the user.");
 		if (access(home, F_OK) != 0 && run(skel) != 0)
 			g_mkdir_with_parents(home, 0755);
 	} else {
@@ -255,7 +261,7 @@ static const char *save_user(const char *name, const char *fullname,
 	gid_t gid = pw->pw_gid;
 
 	if (set_password(name, password) != 0)
-		return "Could not set the password.";
+		return _("Could not set the password.");
 	/* netdev: may choose Wi-Fi networks (wpa_supplicant's control socket),
 	 * connect VPNs and use Bluetooth; audio: may use the sound card
 	 * (/dev/snd); video: the webcam (/dev/video*) and 3D graphics (/dev/dri);
@@ -293,7 +299,7 @@ static const char *set_admin(const char *name, int admin)
 	const char *del[] = { "/usr/sbin/delgroup", name, "wheel", NULL };
 
 	if (run(admin ? add : del) != 0)
-		return "Could not change the administrator rights.";
+		return _("Could not change the administrator rights.");
 	return NULL;
 }
 
@@ -305,10 +311,10 @@ static const char *remove_user(const char *name)
 	const char *del[] = { "/usr/sbin/deluser", name, NULL };
 
 	if (!pw || pw->pw_uid < FIRST_UID)
-		return "No such user.";
+		return _("No such user.");
 	snprintf(home, sizeof home, "%s", pw->pw_dir);
 	if (run(del) != 0)
-		return "Could not remove the user.";
+		return _("Could not remove the user.");
 	/* only a folder in /home that is clearly theirs */
 	if (strncmp(home, "/home/", 6) == 0 && !strstr(home, "..") && strchr(home + 6, '/') == NULL) {
 		const char *rm[] = { "/bin/rm", "-rf", home, NULL };
@@ -327,7 +333,7 @@ static const char *set_hostname(const char *name)
 
 	snprintf(line, sizeof line, "%s\n", name);
 	if (write_file("/etc/hostname", line, 0644) != 0)
-		return "Could not write /etc/hostname.";
+		return _("Could not write /etc/hostname.");
 	run(cmd);
 
 	/* /etc/hosts: the line "127.0.1.1 <name>" lets programs find this computer */
@@ -387,7 +393,7 @@ static const char *set_layout(const char *id)
 
 	g_free(text);
 	run(now);                         /* the X server that runs now */
-	return ok ? NULL : "Could not save the keyboard layout.";
+	return ok ? NULL : _("Could not save the keyboard layout.");
 }
 
 /* --- Time zone ------------------------------------------------------------------ */
@@ -432,12 +438,12 @@ static const char *set_timezone(const char *id)
 	char target[300], text[80];
 
 	if (!valid_timezone(id))
-		return "Unknown time zone.";
+		return _("Unknown time zone.");
 	snprintf(target, sizeof target, "../usr/share/zoneinfo/%s", id);
 	unlink("/etc/localtime.new");
 	if (symlink(target, "/etc/localtime.new") != 0 ||
 	    rename("/etc/localtime.new", "/etc/localtime") != 0)
-		return "Could not set the time zone.";
+		return _("Could not set the time zone.");
 	snprintf(text, sizeof text, "%s\n", id);
 	write_file("/etc/timezone", text, 0644);
 	return NULL;
@@ -517,7 +523,7 @@ static void on_city(GtkComboBox *c, gpointer d)
 		return;
 	err = set_timezone(id);
 	if (tz_status_label)
-		gtk_label_set_text(GTK_LABEL(tz_status_label), err ? err : "Time zone set.");
+		gtk_label_set_text(GTK_LABEL(tz_status_label), err ? err : _("Time zone set."));
 }
 
 static void on_region(GtkComboBox *c, gpointer city)
@@ -580,6 +586,97 @@ static int live_system(void)
 	return live;
 }
 
+/* --- Language -------------------------------------------------------------------- */
+
+static const struct { const char *id, *label; } languages[] = { LANGUAGES, { NULL, NULL } };
+
+static const char *set_system_language(const char *id)
+{
+	char text[64];
+
+	snprintf(text, sizeof text, "%s\n", id);
+	return write_file(SYSTEM_LANGUAGE, text, 0644) == 0 ? NULL
+	       : _("Could not save the language.");
+}
+
+static GtkWidget *language_combo(void)
+{
+	GtkWidget *c = gtk_combo_box_text_new();
+	char now[64];
+
+	for (int i = 0; languages[i].id; i++)
+		gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(c), languages[i].id, languages[i].label);
+	i18n_system_language(now, sizeof now);
+	if (!gtk_combo_box_set_active_id(GTK_COMBO_BOX(c), now))
+		gtk_combo_box_set_active(GTK_COMBO_BOX(c), 0);
+	return c;
+}
+
+/* --- Parental controls -------------------------------------------------------- */
+/* /etc/my-distro/parental: "NAME FROM-TO MINUTES" per user, e.g.
+ * "lena 08:00-20:00 120" ("-" = any time, 0 = no daily limit). my-login
+ * reads it (see login/my-login.c). */
+#define PARENTAL "/etc/my-distro/parental"
+
+struct limits { int on_hours, from, to, minutes; };   /* from/to: minutes of the day */
+
+static void get_limits(const char *name, struct limits *l)
+{
+	char *text = NULL, **lines;
+
+	*l = (struct limits){ 0, 8 * 60, 20 * 60, 0 };
+	if (!g_file_get_contents(PARENTAL, &text, NULL, NULL))
+		return;
+	lines = g_strsplit(text, "\n", -1);
+	for (int i = 0; lines[i]; i++) {
+		char u[64], hours[32];
+		int min, h1, m1, h2, m2;
+
+		if (lines[i][0] == '#' || sscanf(lines[i], "%63s %31s %d", u, hours, &min) != 3 ||
+		    strcmp(u, name) != 0)
+			continue;
+		if (sscanf(hours, "%d:%d-%d:%d", &h1, &m1, &h2, &m2) == 4)
+			*l = (struct limits){ 1, h1 * 60 + m1, h2 * 60 + m2, 0 };
+		l->minutes = min > 0 ? min : 0;
+	}
+	g_strfreev(lines);
+	g_free(text);
+}
+
+/* Writes the user's line (or removes it: no limits at all) */
+static const char *set_limits(const char *name, const struct limits *l)
+{
+	char *text = NULL, **lines;
+	GString *out = g_string_new("# Parental controls (\"Users and system\"): NAME FROM-TO "
+	                            "MINUTES_PER_DAY\n# \"-\" = any time, 0 = no daily limit. "
+	                            "my-login enforces them.\n");
+	int ok;
+
+	if (g_file_get_contents(PARENTAL, &text, NULL, NULL)) {
+		lines = g_strsplit(text, "\n", -1);
+		for (int i = 0; lines[i]; i++) {
+			char u[64];
+
+			if (!lines[i][0] || lines[i][0] == '#' ||
+			    (sscanf(lines[i], "%63s", u) == 1 && strcmp(u, name) == 0))
+				continue;
+			g_string_append_printf(out, "%s\n", lines[i]);
+		}
+		g_strfreev(lines);
+		g_free(text);
+	}
+	if (l->on_hours || l->minutes > 0) {
+		if (l->on_hours)
+			g_string_append_printf(out, "%s %02d:%02d-%02d:%02d %d\n", name, l->from / 60,
+			                       l->from % 60, l->to / 60, l->to % 60, l->minutes);
+		else
+			g_string_append_printf(out, "%s - %d\n", name, l->minutes);
+	}
+	ok = write_file(PARENTAL, out->str, 0644) == 0;
+	g_string_free(out, TRUE);
+	return ok ? NULL : _("Could not save the parental controls.");
+}
+
 /* --- Small helpers for building windows -------------------------------------- */
 
 static GtkWidget *label(const char *text, const char *css_class)
@@ -609,13 +706,28 @@ static GtkWidget *layout_combo(void)
 	char now[16];
 
 	for (int i = 0; layouts[i].id; i++)
-		gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(c), layouts[i].id, layouts[i].label);
+		gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(c), layouts[i].id, _(layouts[i].label));
 	current_layout(now, sizeof now);
 	if (!gtk_combo_box_set_active_id(GTK_COMBO_BOX(c), now)) {
 		gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(c), now, now);  /* set by hand */
 		gtk_combo_box_set_active_id(GTK_COMBO_BOX(c), now);
 	}
 	return c;
+}
+
+/* First boot: a language was chosen. Save it and start the setup again in
+ * that language (GTK reads the translations only at the start). */
+static char **fb_argv;
+
+static void on_language_first(GtkComboBox *c, gpointer d)
+{
+	const char *id = gtk_combo_box_get_active_id(c);
+
+	(void)d;
+	if (!id || set_system_language(id))
+		return;
+	setenv("LANG", id, 1);
+	execv("/proc/self/exe", fb_argv);
 }
 
 static void on_layout(GtkComboBox *c, gpointer d)
@@ -636,9 +748,9 @@ static const char *text_of(GtkWidget *e)
 static const char *check_passwords(GtkWidget *a, GtkWidget *b)
 {
 	if (!text_of(a)[0])
-		return "Choose a password.";
+		return _("Choose a password.");
 	if (strcmp(text_of(a), text_of(b)) != 0)
-		return "The two passwords are not the same.";
+		return _("The two passwords are not the same.");
 	return NULL;
 }
 
@@ -750,16 +862,16 @@ static void on_account_next(GtkButton *b, gpointer d)
 
 	(void)b; (void)d;
 	if (!valid_username(user))
-		err = "User name: small letters a-z, digits, - and _, starting with a letter.";
+		err = _("User name: small letters a-z, digits, - and _, starting with a letter.");
 	else if ((pw = getpwnam(user)) && pw->pw_uid < FIRST_UID)
-		err = "That user name belongs to the system. Choose another one.";
+		err = _("That user name belongs to the system. Choose another one.");
 	else if (!valid_fullname(text_of(fb_fullname)))
-		err = "The name can't contain \":\".";
+		err = _("The name can't contain \":\".");
 	else
 		err = check_passwords(fb_pass1, fb_pass2);
 	if (!err && !gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(fb_same_root)) &&
 	    check_passwords(fb_root1, fb_root2))
-		err = "Administrator password: type the same password twice.";
+		err = _("Administrator password: type the same password twice.");
 	show_error(fb_err_account, err);
 	if (!err)
 		fb_go("computer");
@@ -774,14 +886,14 @@ static void on_finish(GtkButton *b, gpointer d)
 
 	(void)b; (void)d;
 	if (!valid_hostname(text_of(fb_hostname))) {
-		show_error(fb_err_computer, "Computer name: letters, digits and -, no spaces.");
+		show_error(fb_err_computer, _("Computer name: letters, digits and -, no spaces."));
 		return;
 	}
 	fullname = g_strdup(text_of(fb_fullname)[0] ? text_of(fb_fullname) : user);
 	err = save_user(user, fullname, text_of(fb_pass1), fb_theme, 0);
 	g_free(fullname);
 	if (!err && set_password("root", root_pw) != 0)
-		err = "Could not set the administrator password.";
+		err = _("Could not set the administrator password.");
 	/* Your password is the root password too: you are the administrator,
 	 * so you may also use sudo. With a separate root password you aren't
 	 * (that's what a separate one is for). */
@@ -801,7 +913,7 @@ static void on_finish(GtkButton *b, gpointer d)
 		remove_user(DEMO_USER);
 	write_setup_done("done");
 
-	msg = g_strdup_printf("Your account \"%s\" is ready. Log in with your new password.",
+	msg = g_strdup_printf(_("Your account \"%s\" is ready. Log in with your new password."),
 	                      user);
 	gtk_label_set_text(GTK_LABEL(fb_done_text), msg);
 	g_free(msg);
@@ -901,7 +1013,7 @@ static int first_boot(void)
 
 	/* No window manager runs yet: the window covers the screen by itself. */
 	win = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-	gtk_window_set_title(GTK_WINDOW(win), "Setup");
+	gtk_window_set_title(GTK_WINDOW(win), _("Setup"));
 	gtk_window_set_decorated(GTK_WINDOW(win), FALSE);
 	gtk_window_set_default_size(GTK_WINDOW(win), screen.width, screen.height);
 	gtk_window_move(GTK_WINDOW(win), screen.x, screen.y);
@@ -925,17 +1037,20 @@ static int first_boot(void)
 	gtk_box_pack_start(GTK_BOX(card), fb_stack, FALSE, FALSE, 0);
 
 	/* 1. Welcome and keyboard (first, so the passwords are typed right) */
-	p = fb_page("welcome", "Welcome to my-distro",
-	            "Let's set up your computer: your keyboard, your own account and a "
+	p = fb_page("welcome", _("Welcome to my-distro"),
+	            _("Let's set up your computer: your keyboard, your own account and a "
 	            "name for the computer. It takes a minute, and you can change all of "
-	            "it later in \"Users and system\".");
+	            "it later in \"Users and system\"."));
+	row = language_combo();
+	g_signal_connect(row, "changed", G_CALLBACK(on_language_first), NULL);
+	add_field(p, "Language / Sprache", row);
 	row = layout_combo();
 	g_signal_connect(row, "changed", G_CALLBACK(on_layout), NULL);
-	add_field(p, "Keyboard layout", row);
-	add_field(p, "Try your keyboard here", entry(0));
-	add_field(p, "Time zone", timezone_widget());
+	add_field(p, _("Keyboard layout"), row);
+	add_field(p, _("Try your keyboard here"), entry(0));
+	add_field(p, _("Time zone"), timezone_widget());
 	if (live) {
-		GtkWidget *skip = gtk_button_new_with_label("Skip: try it with the demo account");
+		GtkWidget *skip = gtk_button_new_with_label(_("Skip: try it with the demo account"));
 
 		gtk_widget_set_halign(skip, GTK_ALIGN_START);
 		gtk_widget_set_margin_top(skip, 14);
@@ -943,25 +1058,25 @@ static int first_boot(void)
 		g_signal_connect(skip, "clicked", G_CALLBACK(on_skip), NULL);
 		gtk_box_pack_start(GTK_BOX(p), skip, FALSE, FALSE, 0);
 		gtk_box_pack_start(GTK_BOX(p),
-			label("The live system keeps nothing after a reboot. Install it to "
-			      "keep your account.", "dim"), FALSE, FALSE, 0);
+			label(_("The live system keeps nothing after a reboot. Install it to "
+			      "keep your account."), "dim"), FALSE, FALSE, 0);
 	}
-	set_next(p, buttons(NULL, NULL, NULL, "Next", G_CALLBACK(on_page), "account"));
+	set_next(p, buttons(NULL, NULL, NULL, _("Next"), G_CALLBACK(on_page), "account"));
 
 	/* 2. Account */
-	p = fb_page("account", "Your account", NULL);
+	p = fb_page("account", _("Your account"), NULL);
 	fb_fullname = entry(0);
 	fb_username = entry(0);
 	fb_pass1 = entry(1);
 	fb_pass2 = entry(1);
 	g_signal_connect(fb_fullname, "changed", G_CALLBACK(on_fullname), NULL);
 	g_signal_connect(fb_username, "changed", G_CALLBACK(on_username), NULL);
-	add_field(p, "Your name", fb_fullname);
-	add_field(p, "User name (to log in)", fb_username);
-	add_field(p, "Password", fb_pass1);
-	add_field(p, "Password again", fb_pass2);
+	add_field(p, _("Your name"), fb_fullname);
+	add_field(p, _("User name (to log in)"), fb_username);
+	add_field(p, _("Password"), fb_pass1);
+	add_field(p, _("Password again"), fb_pass2);
 	fb_same_root = gtk_check_button_new_with_label(
-		"Use this password for the administrator (root) too");
+		_("Use this password for the administrator (root) too"));
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(fb_same_root), TRUE);
 	gtk_widget_set_margin_top(fb_same_root, 10);
 	g_signal_connect(fb_same_root, "toggled", G_CALLBACK(on_same_root), NULL);
@@ -969,8 +1084,8 @@ static int first_boot(void)
 	fb_root_box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 8);
 	fb_root1 = entry(1);
 	fb_root2 = entry(1);
-	add_field(fb_root_box, "Administrator password", fb_root1);
-	add_field(fb_root_box, "Administrator password again", fb_root2);
+	add_field(fb_root_box, _("Administrator password"), fb_root1);
+	add_field(fb_root_box, _("Administrator password again"), fb_root2);
 	gtk_box_pack_start(GTK_BOX(p), fb_root_box, FALSE, FALSE, 0);
 	/* hidden until "same password" is unticked; show_all below skips it */
 	gtk_widget_show_all(fb_root_box);
@@ -978,21 +1093,21 @@ static int first_boot(void)
 	gtk_widget_set_no_show_all(fb_root_box, TRUE);
 	fb_err_account = label("", "error");
 	gtk_box_pack_start(GTK_BOX(p), fb_err_account, FALSE, FALSE, 4);
-	set_next(p, buttons("Back", G_CALLBACK(on_page), "welcome",
-	                    "Next", G_CALLBACK(on_account_next), NULL));
+	set_next(p, buttons(_("Back"), G_CALLBACK(on_page), "welcome",
+	                    _("Next"), G_CALLBACK(on_account_next), NULL));
 
 	/* 3. Computer name and theme */
-	p = fb_page("computer", "Your computer", NULL);
+	p = fb_page("computer", _("Your computer"), NULL);
 	fb_hostname = entry(0);
 	gethostname(host, sizeof host - 1);
 	gtk_entry_set_text(GTK_ENTRY(fb_hostname), host);
-	add_field(p, "Computer name (shown on the network and the login screen)", fb_hostname);
+	add_field(p, _("Computer name (shown on the network and the login screen)"), fb_hostname);
 	flow = gtk_flow_box_new();
 	gtk_flow_box_set_selection_mode(GTK_FLOW_BOX(flow), GTK_SELECTION_NONE);
 	gtk_flow_box_set_min_children_per_line(GTK_FLOW_BOX(flow), 3);
 	gtk_flow_box_set_max_children_per_line(GTK_FLOW_BOX(flow), 3);
 	for (int i = 0; themes[i].name; i++) {
-		GtkWidget *b = gtk_radio_button_new_with_label(group, themes[i].label);
+		GtkWidget *b = gtk_radio_button_new_with_label(group, _(themes[i].label));
 
 		group = gtk_radio_button_get_group(GTK_RADIO_BUTTON(b));
 		gtk_toggle_button_set_mode(GTK_TOGGLE_BUTTON(b), FALSE);
@@ -1000,17 +1115,17 @@ static int first_boot(void)
 		g_signal_connect(b, "toggled", G_CALLBACK(on_theme_button), (gpointer)themes[i].name);
 		gtk_container_add(GTK_CONTAINER(flow), b);
 	}
-	add_field(p, "Colors (more choices later in Settings)", flow);
+	add_field(p, _("Colors (more choices later in Settings)"), flow);
 	fb_err_computer = label("", "error");
 	gtk_box_pack_start(GTK_BOX(p), fb_err_computer, FALSE, FALSE, 4);
-	set_next(p, buttons("Back", G_CALLBACK(on_page), "account",
-	                    "Finish", G_CALLBACK(on_finish), NULL));
+	set_next(p, buttons(_("Back"), G_CALLBACK(on_page), "account",
+	                    _("Finish"), G_CALLBACK(on_finish), NULL));
 
 	/* 4. Done */
-	p = fb_page("done", "All set", NULL);
+	p = fb_page("done", _("All set"), NULL);
 	fb_done_text = label("", NULL);
 	gtk_box_pack_start(GTK_BOX(p), fb_done_text, FALSE, FALSE, 0);
-	set_next(p, buttons(NULL, NULL, NULL, "Go to the login screen",
+	set_next(p, buttons(NULL, NULL, NULL, _("Go to the login screen"),
 	                    G_CALLBACK(gtk_main_quit), NULL));
 
 	g_signal_connect(win, "destroy", G_CALLBACK(gtk_main_quit), NULL);
@@ -1023,7 +1138,7 @@ static int first_boot(void)
 
 /* --- "Users and system" ------------------------------------------------------------ */
 
-static GtkWidget *mg_admin;
+static GtkWidget *mg_admin, *mg_parental;
 static GtkWidget *mg_win, *mg_users, *mg_remove, *mg_status, *mg_hostname,
 	*mg_root1, *mg_root2;
 static const char *mg_me;          /* who started it (can't remove themselves) */
@@ -1047,8 +1162,9 @@ static void on_user_selected(GtkListBox *l, GtkListBoxRow *r, gpointer d)
 	(void)l; (void)d;
 	gtk_widget_set_sensitive(mg_remove, name && strcmp(name, mg_me) != 0);
 	gtk_widget_set_sensitive(mg_admin, name != NULL);
+	gtk_widget_set_sensitive(mg_parental, name != NULL);
 	gtk_button_set_label(GTK_BUTTON(mg_admin), name && is_admin(name)
-	                     ? "Remove administrator rights" : "Make administrator");
+	                     ? _("Remove administrator rights") : _("Make administrator"));
 }
 
 static void fill_users(void)
@@ -1085,7 +1201,8 @@ static void fill_users(void)
 	gtk_widget_show_all(mg_users);
 	gtk_widget_set_sensitive(mg_remove, FALSE);
 	gtk_widget_set_sensitive(mg_admin, FALSE);
-	gtk_button_set_label(GTK_BUTTON(mg_admin), "Make administrator");
+	gtk_widget_set_sensitive(mg_parental, FALSE);
+	gtk_button_set_label(GTK_BUTTON(mg_admin), _("Make administrator"));
 }
 
 /* Administrator rights (sudo) on or off for the chosen user */
@@ -1101,8 +1218,8 @@ static void on_admin(GtkButton *b, gpointer d)
 	name = g_strdup(user);              /* fill_users() frees the row's copy */
 	admin = !is_admin(name);
 	status(set_admin(name, admin), admin
-	       ? "Administrator now: may use sudo with their own password."
-	       : "No administrator rights any more.");
+	       ? _("Administrator now: may use sudo with their own password.")
+	       : _("No administrator rights any more."));
 	fill_users();
 	g_free(name);
 }
@@ -1112,7 +1229,7 @@ static GtkWidget *form_dialog(const char *title, GtkWidget **grid)
 {
 	GtkWidget *d = gtk_dialog_new_with_buttons(title, GTK_WINDOW(mg_win),
 		GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
-		"Cancel", GTK_RESPONSE_CANCEL, "OK", GTK_RESPONSE_OK, NULL);
+		_("Cancel"), GTK_RESPONSE_CANCEL, _("OK"), GTK_RESPONSE_OK, NULL);
 
 	*grid = gtk_grid_new();
 	gtk_grid_set_row_spacing(GTK_GRID(*grid), 10);
@@ -1135,29 +1252,29 @@ static void grid_row(GtkWidget *grid, int y, const char *caption, GtkWidget *w)
 
 static void on_add_user(GtkButton *b, gpointer d)
 {
-	GtkWidget *grid, *dlg = form_dialog("Add a user", &grid);
+	GtkWidget *grid, *dlg = form_dialog(_("Add a user"), &grid);
 	GtkWidget *full = entry(0), *name = entry(0), *p1 = entry(1), *p2 = entry(1);
 	GtkWidget *err = label("", "error");
 
 	(void)b; (void)d;
-	grid_row(grid, 0, "Full name", full);
-	grid_row(grid, 1, "User name", name);
-	grid_row(grid, 2, "Password", p1);
-	grid_row(grid, 3, "Password again", p2);
+	grid_row(grid, 0, _("Full name"), full);
+	grid_row(grid, 1, _("User name"), name);
+	grid_row(grid, 2, _("Password"), p1);
+	grid_row(grid, 3, _("Password again"), p2);
 	gtk_grid_attach(GTK_GRID(grid), err, 0, 4, 2, 1);
 	gtk_widget_show_all(dlg);
 	while (gtk_dialog_run(GTK_DIALOG(dlg)) == GTK_RESPONSE_OK) {
 		const char *e = NULL;
 
 		if (!valid_username(text_of(name)))
-			e = "User name: small letters a-z, digits, - and _, starting with a letter.";
+			e = _("User name: small letters a-z, digits, - and _, starting with a letter.");
 		else if (!valid_fullname(text_of(full)))
-			e = "The full name can't contain \":\".";
+			e = _("The full name can't contain \":\".");
 		else if (!(e = check_passwords(p1, p2)))
 			e = save_user(text_of(name), text_of(full)[0] ? text_of(full) : text_of(name),
 			              text_of(p1), NULL, 1);
 		if (!e) {
-			status(NULL, "User added.");
+			status(NULL, _("User added."));
 			fill_users();
 			break;
 		}
@@ -1174,23 +1291,112 @@ static void on_password(GtkButton *b, gpointer d)
 
 	(void)b; (void)d;
 	if (!user) {
-		status("Choose a user in the list first.", NULL);
+		status(_("Choose a user in the list first."), NULL);
 		return;
 	}
-	title = g_strdup_printf("New password for %s", user);
+	title = g_strdup_printf(_("New password for %s"), user);
 	dlg = form_dialog(title, &grid);
 	g_free(title);
-	grid_row(grid, 0, "New password", p1);
-	grid_row(grid, 1, "Password again", p2);
+	grid_row(grid, 0, _("New password"), p1);
+	grid_row(grid, 1, _("Password again"), p2);
 	gtk_grid_attach(GTK_GRID(grid), err, 0, 2, 2, 1);
 	gtk_widget_show_all(dlg);
 	while (gtk_dialog_run(GTK_DIALOG(dlg)) == GTK_RESPONSE_OK) {
 		const char *e = check_passwords(p1, p2);
 
 		if (!e && set_password(user, text_of(p1)) != 0)
-			e = "Could not set the password.";
+			e = _("Could not set the password.");
 		if (!e) {
-			status(NULL, "Password changed.");
+			status(NULL, _("Password changed."));
+			break;
+		}
+		gtk_label_set_text(GTK_LABEL(err), e);
+	}
+	gtk_widget_destroy(dlg);
+}
+
+/* "08:00" -> minutes of the day, -1 if it isn't a time */
+static int parse_time(const char *s)
+{
+	int h, m;
+	char end;
+
+	if (sscanf(s, "%d:%d%c", &h, &m, &end) != 2 || h < 0 || h > 24 || m < 0 || m > 59 ||
+	    (h == 24 && m > 0))
+		return -1;
+	return h * 60 + m;
+}
+
+static void on_limits_toggled(GtkToggleButton *t, gpointer w)
+{
+	gtk_widget_set_sensitive(w, gtk_toggle_button_get_active(t));
+}
+
+/* Parental controls of the chosen user: when and how long they may use
+ * the computer */
+static void on_parental(GtkButton *b, gpointer d)
+{
+	const char *user = selected_user();
+	GtkWidget *grid, *dlg, *hours, *times, *from, *to, *daily, *mins, *err, *note;
+	struct limits l;
+	char t[16], *title;
+
+	(void)b; (void)d;
+	if (!user) {
+		status(_("Choose a user in the list first."), NULL);
+		return;
+	}
+	get_limits(user, &l);
+	title = g_strdup_printf(_("Parental controls for %s"), user);
+	dlg = form_dialog(title, &grid);
+	g_free(title);
+
+	hours = gtk_check_button_new_with_label(_("May use the computer only from"));
+	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(hours), l.on_hours);
+	times = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 6);
+	from = entry(0);
+	to = entry(0);
+	gtk_entry_set_width_chars(GTK_ENTRY(from), 6);
+	gtk_entry_set_width_chars(GTK_ENTRY(to), 6);
+	snprintf(t, sizeof t, "%02d:%02d", l.from / 60, l.from % 60);
+	gtk_entry_set_text(GTK_ENTRY(from), t);
+	snprintf(t, sizeof t, "%02d:%02d", l.to / 60, l.to % 60);
+	gtk_entry_set_text(GTK_ENTRY(to), t);
+	gtk_box_pack_start(GTK_BOX(times), from, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(times), gtk_label_new(_("to")), FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(times), to, FALSE, FALSE, 0);
+	gtk_widget_set_sensitive(times, l.on_hours);
+	g_signal_connect(hours, "toggled", G_CALLBACK(on_limits_toggled), times);
+	gtk_grid_attach(GTK_GRID(grid), hours, 0, 0, 1, 1);
+	gtk_grid_attach(GTK_GRID(grid), times, 1, 0, 1, 1);
+
+	daily = gtk_check_button_new_with_label(_("At most, minutes per day"));
+	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(daily), l.minutes > 0);
+	mins = gtk_spin_button_new_with_range(15, 960, 15);
+	gtk_spin_button_set_value(GTK_SPIN_BUTTON(mins), l.minutes > 0 ? l.minutes : 120);
+	gtk_widget_set_sensitive(mins, l.minutes > 0);
+	g_signal_connect(daily, "toggled", G_CALLBACK(on_limits_toggled), mins);
+	gtk_grid_attach(GTK_GRID(grid), daily, 0, 1, 1, 1);
+	gtk_grid_attach(GTK_GRID(grid), mins, 1, 1, 1, 1);
+
+	note = label(_("The login screen checks this. 5 minutes before the time is over a "
+		"notice appears, then the session ends (unsaved work is lost)."), "dim");
+	gtk_grid_attach(GTK_GRID(grid), note, 0, 2, 2, 1);
+	err = label("", "error");
+	gtk_grid_attach(GTK_GRID(grid), err, 0, 3, 2, 1);
+	gtk_widget_show_all(dlg);
+	while (gtk_dialog_run(GTK_DIALOG(dlg)) == GTK_RESPONSE_OK) {
+		struct limits n = { gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(hours)),
+		                    parse_time(text_of(from)), parse_time(text_of(to)),
+		                    gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(daily))
+		                    ? gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(mins)) : 0 };
+		const char *e = NULL;
+
+		if (n.on_hours && (n.from < 0 || n.to < 0))
+			e = _("Write the times like 08:00 and 20:00.");
+		else if (!(e = set_limits(user, &n))) {
+			status(NULL, n.on_hours || n.minutes ? _("Parental controls saved.")
+			                                     : _("No limits for this user."));
 			break;
 		}
 		gtk_label_set_text(GTK_LABEL(err), e);
@@ -1208,13 +1414,13 @@ static void on_remove_user(GtkButton *b, gpointer d)
 		return;
 	ask = gtk_message_dialog_new(GTK_WINDOW(mg_win), GTK_DIALOG_MODAL,
 		GTK_MESSAGE_WARNING, GTK_BUTTONS_NONE,
-		"Remove the user \"%s\"?", user);
+		_("Remove the user \"%s\"?"), user);
 	gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(ask),
-		"Their home folder /home/%s and all files in it are deleted.", user);
-	gtk_dialog_add_buttons(GTK_DIALOG(ask), "Cancel", GTK_RESPONSE_CANCEL,
-	                       "Remove", GTK_RESPONSE_ACCEPT, NULL);
+		_("Their home folder /home/%s and all files in it are deleted."), user);
+	gtk_dialog_add_buttons(GTK_DIALOG(ask), _("Cancel"), GTK_RESPONSE_CANCEL,
+	                       _("Remove"), GTK_RESPONSE_ACCEPT, NULL);
 	if (gtk_dialog_run(GTK_DIALOG(ask)) == GTK_RESPONSE_ACCEPT) {
-		status(remove_user(user), "User removed.");
+		status(remove_user(user), _("User removed."));
 		fill_users();
 	}
 	gtk_widget_destroy(ask);
@@ -1226,9 +1432,9 @@ static void on_save_hostname(GtkButton *b, gpointer d)
 
 	(void)b; (void)d;
 	if (!valid_hostname(h))
-		status("Computer name: letters, digits and -, no spaces.", NULL);
+		status(_("Computer name: letters, digits and -, no spaces."), NULL);
 	else
-		status(set_hostname(h), "Computer name saved.");
+		status(set_hostname(h), _("Computer name saved."));
 }
 
 static void on_layout_manage(GtkComboBox *c, gpointer d)
@@ -1237,7 +1443,16 @@ static void on_layout_manage(GtkComboBox *c, gpointer d)
 
 	(void)d;
 	if (id)
-		status(set_layout(id), "Keyboard layout changed.");
+		status(set_layout(id), _("Keyboard layout changed."));
+}
+
+static void on_language_manage(GtkComboBox *c, gpointer d)
+{
+	const char *id = gtk_combo_box_get_active_id(c);
+
+	(void)d;
+	if (id)
+		status(set_system_language(id), _("Language saved: it is used from the next login."));
 }
 
 static void on_save_root(GtkButton *b, gpointer d)
@@ -1246,8 +1461,8 @@ static void on_save_root(GtkButton *b, gpointer d)
 
 	(void)b; (void)d;
 	if (!e && set_password("root", text_of(mg_root1)) != 0)
-		e = "Could not set the password.";
-	status(e, "Administrator password changed.");
+		e = _("Could not set the password.");
+	status(e, _("Administrator password changed."));
 	if (!e) {
 		gtk_entry_set_text(GTK_ENTRY(mg_root1), "");
 		gtk_entry_set_text(GTK_ENTRY(mg_root2), "");
@@ -1297,13 +1512,13 @@ static void on_check(GtkButton *b, gpointer d)
 	int st;
 
 	(void)b; (void)d;
-	gtk_label_set_text(GTK_LABEL(up_status), "Looking for updates…");
+	gtk_label_set_text(GTK_LABEL(up_status), _("Looking for updates…"));
 	gtk_widget_set_sensitive(up_install, FALSE);
 	while (gtk_events_pending())
 		gtk_main_iteration();
 	if (!g_spawn_sync(NULL, (char **)argv, NULL, G_SPAWN_STDERR_TO_DEV_NULL,
 	                  NULL, NULL, &out, NULL, &st, NULL) || !out) {
-		gtk_label_set_text(GTK_LABEL(up_status), "my-update is missing.");
+		gtk_label_set_text(GTK_LABEL(up_status), _("my-update is missing."));
 		return;
 	}
 	porcelain(out, "installed", installed, sizeof installed);
@@ -1314,7 +1529,7 @@ static void on_check(GtkButton *b, gpointer d)
 	porcelain(out, "error", err, sizeof err);
 	porcelain(out, "rollback", up_previous, sizeof up_previous);
 	if (up_previous[0]) {
-		char *t = g_strdup_printf("Undo last update (back to %s)…", up_previous);
+		char *t = g_strdup_printf(_("Undo last update (back to %s)…"), up_previous);
 
 		gtk_button_set_label(GTK_BUTTON(up_undo), t);
 		g_free(t);
@@ -1326,18 +1541,18 @@ static void on_check(GtkButton *b, gpointer d)
 	gtk_text_buffer_set_text(up_buf, notes ? notes + 7 : "", -1);
 
 	if (err[0])
-		msg = g_strdup_printf("Could not look for updates (no internet?): %s", err);
+		msg = g_strdup_printf(_("Could not look for updates (no internet?): %s"), err);
 	else if (strcmp(available, "1") != 0)
-		msg = g_strdup_printf("my-distro %s is up to date.", installed);
+		msg = g_strdup_printf(_("my-distro %s is up to date."), installed);
 	else if (strcmp(live, "1") == 0)
-		msg = g_strdup_printf("my-distro %s is out. This is the live system, which "
-			"forgets updates: download the new ISO from GitHub.", up_latest);
+		msg = g_strdup_printf(_("my-distro %s is out. This is the live system, which "
+			"forgets updates: download the new ISO from GitHub."), up_latest);
 	else if (strcmp(installable, "1") != 0)
-		msg = g_strdup_printf("my-distro %s is out, but without an update package: "
-			"download its ISO from GitHub.", up_latest);
+		msg = g_strdup_printf(_("my-distro %s is out, but without an update package: "
+			"download its ISO from GitHub."), up_latest);
 	else
-		msg = g_strdup_printf("my-distro %s is ready to install (you have %s). "
-			"What's new:", up_latest, installed);
+		msg = g_strdup_printf(_("my-distro %s is ready to install (you have %s). "
+			"What's new:"), up_latest, installed);
 	gtk_label_set_text(GTK_LABEL(up_status), msg);
 	gtk_widget_set_sensitive(up_install, strcmp(installable, "1") == 0);
 	g_free(msg);
@@ -1366,16 +1581,16 @@ static void on_install_done(GPid pid, gint st, gpointer d)
 	gtk_widget_set_sensitive(up_undo, TRUE);
 	if (g_spawn_check_wait_status(st, NULL)) {
 		gtk_label_set_text(GTK_LABEL(up_status), up_undoing
-			? "The previous version is back. Restart the computer to finish."
-			: "The update is installed. Restart the computer to finish. "
-			  "If something doesn't work afterwards, \"Undo last update\" goes back.");
+			? _("The previous version is back. Restart the computer to finish.")
+			: _("The update is installed. Restart the computer to finish. "
+			  "If something doesn't work afterwards, \"Undo last update\" goes back."));
 		gtk_widget_show(up_restart);
 		if (up_undoing)
 			gtk_widget_hide(up_undo);
 	} else {
 		gtk_label_set_text(GTK_LABEL(up_status), up_undoing
-			? "Going back did not work: see the messages below."
-			: "The update did not work: see the messages below.");
+			? _("Going back did not work: see the messages below.")
+			: _("The update did not work: see the messages below."));
 		gtk_widget_set_sensitive(up_install, !up_undoing);
 	}
 }
@@ -1393,7 +1608,7 @@ static void run_update(const char *cmd, const char *question, const char *detail
 	ask = gtk_message_dialog_new(GTK_WINDOW(mg_win), GTK_DIALOG_MODAL,
 		GTK_MESSAGE_QUESTION, GTK_BUTTONS_NONE, "%s", question);
 	gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(ask), "%s", detail);
-	gtk_dialog_add_buttons(GTK_DIALOG(ask), "Cancel", GTK_RESPONSE_CANCEL,
+	gtk_dialog_add_buttons(GTK_DIALOG(ask), _("Cancel"), GTK_RESPONSE_CANCEL,
 	                       yes, GTK_RESPONSE_ACCEPT, NULL);
 	answer = gtk_dialog_run(GTK_DIALOG(ask));
 	gtk_widget_destroy(ask);
@@ -1404,7 +1619,7 @@ static void run_update(const char *cmd, const char *question, const char *detail
 	if (!g_spawn_async_with_pipes(NULL, (char **)argv, NULL,
 	                              G_SPAWN_DO_NOT_REAP_CHILD | G_SPAWN_STDERR_TO_DEV_NULL,
 	                              NULL, NULL, &pid, NULL, &out, NULL, NULL)) {
-		gtk_label_set_text(GTK_LABEL(up_status), "Could not start my-update.");
+		gtk_label_set_text(GTK_LABEL(up_status), _("Could not start my-update."));
 		return;
 	}
 	gtk_widget_set_sensitive(up_install, FALSE);
@@ -1422,23 +1637,23 @@ static void run_update(const char *cmd, const char *question, const char *detail
 
 static void on_install(GtkButton *b, gpointer d)
 {
-	char *q = g_strdup_printf("Install my-distro %s?", up_latest);
+	char *q = g_strdup_printf(_("Install my-distro %s?"), up_latest);
 
 	(void)b; (void)d;
-	run_update("install", q, "Your files, users and settings stay. Don't switch the "
-	           "computer off while it installs; restart it afterwards.", "Install",
-	           "Installing… don't switch the computer off.");
+	run_update("install", q, _("Your files, users and settings stay. Don't switch the "
+	           "computer off while it installs; restart it afterwards."), _("Install"),
+	           _("Installing… don't switch the computer off."));
 	g_free(q);
 }
 
 static void on_undo(GtkButton *b, gpointer d)
 {
-	char *q = g_strdup_printf("Go back to my-distro %s?", up_previous);
+	char *q = g_strdup_printf(_("Go back to my-distro %s?"), up_previous);
 
 	(void)b; (void)d;
-	run_update("rollback", q, "The system files of the version before the last update "
-	           "come back. Your files, users and settings stay. Restart afterwards.",
-	           "Go back", "Going back… don't switch the computer off.");
+	run_update("rollback", q, _("The system files of the version before the last update "
+	           "come back. Your files, users and settings stay. Restart afterwards."),
+	           _("Go back"), _("Going back… don't switch the computer off."));
 	g_free(q);
 }
 
@@ -1458,15 +1673,15 @@ static void on_reset(GtkButton *b, gpointer d)
 
 	(void)b; (void)d;
 	ask = gtk_message_dialog_new(GTK_WINDOW(mg_win), GTK_DIALOG_MODAL, GTK_MESSAGE_WARNING,
-		GTK_BUTTONS_NONE, "Delete all users, files and settings?");
+		GTK_BUTTONS_NONE, _("Delete all users, files and settings?"));
 	gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(ask),
-		"Every user and everything in their home folders (documents, pictures, browser "
+		_("Every user and everything in their home folders (documents, pictures, browser "
 		"data) is deleted, and all settings: passwords, computer name, Wi-Fi networks, "
 		"VPNs, time zone. Only the system stays. This can't be undone.\n\n"
 		"The computer restarts now; the reset takes a few seconds, then the setup "
-		"starts as after installing.");
-	gtk_dialog_add_button(GTK_DIALOG(ask), "Cancel", GTK_RESPONSE_CANCEL);
-	yes = gtk_dialog_add_button(GTK_DIALOG(ask), "Reset and restart", GTK_RESPONSE_ACCEPT);
+		"starts as after installing."));
+	gtk_dialog_add_button(GTK_DIALOG(ask), _("Cancel"), GTK_RESPONSE_CANCEL);
+	yes = gtk_dialog_add_button(GTK_DIALOG(ask), _("Reset and restart"), GTK_RESPONSE_ACCEPT);
 	gtk_style_context_add_class(gtk_widget_get_style_context(yes), "destructive-action");
 	gtk_dialog_set_default_response(GTK_DIALOG(ask), GTK_RESPONSE_CANCEL);
 	answer = gtk_dialog_run(GTK_DIALOG(ask));
@@ -1476,7 +1691,7 @@ static void on_reset(GtkButton *b, gpointer d)
 	if (!g_spawn_sync(NULL, (char **)argv, NULL, G_SPAWN_STDOUT_TO_DEV_NULL |
 	                  G_SPAWN_STDERR_TO_DEV_NULL, NULL, NULL, NULL, NULL, &st, NULL) ||
 	    !g_spawn_check_wait_status(st, NULL)) {
-		status("Could not start the factory reset.", NULL);
+		status(_("Could not start the factory reset."), NULL);
 		return;
 	}
 	kill(1, SIGTERM);                 /* our init: TERM = reboot */
@@ -1509,7 +1724,7 @@ static int manage(int open_update)
 		mg_me = "";
 
 	mg_win = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-	gtk_window_set_title(GTK_WINDOW(mg_win), "Users and system");
+	gtk_window_set_title(GTK_WINDOW(mg_win), _("Users and system"));
 	gtk_window_set_default_size(GTK_WINDOW(mg_win), 760, 460);
 	gtk_window_set_icon_name(GTK_WINDOW(mg_win), "system-users");
 	g_signal_connect(mg_win, "destroy", G_CALLBACK(gtk_main_quit), NULL);
@@ -1517,7 +1732,7 @@ static int manage(int open_update)
 	stack = gtk_stack_new();
 
 	/* Users */
-	p = mg_page(stack, "users", "Users");
+	p = mg_page(stack, "users", _("Users"));
 	mg_users = gtk_list_box_new();
 	g_signal_connect(mg_users, "row-selected", G_CALLBACK(on_user_selected), NULL);
 	scroll = gtk_scrolled_window_new(NULL, NULL);
@@ -1525,59 +1740,67 @@ static int manage(int open_update)
 	gtk_container_add(GTK_CONTAINER(scroll), mg_users);
 	gtk_box_pack_start(GTK_BOX(p), scroll, TRUE, TRUE, 0);
 	row = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
-	gtk_box_pack_start(GTK_BOX(row), button("Add user…", G_CALLBACK(on_add_user)), FALSE, FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(row), button("Change password…", G_CALLBACK(on_password)), FALSE, FALSE, 0);
-	mg_admin = button("Make administrator", G_CALLBACK(on_admin));
+	gtk_box_pack_start(GTK_BOX(row), button(_("Add user…"), G_CALLBACK(on_add_user)), FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(row), button(_("Change password…"), G_CALLBACK(on_password)), FALSE, FALSE, 0);
+	mg_admin = button(_("Make administrator"), G_CALLBACK(on_admin));
 	gtk_box_pack_start(GTK_BOX(row), mg_admin, FALSE, FALSE, 0);
-	mg_remove = button("Remove user…", G_CALLBACK(on_remove_user));
+	mg_parental = button(_("Parental controls…"), G_CALLBACK(on_parental));
+	gtk_box_pack_start(GTK_BOX(row), mg_parental, FALSE, FALSE, 0);
+	mg_remove = button(_("Remove user…"), G_CALLBACK(on_remove_user));
 	gtk_box_pack_end(GTK_BOX(row), mg_remove, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(p), row, FALSE, FALSE, 0);
 
 	/* Computer */
-	p = mg_page(stack, "computer", "Computer");
+	p = mg_page(stack, "computer", _("Computer"));
 	gethostname(host, sizeof host - 1);
 	mg_hostname = entry(0);
 	gtk_entry_set_text(GTK_ENTRY(mg_hostname), host);
-	gtk_box_pack_start(GTK_BOX(p), label("Computer name", NULL), FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(p), label(_("Computer name"), NULL), FALSE, FALSE, 0);
 	row = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
 	gtk_box_pack_start(GTK_BOX(row), mg_hostname, TRUE, TRUE, 0);
-	gtk_box_pack_start(GTK_BOX(row), button("Save", G_CALLBACK(on_save_hostname)), FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(row), button(_("Save"), G_CALLBACK(on_save_hostname)), FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(p), row, FALSE, FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(p), label("Keyboard layout (for everyone, at once)", NULL),
+	gtk_box_pack_start(GTK_BOX(p), label(_("Keyboard layout (for everyone, at once)"), NULL),
 	                   FALSE, FALSE, 8);
 	combo = layout_combo();
 	g_signal_connect(combo, "changed", G_CALLBACK(on_layout_manage), NULL);
 	gtk_widget_set_halign(combo, GTK_ALIGN_START);
 	gtk_box_pack_start(GTK_BOX(p), combo, FALSE, FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(p), label("Time zone (for everyone, at once)", NULL),
+	gtk_box_pack_start(GTK_BOX(p), label(_("Time zone (for everyone, at once)"), NULL),
 	                   FALSE, FALSE, 8);
 	combo = timezone_widget();
 	gtk_widget_set_halign(combo, GTK_ALIGN_START);
 	gtk_box_pack_start(GTK_BOX(p), combo, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(p), label(_("Language (for everyone who didn't choose "
+		"their own in Settings; at the next login)"), NULL), FALSE, FALSE, 8);
+	combo = language_combo();
+	g_signal_connect(combo, "changed", G_CALLBACK(on_language_manage), NULL);
+	gtk_widget_set_halign(combo, GTK_ALIGN_START);
+	gtk_box_pack_start(GTK_BOX(p), combo, FALSE, FALSE, 0);
 
 	/* Administrator */
-	p = mg_page(stack, "admin", "Administrator");
-	gtk_box_pack_start(GTK_BOX(p), label("The administrator (root) password is asked "
-		"for when you install the system or change things here.", "dim"), FALSE, FALSE, 0);
+	p = mg_page(stack, "admin", _("Administrator"));
+	gtk_box_pack_start(GTK_BOX(p), label(_("The administrator (root) password is asked "
+		"for when you install the system or change things here."), "dim"), FALSE, FALSE, 0);
 	mg_root1 = entry(1);
 	mg_root2 = entry(1);
-	gtk_box_pack_start(GTK_BOX(p), label("New administrator password", NULL), FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(p), label(_("New administrator password"), NULL), FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(p), mg_root1, FALSE, FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(p), label("Password again", NULL), FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(p), label(_("Password again"), NULL), FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(p), mg_root2, FALSE, FALSE, 0);
-	row = button("Change password", G_CALLBACK(on_save_root));
+	row = button(_("Change password"), G_CALLBACK(on_save_root));
 	gtk_widget_set_halign(row, GTK_ALIGN_START);
 	gtk_box_pack_start(GTK_BOX(p), row, FALSE, FALSE, 0);
 
 	/* System update */
-	p = mg_page(stack, "update", "System update");
+	p = mg_page(stack, "update", _("System update"));
 	g_file_get_contents("/etc/my-distro/version", &version, NULL, NULL);
-	text = g_strdup_printf("Installed: my-distro %s", version ? g_strstrip(version) : "?");
+	text = g_strdup_printf(_("Installed: my-distro %s"), version ? g_strstrip(version) : "?");
 	gtk_box_pack_start(GTK_BOX(p), label(text, NULL), FALSE, FALSE, 0);
 	g_free(text);
 	g_free(version);
-	up_status = label("Look for a new version of my-distro. Updates are checked "
-		"automatically too: the taskbar shows a button when one is out.", "dim");
+	up_status = label(_("Look for a new version of my-distro. Updates are checked "
+		"automatically too: the taskbar shows a button when one is out."), "dim");
 	gtk_box_pack_start(GTK_BOX(p), up_status, FALSE, FALSE, 0);
 	up_view = gtk_text_view_new();
 	gtk_text_view_set_editable(GTK_TEXT_VIEW(up_view), FALSE);
@@ -1590,13 +1813,13 @@ static int manage(int open_update)
 	gtk_container_add(GTK_CONTAINER(scroll), up_view);
 	gtk_box_pack_start(GTK_BOX(p), scroll, TRUE, TRUE, 0);
 	row = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
-	up_check = button("Look for updates", G_CALLBACK(on_check));
-	up_install = button("Install update", G_CALLBACK(on_install));
+	up_check = button(_("Look for updates"), G_CALLBACK(on_check));
+	up_install = button(_("Install update"), G_CALLBACK(on_install));
 	gtk_style_context_add_class(gtk_widget_get_style_context(up_install), "suggested-action");
 	gtk_widget_set_sensitive(up_install, FALSE);
-	up_restart = button("Restart now", G_CALLBACK(on_restart));
+	up_restart = button(_("Restart now"), G_CALLBACK(on_restart));
 	gtk_widget_set_no_show_all(up_restart, TRUE);
-	up_undo = button("Undo last update…", G_CALLBACK(on_undo));
+	up_undo = button(_("Undo last update…"), G_CALLBACK(on_undo));
 	gtk_widget_set_no_show_all(up_undo, TRUE);
 	gtk_box_pack_start(GTK_BOX(row), up_check, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(row), up_install, FALSE, FALSE, 0);
@@ -1605,21 +1828,21 @@ static int manage(int open_update)
 	gtk_box_pack_start(GTK_BOX(p), row, FALSE, FALSE, 0);
 
 	/* Factory reset */
-	p = mg_page(stack, "reset", "Factory reset");
-	gtk_box_pack_start(GTK_BOX(p), label("Puts this computer back to how it was right after "
+	p = mg_page(stack, "reset", _("Factory reset"));
+	gtk_box_pack_start(GTK_BOX(p), label(_("Puts this computer back to how it was right after "
 		"installing my-distro: all users, their files and all settings are deleted. "
-		"The system itself stays, in the version it has now. Then the setup starts.",
+		"The system itself stays, in the version it has now. Then the setup starts."),
 		NULL), FALSE, FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(p), label("If the desktop doesn't start any more: choose "
-		"\"recovery mode\" in the boot menu and run my-reset there.", "dim"), FALSE, FALSE, 0);
-	row = button("Reset this computer…", G_CALLBACK(on_reset));
+	gtk_box_pack_start(GTK_BOX(p), label(_("If the desktop doesn't start any more: choose "
+		"\"recovery mode\" in the boot menu and run my-reset there."), "dim"), FALSE, FALSE, 0);
+	row = button(_("Reset this computer…"), G_CALLBACK(on_reset));
 	gtk_style_context_add_class(gtk_widget_get_style_context(row), "destructive-action");
 	gtk_widget_set_halign(row, GTK_ALIGN_START);
 	gtk_box_pack_start(GTK_BOX(p), row, FALSE, FALSE, 8);
 	if (live_system()) {
 		gtk_widget_set_sensitive(row, FALSE);
-		gtk_box_pack_start(GTK_BOX(p), label("Not needed on the live system: it starts "
-			"fresh every time.", "dim"), FALSE, FALSE, 0);
+		gtk_box_pack_start(GTK_BOX(p), label(_("Not needed on the live system: it starts "
+			"fresh every time."), "dim"), FALSE, FALSE, 0);
 	}
 
 	side = gtk_stack_sidebar_new();
@@ -1664,7 +1887,7 @@ static void on_admin_done(GPid pid, gint st, gpointer d)
 	g_spawn_close_pid(pid);
 	if (WIFEXITED(st) && WEXITSTATUS(st) == 2) {
 		ask_root_password();
-		gtk_label_set_text(GTK_LABEL(auth_err), "Wrong password.");
+		gtk_label_set_text(GTK_LABEL(auth_err), _("Wrong password."));
 		return;
 	}
 	gtk_main_quit();
@@ -1702,14 +1925,14 @@ static void ask_root_password(void)
 {
 	GtkWidget *box, *pass;
 
-	auth_dlg = gtk_dialog_new_with_buttons("Users and system", NULL, 0,
-		"Cancel", GTK_RESPONSE_CANCEL, "OK", GTK_RESPONSE_OK, NULL);
+	auth_dlg = gtk_dialog_new_with_buttons(_("Users and system"), NULL, 0,
+		_("Cancel"), GTK_RESPONSE_CANCEL, _("OK"), GTK_RESPONSE_OK, NULL);
 	gtk_window_set_icon_name(GTK_WINDOW(auth_dlg), "system-users");
 	box = gtk_dialog_get_content_area(GTK_DIALOG(auth_dlg));
 	gtk_container_set_border_width(GTK_CONTAINER(box), 18);
 	gtk_box_set_spacing(GTK_BOX(box), 10);
-	gtk_box_pack_start(GTK_BOX(box), label("Changing users and system settings needs "
-		"the administrator (root) password.", NULL), FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(box), label(_("Changing users and system settings needs "
+		"the administrator (root) password."), NULL), FALSE, FALSE, 0);
 	pass = entry(1);
 	gtk_box_pack_start(GTK_BOX(box), pass, FALSE, FALSE, 0);
 	auth_err = label("", "error");
@@ -1723,6 +1946,11 @@ int main(int argc, char **argv)
 {
 	int first = 0, manage_mode = 0;
 
+	fb_argv = argv;
+	if (geteuid() == 0 && getenv("MY_SETUP_USER") == NULL)
+		i18n_init_system();               /* the setup: the system's language */
+	else
+		i18n_init();                      /* the session's (my-admin passes it on) */
 	for (int i = 1; i < argc; i++) {
 		first |= strcmp(argv[i], "--first-boot") == 0;
 		manage_mode |= strcmp(argv[i], "--manage") == 0;

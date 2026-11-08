@@ -1,28 +1,51 @@
 #!/bin/sh
-# in-session PROGRAM [ARGS]: runs a program on the desktop of whoever is
-# logged in, as that user. For programs that run as root without a desktop
-# of their own: the lid daemon (my-lock) and automount (via notify-session).
-# Exits 1 when nobody is logged in.
+# in-session [--uid UID] PROGRAM [ARGS]: runs a program on the desktop of
+# whoever is logged in, as that user. For programs that run as root without
+# a desktop of their own: the lid daemon (my-lock), automount (via
+# notify-session) and the crash reporter. --uid: on that user's desktop
+# only (with "Switch user" several people can be logged in); without it,
+# the desktop on the screen that is shown now comes first.
+# Exits 1 when nobody (or not that user) is logged in.
 #
 # The desktop's address (DISPLAY) and its session D-Bus (for notifications)
 # are in the environment of the user's window manager (.xinitrc starts the
 # bus); read them from there.
+want=""
+if [ "$1" = --uid ]; then
+	want=$2
+	shift 2
+fi
+# The display on the console shown now: :0 on console 7, :1 on 8, ...
+active=$(cat /sys/class/tty/tty0/active 2>/dev/null)
+active=":$((${active#tty} - 7))"
+
+found=""
 for p in /proc/[0-9]*; do
 	[ "$(cat "$p/comm" 2>/dev/null)" = openbox ] || continue
 	uid=$(awk '/^Uid:/ { print $2; exit }' "$p/status")
-	user=$(awk -F: -v u="$uid" '$3 == u { print $1; exit }' /etc/passwd)
-	env=$(tr '\0' '\n' <"$p/environ")
-	bus=$(echo "$env" | sed -n 's/^DBUS_SESSION_BUS_ADDRESS=//p')
-	display=$(echo "$env" | sed -n 's/^DISPLAY=//p')
-	home=$(echo "$env" | sed -n 's/^HOME=//p')
-	[ -n "$user" ] && [ -n "$display" ] || continue
-	export DISPLAY="$display" DBUS_SESSION_BUS_ADDRESS="$bus" HOME="$home"
-	if [ "$uid" = 0 ]; then
-		"$@"
-	else
-		# "--": BusyBox's su would read the program's options as its own
-		su -s /bin/sh -c 'exec "$@"' -- "$user" in-session "$@"
+	[ -z "$want" ] || [ "$uid" = "$want" ] || continue
+	display=$(tr '\0' '\n' <"$p/environ" | sed -n 's/^DISPLAY=//p')
+	[ -n "$display" ] || continue
+	# the shown screen's session wins; else the first one found
+	if [ -z "$found" ] || [ "${display%.*}" = "$active" ]; then
+		found=$p
 	fi
-	exit $?
 done
-exit 1
+[ -n "$found" ] || exit 1
+
+p=$found
+uid=$(awk '/^Uid:/ { print $2; exit }' "$p/status")
+user=$(awk -F: -v u="$uid" '$3 == u { print $1; exit }' /etc/passwd)
+env=$(tr '\0' '\n' <"$p/environ")
+bus=$(echo "$env" | sed -n 's/^DBUS_SESSION_BUS_ADDRESS=//p')
+display=$(echo "$env" | sed -n 's/^DISPLAY=//p')
+home=$(echo "$env" | sed -n 's/^HOME=//p')
+lang=$(echo "$env" | sed -n 's/^LANG=//p')
+[ -n "$user" ] && [ -n "$display" ] || exit 1
+export DISPLAY="$display" DBUS_SESSION_BUS_ADDRESS="$bus" HOME="$home" LANG="${lang:-en_US.UTF-8}"
+if [ "$uid" = 0 ]; then
+	exec "$@"
+else
+	# "--": BusyBox's su would read the program's options as its own
+	exec su -s /bin/sh -c 'exec "$@"' -- "$user" in-session "$@"
+fi

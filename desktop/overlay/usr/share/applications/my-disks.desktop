@@ -1,6 +1,7 @@
 [Desktop Entry]
 Type=Application
 Name=Disks
+Name[de]=Datenträger
 Comment=Format USB sticks and partitions, check and repair them
 Icon=drive-harddisk
 Exec=my-disks

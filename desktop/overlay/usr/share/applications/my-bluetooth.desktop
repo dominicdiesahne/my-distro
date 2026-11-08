@@ -1,6 +1,7 @@
 [Desktop Entry]
 Type=Application
 Name=Bluetooth
+Name[de]=Bluetooth
 Comment=Switch Bluetooth on and off, pair and connect devices
 Icon=my-bluetooth
 Exec=my-bluetooth

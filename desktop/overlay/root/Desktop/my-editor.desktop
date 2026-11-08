@@ -1,6 +1,7 @@
 [Desktop Entry]
 Type=Application
 Name=Text editor
+Name[de]=Texteditor
 Icon=accessories-text-editor
 Exec=xterm -name editor -T "Text editor" -e nano %f
 Terminal=false

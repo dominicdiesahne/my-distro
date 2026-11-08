@@ -12,11 +12,22 @@
 #   5. the installed system starts with the setup (your own user and
 #      passwords), unless you already did the setup on the live system
 #
+# Optional: "Encrypt the disk". The system partition becomes a LUKS2 volume
+# (cryptsetup; AES-XTS, the passphrase stretched with Argon2id), and the
+# ext4 filesystem lives inside it. GRUB can't open that, so the kernel and
+# a small start-up system (initramfs, made by my-mkinitramfs) go onto the
+# EFI partition, with GRUB's files. At every start the initramfs asks for
+# the passphrase, opens the volume and starts the real system from it.
+#
+# Hibernation: a swap file /swapfile (half the RAM, 1-8 GB) gets the memory
+# when the computer hibernates; the kernel line says where it is.
+#
 # Run it as root, or from the "Install to disk" icon (asks for the root
 # password). Log of the last run: /tmp/my-install.log
 
 T=/mnt/target                  # where the new system is mounted
 LOG=/tmp/my-install.log
+CRYPT_NAME=my-distro-root      # /dev/mapper/NAME: the opened encrypted volume
 
 # "su root -c" keeps the user's PATH, which has no sbin directories; sfdisk,
 # mkfs and grub-install live there.
@@ -43,6 +54,7 @@ die() {
 	echo "Installation failed: $*"
 	echo "Details: $LOG"
 	umount "$T/boot/efi" "$T/dev" "$T" 2>/dev/null
+	cryptsetup close "$CRYPT_NAME" 2>/dev/null
 	quit
 }
 
@@ -118,6 +130,44 @@ case "$NAME" in *[0-9]) P=${DISK}p ;; *) P=$DISK ;; esac
 ESP=${P}2
 ROOT=${P}3
 
+# --- 1b. Encryption (optional) ---------------------------------------------------
+
+echo
+echo "Encrypt the disk? Then nobody can read your files without a passphrase,"
+echo "even with the disk in another computer (a stolen laptop). The computer"
+echo "asks for the passphrase at every start. If you forget it, everything on"
+echo "the disk is lost: nobody can open it, not even with the root password."
+printf "Encrypt the disk? Type yes or no [no]: "
+read -r answer
+ENCRYPT=0
+[ "$answer" = yes ] && ENCRYPT=1
+
+# The X keyboard layout ("de", "us", ...): at the start the passphrase is
+# typed on the text console, which gets the same layout (my-mkinitramfs).
+LAYOUT=$(sed -n 's/.*"XkbLayout"[[:space:]]*"\([a-z]*\)".*/\1/p' \
+	/etc/X11/xorg.conf.d/00-keyboard.conf 2>/dev/null | head -n 1)
+[ -n "$LAYOUT" ] || LAYOUT=us
+
+if [ "$ENCRYPT" = 1 ]; then
+	echo
+	echo "Choose a passphrase: at least 8 characters, several words are good."
+	echo "It is typed with the keyboard layout \"$LAYOUT\" at the start too."
+	while :; do
+		printf "Passphrase: "
+		read -rs PASS1; echo
+		printf "Passphrase again: "
+		read -rs PASS2; echo
+		if [ "${#PASS1}" -lt 8 ]; then
+			echo "Too short: at least 8 characters."
+		elif [ "$PASS1" != "$PASS2" ]; then
+			echo "The two are not the same, try again."
+		else
+			break
+		fi
+	done
+	PASS2=
+fi
+
 echo
 echo "ALL DATA ON $DISK WILL BE DELETED."
 printf "Type yes to continue: "
@@ -143,13 +193,31 @@ done
 [ -b "$ROOT" ] || die "$ROOT did not appear"
 
 run mkfs.fat -F 32 -n EFI "$ESP"
-run mkfs.ext4 -F -q -L my-distro "$ROOT"
+
+# Encrypted: the partition becomes a LUKS2 volume; opened, it appears as
+# /dev/mapper/my-distro-root, and the filesystem goes in there. The
+# passphrase goes to cryptsetup on its standard input (not the command line,
+# where other programs could see it).
+FS_DEV=$ROOT
+if [ "$ENCRYPT" = 1 ]; then
+	echo "      Encrypting (cryptsetup measures this computer's speed first)"
+	printf '%s' "$PASS1" | cryptsetup luksFormat --type luks2 --batch-mode \
+		--label my-distro-crypt --key-file=- "$ROOT" >>"$LOG" 2>&1 ||
+		die "cryptsetup luksFormat did not work"
+	printf '%s' "$PASS1" | cryptsetup open --key-file=- "$ROOT" "$CRYPT_NAME" \
+		>>"$LOG" 2>&1 || die "cryptsetup open did not work"
+	PASS1=
+	FS_DEV=/dev/mapper/$CRYPT_NAME
+	LUKS_UUID=$(cryptsetup luksUUID "$ROOT")
+	[ -n "$LUKS_UUID" ] || die "could not read the encrypted volume's ID"
+fi
+run mkfs.ext4 -F -q -L my-distro "$FS_DEV"
 
 # --- 3. Copy the system ------------------------------------------------------------
 
 echo "[2/5] Copying the system (a minute or two)"
 mkdir -p "$T"
-run mount -t ext4 "$ROOT" "$T"
+run mount -t ext4 "$FS_DEV" "$T"
 
 # Everything at the top level except the virtual filesystems the kernel and
 # init create at every boot, and the mount points.
@@ -167,29 +235,92 @@ run /usr/lib/my-distro/installed-fixups "$T"
 
 [ -f "$T/boot/bzImage" ] || die "the kernel /boot/bzImage is missing in the live system"
 
+# --- 3b. Swap file for hibernation -----------------------------------------------
+# Hibernating writes the memory into swap space; zram (swap in RAM) can't
+# keep it while the power is off. Half the RAM is enough, because the kernel
+# compresses the image and frees caches first. The kernel needs to know
+# where the file starts on the disk (resume_offset, in 4 KB blocks): FIBMAP
+# asks the filesystem for the disk block of the file's first block.
+SWAP_ARGS=""
+ram_mb=$(awk '/^MemTotal:/ { print int($2 / 1024) }' /proc/meminfo)
+swap_mb=$((ram_mb / 2))
+[ "$swap_mb" -lt 1024 ] && swap_mb=1024
+[ "$swap_mb" -gt 8192 ] && swap_mb=8192
+free_mb=$(df -m "$T" | awk 'NR == 2 { print $4 }')
+if [ "$free_mb" -gt $((swap_mb + 3072)) ]; then
+	echo "      Swap file for hibernation ($swap_mb MB)"
+	run dd if=/dev/zero of="$T/swapfile" bs=1M count="$swap_mb"
+	chmod 600 "$T/swapfile"
+	run mkswap "$T/swapfile"
+	sync
+	OFFSET=$(python3 -c 'import fcntl, struct, sys
+with open(sys.argv[1], "rb") as f:
+    print(struct.unpack("i", fcntl.ioctl(f, 1, struct.pack("i", 0)))[0])' "$T/swapfile")
+	[ -n "$OFFSET" ] && [ "$OFFSET" -gt 0 ] && SWAP_ARGS="resume_offset=$OFFSET"
+else
+	echo "      No hibernation: the disk is too small for a swap file"
+fi
+
 # --- 4. Boot loader ---------------------------------------------------------------
 
 echo "[3/5] Installing the boot loader (BIOS and UEFI)"
 mkdir -p "$T/boot/efi"
 run mount -t vfat "$ESP" "$T/boot/efi"
 
+# GRUB's own files and its boot menu go where GRUB can read them: on the
+# system partition, or (encrypted: GRUB can't read that) on the EFI
+# partition, which is $T/boot/efi now.
+if [ "$ENCRYPT" = 1 ]; then
+	GRUB_DIR="$T/boot/efi"
+else
+	GRUB_DIR="$T/boot"
+fi
 # BIOS: GRUB's first stage goes into the disk's first sector, the rest into
 # the BIOS boot partition.
-run grub-install --target=i386-pc --boot-directory="$T/boot" "$DISK"
+run grub-install --target=i386-pc --boot-directory="$GRUB_DIR" "$DISK"
 # UEFI: --removable puts GRUB at EFI/BOOT/BOOTX64.EFI, the path every UEFI
 # firmware starts by itself, so no boot entry in the firmware is needed.
 run grub-install --target=x86_64-efi --efi-directory="$T/boot/efi" \
-	--boot-directory="$T/boot" --removable --no-nvram
+	--boot-directory="$GRUB_DIR" --removable --no-nvram
 
 # The kernel finds its root filesystem by the partition's unique ID, so it
 # doesn't matter whether the disk is called sda, vda or nvme0n1 at boot.
 PARTUUID=$(sfdisk --part-uuid "$DISK" 3)
 [ -n "$PARTUUID" ] || die "could not read the partition ID of $ROOT"
-ARGS="root=PARTUUID=$PARTUUID rootfstype=ext4 rootwait rw init=/sbin/my-init"
 
-cat >"$T/boot/grub/grub.cfg" <<EOF
+if [ "$ENCRYPT" = 1 ]; then
+	# The initramfs finds the volume by its LUKS ID, asks for the passphrase
+	# and starts /sbin/my-init from it (see my-mkinitramfs). It reads what it
+	# needs from /etc/my-distro/crypt; installed-fixups makes it again after
+	# every update, with the new kernel.
+	ESP_UUID=$(sfdisk --part-uuid "$DISK" 2)
+	[ -n "$ESP_UUID" ] || die "could not read the partition ID of $ESP"
+	cat >"$T/etc/my-distro/crypt" <<EOF
+# This system is encrypted (my-install). my-mkinitramfs reads this and puts
+# the kernel and the start-up system that asks for the passphrase onto the
+# EFI partition. keyboard = the layout for typing the passphrase.
+luks_uuid = $LUKS_UUID
+esp_partuuid = $ESP_UUID
+keyboard = $LAYOUT
+EOF
+	run "$T/usr/sbin/my-mkinitramfs" "$T"
+	KERNEL=/my-distro/bzImage
+	INITRD="initrd /my-distro/initramfs.gz"
+	ARGS="my-crypt=$LUKS_UUID rw init=/sbin/my-init $SWAP_ARGS"
+	CFG="$GRUB_DIR/grub/grub.cfg"
+	WHERE="the EFI partition (the system partition is encrypted)"
+else
+	KERNEL=/boot/bzImage
+	INITRD=""
+	ARGS="root=PARTUUID=$PARTUUID rootfstype=ext4 rootwait rw init=/sbin/my-init"
+	[ -n "$SWAP_ARGS" ] && ARGS="$ARGS resume=PARTUUID=$PARTUUID $SWAP_ARGS"
+	CFG="$T/boot/grub/grub.cfg"
+	WHERE="the system partition (GRUB found it there)"
+fi
+
+cat >"$CFG" <<EOF
 # Boot menu of the installed my-distro, written by my-install.
-# The kernel is /boot/bzImage on the system partition (GRUB found it there).
+# The kernel is $KERNEL on $WHERE.
 set default="0"
 set timeout="3"
 
@@ -197,22 +328,29 @@ insmod all_video
 set gfxpayload="1280x800,1024x768,auto"
 
 menuentry "my-distro" {
-	linux /boot/bzImage $ARGS console=tty1 quiet
+	linux $KERNEL $ARGS console=tty1 quiet
+	$INITRD
 }
 
 menuentry "my-distro (safe graphics)" {
-	linux /boot/bzImage $ARGS console=tty1 nomodeset
+	linux $KERNEL $ARGS console=tty1 nomodeset
+	$INITRD
 }
 
 menuentry "my-distro (show boot messages)" {
-	linux /boot/bzImage $ARGS console=ttyS0,115200 console=tty1
+	linux $KERNEL $ARGS console=ttyS0,115200 console=tty1
+	$INITRD
 }
 
 # Text console only, no desktop: to undo an update or reset the system
 menuentry "my-distro (recovery mode)" {
-	linux /boot/bzImage $ARGS console=tty1 my-recovery
+	linux $KERNEL $ARGS console=tty1 my-recovery
+	$INITRD
 }
 EOF
+
+# Again, now that the swap file is there: Hibernate in the Start menu
+run /usr/lib/my-distro/installed-fixups "$T"
 
 # --- 5. Your account -----------------------------------------------------------------
 
@@ -235,9 +373,11 @@ echo "[5/5] Writing everything to the disk"
 sync
 umount "$T/boot/efi"
 umount "$T" || die "could not unmount $T"
+[ "$ENCRYPT" = 1 ] && cryptsetup close "$CRYPT_NAME"
 
 echo
 echo "Done. my-distro is installed on $DISK."
+[ "$ENCRYPT" = 1 ] && echo "It is encrypted: at every start it asks for your passphrase."
 echo "Power off, remove the ISO from the (virtual) CD drive and start again:"
 echo "it boots from the disk, and your files stay after a reboot."
 pause

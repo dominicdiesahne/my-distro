@@ -1,0 +1,74 @@
+#!/bin/sh
+# /init of the initramfs of encrypted installations (my-mkinitramfs packs it).
+# The kernel runs it as the very first program, from RAM:
+#   1. find the encrypted system partition by its LUKS ID (my-crypt=... on
+#      the kernel line, written by my-install)
+#   2. ask for the passphrase and open it (cryptsetup)
+#   3. if the computer was hibernated: tell the kernel where the swap file
+#      is; it then loads the saved memory and continues there (no return)
+#   4. mount the filesystem and hand over to /sbin/my-init on it
+export PATH=/bin:/usr/sbin:/usr/bin
+mount -t proc proc /proc
+mount -t sysfs sysfs /sys
+mount -t devtmpfs devtmpfs /dev
+exec </dev/console >/dev/console 2>&1
+mkdir -p /run/cryptsetup             # cryptsetup's lock files
+NAME=my-distro-root
+
+# Nothing works without the system: say so and keep a shell for repairs
+fail() {
+	echo "my-distro: $*"
+	echo "A shell for repairs (type exit to try again):"
+	sh
+}
+
+uuid="" offset="" init=/sbin/my-init
+for arg in $(cat /proc/cmdline); do
+	case "$arg" in
+	my-crypt=*)      uuid=${arg#my-crypt=} ;;
+	resume_offset=*) offset=${arg#resume_offset=} ;;
+	init=*)          init=${arg#init=} ;;
+	esac
+done
+
+# The desktop's keyboard layout, so the passphrase is typed the same way
+[ -f /etc/keymap ] && loadkmap </etc/keymap
+
+# 1. The partition: its disk may take a few seconds to appear (USB, NVMe)
+dev=""
+while [ -z "$dev" ]; do
+	for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do
+		for b in /sys/class/block/*; do
+			d=/dev/${b##*/}
+			[ "$(cryptsetup luksUUID "$d" 2>/dev/null)" = "$uuid" ] && { dev=$d; break 2; }
+		done
+		sleep 1
+	done
+	[ -n "$dev" ] || fail "the encrypted disk ($uuid) was not found."
+done
+
+# 2. The passphrase (cryptsetup asks 3 times, then we ask again)
+echo
+echo "This computer's disk is encrypted."
+until cryptsetup open --tries 3 "$dev" "$NAME"; do
+	echo "Wrong passphrase. Try again."
+done
+
+# 3. Hibernated? Writing the volume's device number makes the kernel look
+#    for a saved image in the swap file there; if there is one, it restores
+#    it and the system continues where it was (this script ends here).
+if [ -n "$offset" ] && [ -w /sys/power/resume ]; then
+	echo "$offset" >/sys/power/resume_offset
+	for b in /sys/block/dm-*; do
+		[ "$(cat "$b/dm/name" 2>/dev/null)" = "$NAME" ] && cat "$b/dev" >/sys/power/resume
+	done
+fi
+
+# 4. The real system. /dev moves along (the console is open on it); my-init
+#    mounts /proc and /sys again.
+until mount -t ext4 -o rw "/dev/mapper/$NAME" /newroot; do
+	fail "the system partition could not be mounted."
+done
+umount /proc /sys
+mount --move /dev /newroot/dev
+exec switch_root /newroot "$init"

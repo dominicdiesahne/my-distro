@@ -9,6 +9,7 @@
 #define _GNU_SOURCE
 #include "search.h"
 #include "settings.h"
+#include "i18n.h"
 
 #include <X11/Xatom.h>
 #include <X11/Xlib.h>
@@ -115,7 +116,7 @@ static void read_status(char *out, size_t n)
 	search_file("status", file, sizeof file);
 	f = fopen(file, "r");
 	if (!f || !fgets(out, n, f))
-		snprintf(out, n, "Starting the indexer\xe2\x80\xa6");
+		snprintf(out, n, "%s", _("Starting the indexer\xe2\x80\xa6"));
 	out[strcspn(out, "\n")] = '\0';
 	if (f)
 		fclose(f);
@@ -136,7 +137,7 @@ static void redraw(void)
 		text(big, &c_text, 34, 20, 46, query, ww - 80);
 	else
 		text(big, &c_dim, 34, 20, 46,
-		     "Search your files by meaning\xe2\x80\xa6", ww - 80);
+		     _("Search your files by meaning\xe2\x80\xa6"), ww - 80);
 	cx = 34 + (query[0] ? text_width(big, query, strlen(query)) : 0) + 1;
 	if (cx < ww - 40)
 		XftDrawRect(draw, &c_accent, cx, 30, 2, 26);
@@ -147,10 +148,10 @@ static void redraw(void)
 	if (message[0])
 		text(font, &c_err, 24, HEAD_H + 16, 30, message, ww - 48);
 	else if (searched[0] && nhits == 0)
-		text(font, &c_dim, 24, HEAD_H + 16, 30, "Nothing found.", 0);
+		text(font, &c_dim, 24, HEAD_H + 16, 30, _("Nothing found."), 0);
 	else if (!searched[0])
 		text(font, &c_dim, 24, HEAD_H + 16, 30,
-		     "Try something like \"notes about my training plan\" or \"recipe\".", ww - 48);
+		     _("Try something like \"notes about my training plan\" or \"recipe\"."), ww - 48);
 	for (int i = scroll; i < nhits && (i - scroll) * ITEM_H < list_h; i++) {
 		const struct chunk *c = &ix.c[hits[i].chunk];
 		int y = HEAD_H + (i - scroll) * ITEM_H;
@@ -170,7 +171,7 @@ static void redraw(void)
 		text(bold, &c_text, 24, y + 6, 22, name ? name + 1 : c->path, ww - 170);
 		text(small, &c_dim, 24, y + 27, 16, c->path, ww - 170);
 		text(font, &c_text, 24, y + 44, 22,
-		     c->text[0] ? c->text : "(no text, matched by its name)", ww - 48);
+		     c->text[0] ? c->text : _("(no text, matched by its name)"), ww - 48);
 	}
 
 	/* Buttons */
@@ -190,7 +191,7 @@ static void redraw(void)
 			text(bold, i == 0 ? &c_btn_text : &c_text, b->x + 16, b->y, b->h,
 			     b->label, 0);
 		}
-		snprintf(line, sizeof line, nhits ? "%d files found" : "", nhits);
+		snprintf(line, sizeof line, nhits ? _("%d files found") : "", nhits);
 		text(small, &c_dim, 20, wh - FOOT_H, FOOT_H, line, 0);
 	}
 	XCopyArea(dpy, buf, win, DefaultGC(dpy, scr), 0, 0, ww, wh, 0, 0);
@@ -223,7 +224,7 @@ static void run_search(void)
 		return;
 	if (!model_ready) {
 		if (embed_init(MODEL_PATH) != 0) {
-			snprintf(message, sizeof message, "Can't load the search model.");
+			snprintf(message, sizeof message, "%s", _("Can't load the search model."));
 			return;
 		}
 		qvec = malloc(embed_dim() * sizeof(float));
@@ -232,11 +233,11 @@ static void run_search(void)
 	reload_index_if_changed();
 	if (ix.n == 0) {
 		snprintf(message, sizeof message,
-		         "The index is still empty, the indexer is working on it.");
+		         "%s", _("The index is still empty, the indexer is working on it."));
 		return;
 	}
 	if (embed_text(query, qvec) != 0) {
-		snprintf(message, sizeof message, "Couldn't process that query.");
+		snprintf(message, sizeof message, "%s", _("Couldn't process that query."));
 		return;
 	}
 	nhits = index_search(&ix, qvec, query, hits, RESULTS);
@@ -416,6 +417,7 @@ int main(void)
 	int fd;
 
 	signal(SIGCHLD, SIG_IGN);
+	i18n_init();
 	dpy = XOpenDisplay(NULL);
 	if (!dpy) {
 		fprintf(stderr, "my-search-gui: can't open display\n");
@@ -442,9 +444,9 @@ int main(void)
 	color(&c_btn_text, cfg.pal.on_accent);
 	color(&c_err, cfg.pal.dark ? "#ff9a8f" : "#b3261e");
 
-	buttons[0] = (struct button){ "Open", 0, 0, 0, 0, act_open };
-	buttons[1] = (struct button){ "Open folder", 0, 0, 0, 0, act_folder };
-	buttons[2] = (struct button){ "History", 0, 0, 0, 0, act_history };
+	buttons[0] = (struct button){ _("Open"), 0, 0, 0, 0, act_open };
+	buttons[1] = (struct button){ _("Open folder"), 0, 0, 0, 0, act_folder };
+	buttons[2] = (struct button){ _("History"), 0, 0, 0, 0, act_history };
 
 	a.background_pixel = c_bg.pixel;
 	a.event_mask = ExposureMask | ButtonPressMask | KeyPressMask |
@@ -452,10 +454,10 @@ int main(void)
 	win = XCreateWindow(dpy, RootWindow(dpy, scr), 120, 60, ww, wh, 0,
 	                    CopyFromParent, InputOutput, CopyFromParent,
 	                    CWBackPixel | CWEventMask, &a);
-	XStoreName(dpy, win, "Search files");
+	XStoreName(dpy, win, _("Search files"));
 	XChangeProperty(dpy, win, XInternAtom(dpy, "_NET_WM_NAME", False),
 	                XInternAtom(dpy, "UTF8_STRING", False), 8, PropModeReplace,
-	                (unsigned char *)"Search files", 12);
+	                (unsigned char *)_("Search files"), strlen(_("Search files")));
 	XSetClassHint(dpy, win, &class);
 	hints.flags = PMinSize;
 	hints.min_width = 500;

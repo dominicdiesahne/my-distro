@@ -1,7 +1,9 @@
 [Desktop Entry]
 Type=Application
 Name=Users and system
+Name[de]=Benutzer und System
 Comment=Users, passwords, computer name and keyboard layout
+Comment[de]=Benutzer, Passwörter, Computername und Tastatur
 Icon=system-users
 Exec=my-setup
 Terminal=false

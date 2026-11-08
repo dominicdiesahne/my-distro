@@ -20,6 +20,8 @@
 #include <ctype.h>
 #include <dirent.h>
 #include <gtk/gtk.h>
+
+#include "i18n.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -168,7 +170,7 @@ static void status_text(char *buf, size_t len, int *connected)
 	if (state && strcmp(state, "COMPLETED") == 0) {
 		*connected = 1;
 		snprintf(buf, len, "Connected to %s%s%s", ssid ? ssid : "?",
-		         ip ? ", address " : " (getting an address…)", ip ? ip : "");
+		         ip ? _(", address ") : _(" (getting an address…)"), ip ? ip : "");
 	} else if (state && (strstr(state, "ASSOCIAT") || strstr(state, "HANDSHAKE") ||
 	                     strstr(state, "AUTHENTICATING"))) {
 		snprintf(buf, len, "Connecting…");
@@ -299,13 +301,13 @@ static void fill_list(void)
 		char *t;
 
 		if (!nets[i].in_range)
-			t = g_strdup_printf("%s%s", nets[i].current ? "connected   " : "saved   ",
-			                    nets[i].current ? "hidden" : "not found");
+			t = g_strdup_printf("%s%s", nets[i].current ? _("connected   ") : _("saved   "),
+			                    nets[i].current ? "hidden" : _("not found"));
 		else
-			t = g_strdup_printf("%s%s%s", nets[i].current ? "connected   " :
-			                    nets[i].saved_id >= 0 ? "saved   " : "",
-			                    nets[i].enterprise ? "user name   " :
-			                    nets[i].secured ? "secured   " : "open   ",
+			t = g_strdup_printf("%s%s%s", nets[i].current ? _("connected   ") :
+			                    nets[i].saved_id >= 0 ? _("saved   ") : "",
+			                    nets[i].enterprise ? _("user name   ") :
+			                    nets[i].secured ? _("secured   ") : _("open   "),
 			                    bars(nets[i].signal));
 
 		gtk_label_set_markup(GTK_LABEL(name), m);
@@ -366,7 +368,7 @@ static void on_scan(GtkButton *b, gpointer d)
 		read_networks();
 		fill_list();
 	}
-	gtk_label_set_text(GTK_LABEL(status_label), "Looking for networks…");
+	gtk_label_set_text(GTK_LABEL(status_label), _("Looking for networks…"));
 	g_timeout_add(3500, scan_done, NULL);
 }
 
@@ -408,7 +410,7 @@ static gboolean poll_connect(gpointer d)
 	read_networks();
 	fill_list();                      /* sets the status line too: say why after it */
 	gtk_label_set_text(GTK_LABEL(status_label),
-		"Could not connect. Wrong password, or the network is too far away?");
+		_("Could not connect. Wrong password, or the network is too far away?"));
 	keep_message_until = g_get_monotonic_time() + 10 * G_USEC_PER_SEC;
 	poll_id = 0;
 	return G_SOURCE_REMOVE;
@@ -417,7 +419,7 @@ static gboolean poll_connect(gpointer d)
 static void wait_for_connection(void)
 {
 	connect_tries = 0;
-	gtk_label_set_text(GTK_LABEL(status_label), "Connecting…");
+	gtk_label_set_text(GTK_LABEL(status_label), _("Connecting…"));
 	if (poll_id)
 		g_source_remove(poll_id);
 	poll_id = g_timeout_add(1000, poll_connect, NULL);
@@ -426,12 +428,12 @@ static void wait_for_connection(void)
 /* Asks for the password of a secured network. NULL = cancelled. */
 static char *ask_password(const char *ssid)
 {
-	GtkWidget *d = gtk_dialog_new_with_buttons("Wi-Fi password", GTK_WINDOW(win),
-		GTK_DIALOG_MODAL, "Cancel", GTK_RESPONSE_CANCEL, "Connect", GTK_RESPONSE_OK, NULL);
+	GtkWidget *d = gtk_dialog_new_with_buttons(_("Wi-Fi password"), GTK_WINDOW(win),
+		GTK_DIALOG_MODAL, _("Cancel"), GTK_RESPONSE_CANCEL, _("Connect"), GTK_RESPONSE_OK, NULL);
 	GtkWidget *box = gtk_dialog_get_content_area(GTK_DIALOG(d));
-	GtkWidget *entry = gtk_entry_new(), *show = gtk_check_button_new_with_label("Show password");
+	GtkWidget *entry = gtk_entry_new(), *show = gtk_check_button_new_with_label(_("Show password"));
 	GtkWidget *err = gtk_label_new("");
-	char *text = g_strdup_printf("Password for \"%s\":", ssid), *pw = NULL;
+	char *text = g_strdup_printf(_("Password for \"%s\":"), ssid), *pw = NULL;
 
 	gtk_container_set_border_width(GTK_CONTAINER(box), 16);
 	gtk_box_set_spacing(GTK_BOX(box), 8);
@@ -452,7 +454,7 @@ static char *ask_password(const char *ssid)
 			pw = g_strdup(p);
 			break;
 		}
-		gtk_label_set_text(GTK_LABEL(err), "Wi-Fi passwords have 8 to 63 characters.");
+		gtk_label_set_text(GTK_LABEL(err), _("Wi-Fi passwords have 8 to 63 characters."));
 	}
 	gtk_widget_destroy(d);
 	g_free(text);
@@ -534,15 +536,15 @@ static int ask_login(const char *ssid, int security, struct login *l)
 	int y = 0, ok = 0;
 
 	memset(l, 0, sizeof *l);
-	d = gtk_dialog_new_with_buttons(ssid ? "Connect to Wi-Fi" : "Other network", GTK_WINDOW(win),
-		GTK_DIALOG_MODAL, "Cancel", GTK_RESPONSE_CANCEL, "Connect", GTK_RESPONSE_OK, NULL);
+	d = gtk_dialog_new_with_buttons(ssid ? _("Connect to Wi-Fi") : _("Other network"), GTK_WINDOW(win),
+		GTK_DIALOG_MODAL, _("Cancel"), GTK_RESPONSE_CANCEL, _("Connect"), GTK_RESPONSE_OK, NULL);
 	box = gtk_dialog_get_content_area(GTK_DIALOG(d));
 	gtk_container_set_border_width(GTK_CONTAINER(box), 16);
 	gtk_box_set_spacing(GTK_BOX(box), 10);
 
-	title = ssid ? g_strdup_printf("Log in to \"%s\":", ssid)
-	             : g_strdup("A network that doesn't show its name (hidden). Type it exactly, "
-	                        "with upper and lower case:");
+	title = ssid ? g_strdup_printf(_("Log in to \"%s\":"), ssid)
+	             : g_strdup(_("A network that doesn't show its name (hidden). Type it exactly, "
+	                        "with upper and lower case:"));
 	{
 		GtkWidget *t = gtk_label_new(title);
 
@@ -567,17 +569,17 @@ static int ask_login(const char *ssid, int security, struct login *l)
 	if (!ssid) {
 		name = gtk_entry_new();
 		gtk_entry_set_max_length(GTK_ENTRY(name), 32);
-		grid_row(grid, y++, "Network name", name, NULL);
-		grid_row(grid, y++, "Security", lg_security, NULL);
+		grid_row(grid, y++, _("Network name"), name, NULL);
+		grid_row(grid, y++, _("Security"), lg_security, NULL);
 	}
 	user = gtk_entry_new();
-	gtk_entry_set_placeholder_text(GTK_ENTRY(user), "e.g. name@school.ac.at");
-	grid_row(grid, y++, "User name", user, lg_user_row);
+	gtk_entry_set_placeholder_text(GTK_ENTRY(user), _("e.g. name@school.ac.at"));
+	grid_row(grid, y++, _("User name"), user, lg_user_row);
 	pass = gtk_entry_new();
 	gtk_entry_set_visibility(GTK_ENTRY(pass), FALSE);
 	gtk_entry_set_activates_default(GTK_ENTRY(pass), TRUE);
-	grid_row(grid, y++, "Password", pass, lg_pass_row);
-	show = gtk_check_button_new_with_label("Show password");
+	grid_row(grid, y++, _("Password"), pass, lg_pass_row);
+	show = gtk_check_button_new_with_label(_("Show password"));
 	g_object_bind_property(show, "active", pass, "visibility", 0);
 	gtk_grid_attach(GTK_GRID(grid), show, 1, y++, 1, 1);
 
@@ -592,21 +594,21 @@ static int ask_login(const char *ssid, int security, struct login *l)
 	gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(method), "TTLS + PAP");
 	gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(method), "TTLS + MSCHAPv2");
 	gtk_combo_box_set_active(GTK_COMBO_BOX(method), 0);
-	grid_row(adv, 0, "Method", method, NULL);
+	grid_row(adv, 0, _("Method"), method, NULL);
 	anon = gtk_entry_new();
-	gtk_entry_set_placeholder_text(GTK_ENTRY(anon), "optional, e.g. anonymous@school.ac.at");
-	grid_row(adv, 1, "Anonymous identity", anon, NULL);
+	gtk_entry_set_placeholder_text(GTK_ENTRY(anon), _("optional, e.g. anonymous@school.ac.at"));
+	grid_row(adv, 1, _("Anonymous identity"), anon, NULL);
 	domain = gtk_entry_new();
-	gtk_entry_set_placeholder_text(GTK_ENTRY(domain), "e.g. school.ac.at");
-	grid_row(adv, 2, "Server domain", domain, NULL);
-	ca = gtk_file_chooser_button_new("CA certificate", GTK_FILE_CHOOSER_ACTION_OPEN);
-	grid_row(adv, 3, "CA certificate", ca, NULL);
-	lg_advanced = gtk_expander_new("Settings from your school or university");
+	gtk_entry_set_placeholder_text(GTK_ENTRY(domain), _("e.g. school.ac.at"));
+	grid_row(adv, 2, _("Server domain"), domain, NULL);
+	ca = gtk_file_chooser_button_new(_("CA certificate"), GTK_FILE_CHOOSER_ACTION_OPEN);
+	grid_row(adv, 3, _("CA certificate"), ca, NULL);
+	lg_advanced = gtk_expander_new(_("Settings from your school or university"));
 	gtk_container_add(GTK_CONTAINER(lg_advanced), adv);
 	gtk_box_pack_start(GTK_BOX(box), lg_advanced, FALSE, FALSE, 0);
-	lg_hint = gtk_label_new("Your school's Wi-Fi page lists these. With a server domain "
+	lg_hint = gtk_label_new(_("Your school's Wi-Fi page lists these. With a server domain "
 		"(and the CA certificate if they give you one), my-distro checks that it "
-		"really is their server before it sends your password.");
+		"really is their server before it sends your password."));
 	gtk_label_set_xalign(GTK_LABEL(lg_hint), 0);
 	gtk_label_set_line_wrap(GTK_LABEL(lg_hint), TRUE);
 	gtk_label_set_max_width_chars(GTK_LABEL(lg_hint), 50);
@@ -629,15 +631,15 @@ static int ask_login(const char *ssid, int security, struct login *l)
 		size_t n = strlen(p);
 
 		if (name && !gtk_entry_get_text(GTK_ENTRY(name))[0]) {
-			gtk_label_set_text(GTK_LABEL(err), "Type the network's name.");
+			gtk_label_set_text(GTK_LABEL(err), _("Type the network's name."));
 			continue;
 		}
 		if (s == SEC_PASSWORD && (n < 8 || n > 63 || strchr(p, '"'))) {
-			gtk_label_set_text(GTK_LABEL(err), "Wi-Fi passwords have 8 to 63 characters.");
+			gtk_label_set_text(GTK_LABEL(err), _("Wi-Fi passwords have 8 to 63 characters."));
 			continue;
 		}
 		if (s == SEC_LOGIN && (!u[0] || !p[0])) {
-			gtk_label_set_text(GTK_LABEL(err), "Type your user name and password.");
+			gtk_label_set_text(GTK_LABEL(err), _("Type your user name and password."));
 			continue;
 		}
 		l->security = s;
@@ -664,7 +666,7 @@ static void add_and_connect(const char *hex_ssid, const struct login *l, int sae
 
 	out = wpa("add_network", NULL, NULL, NULL);
 	if (!out || !isdigit((unsigned char)out[0])) {
-		gtk_label_set_text(GTK_LABEL(status_label), "Could not add the network.");
+		gtk_label_set_text(GTK_LABEL(status_label), _("Could not add the network."));
 		g_free(out);
 		return;
 	}
@@ -819,9 +821,10 @@ int main(int argc, char **argv)
 	GtkWidget *box, *scroll, *row;
 	char sock[300];
 
+	i18n_init();
 	gtk_init(&argc, &argv);
 	win = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-	gtk_window_set_title(GTK_WINDOW(win), "Wi-Fi");
+	gtk_window_set_title(GTK_WINDOW(win), _("Wi-Fi"));
 	gtk_window_set_default_size(GTK_WINDOW(win), 560, 480);
 	gtk_window_set_icon_name(GTK_WINDOW(win), "network-wireless");
 	g_signal_connect(win, "destroy", G_CALLBACK(gtk_main_quit), NULL);
@@ -836,9 +839,9 @@ int main(int argc, char **argv)
 
 	if (!find_iface()) {
 		gtk_label_set_text(GTK_LABEL(status_label),
-			"No Wi-Fi adapter found.\n\nThis computer has none, or my-distro has no "
+			_("No Wi-Fi adapter found.\n\nThis computer has none, or my-distro has no "
 			"driver for it (in a terminal, lspci -k shows the devices and their drivers). "
-			"A network cable works without setting anything up.");
+			"A network cable works without setting anything up."));
 		gtk_widget_show_all(win);
 		gtk_main();
 		return 0;
@@ -855,12 +858,12 @@ int main(int argc, char **argv)
 	gtk_box_pack_start(GTK_BOX(box), scroll, TRUE, TRUE, 0);
 
 	row = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
-	btn_connect = button("Connect", G_CALLBACK(on_connect));
+	btn_connect = button(_("Connect"), G_CALLBACK(on_connect));
 	gtk_style_context_add_class(gtk_widget_get_style_context(btn_connect), "suggested-action");
-	btn_forget = button("Forget", G_CALLBACK(on_forget));
-	btn_disconnect = button("Disconnect", G_CALLBACK(on_disconnect));
-	gtk_box_pack_start(GTK_BOX(row), button("Search again", G_CALLBACK(on_scan)), FALSE, FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(row), button("Other network…", G_CALLBACK(on_other)), FALSE, FALSE, 0);
+	btn_forget = button(_("Forget"), G_CALLBACK(on_forget));
+	btn_disconnect = button(_("Disconnect"), G_CALLBACK(on_disconnect));
+	gtk_box_pack_start(GTK_BOX(row), button(_("Search again"), G_CALLBACK(on_scan)), FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(row), button(_("Other network…"), G_CALLBACK(on_other)), FALSE, FALSE, 0);
 	gtk_box_pack_end(GTK_BOX(row), btn_connect, FALSE, FALSE, 0);
 	gtk_box_pack_end(GTK_BOX(row), btn_forget, FALSE, FALSE, 0);
 	gtk_box_pack_end(GTK_BOX(row), btn_disconnect, FALSE, FALSE, 0);
@@ -872,11 +875,11 @@ int main(int argc, char **argv)
 	gtk_widget_set_sensitive(btn_disconnect, FALSE);
 	snprintf(sock, sizeof sock, CTRL_DIR "/%s", iface);
 	if (access(sock, F_OK) != 0)
-		gtk_label_set_text(GTK_LABEL(status_label), "Wi-Fi is starting…");
+		gtk_label_set_text(GTK_LABEL(status_label), _("Wi-Fi is starting…"));
 	else if (access(sock, W_OK) != 0)
-		gtk_label_set_text(GTK_LABEL(status_label), "Your user may not change Wi-Fi "
+		gtk_label_set_text(GTK_LABEL(status_label), _("Your user may not change Wi-Fi "
 			"yet (it is not in the group netdev). Log out and in again; if that "
-			"doesn't help, as root: addgroup YOUR-NAME netdev, then log in again.");
+			"doesn't help, as root: addgroup YOUR-NAME netdev, then log in again."));
 	else {
 		on_scan(NULL, NULL);
 		g_timeout_add_seconds(3, refresh_status, NULL);

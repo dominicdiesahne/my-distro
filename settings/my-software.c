@@ -19,6 +19,8 @@
  * the programs that need them.
  */
 #include <gtk/gtk.h>
+
+#include "i18n.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -125,17 +127,17 @@ static void load_list(void)
 
 	/* What to say above the list */
 	if (idx[0] && strcmp(idx, sys) != 0) {
-		char *t = g_strdup_printf("These packages are made for my-distro %s, but this is "
+		char *t = g_strdup_printf(_("These packages are made for my-distro %s, but this is "
 			"my-distro %s: they can't be installed. Update the system (System update), "
-			"or wait until the packages for %s are out.", idx, sys, sys);
+			"or wait until the packages for %s are out."), idx, sys, sys);
 
 		gtk_label_set_text(GTK_LABEL(notice), t);
 		gtk_widget_show(notice);
 		g_free(t);
 	} else if (live) {
-		gtk_label_set_text(GTK_LABEL(notice), "This is the live system: programs you install "
+		gtk_label_set_text(GTK_LABEL(notice), _("This is the live system: programs you install "
 			"here go into RAM and are gone when you shut down, like everything else. "
-			"Install my-distro to a disk to keep them.");
+			"Install my-distro to a disk to keep them."));
 		gtk_widget_show(notice);
 	} else {
 		gtk_widget_hide(notice);
@@ -196,7 +198,7 @@ static GtkWidget *row_for(struct pkg *k)
 		struct pkg *d = find(k->deps[i]);
 
 		if (d && strcmp(d->category, LIBRARIES) != 0) {
-			g_strlcat(needs, needs[0] ? ", " : "\nNeeds: ", sizeof needs);
+			g_strlcat(needs, needs[0] ? ", " : _("\nNeeds: "), sizeof needs);
 			g_strlcat(needs, d->title, sizeof needs);
 		}
 	}
@@ -211,8 +213,8 @@ static GtkWidget *row_for(struct pkg *k)
 
 	s1 = human(k->disk);
 	s2 = human(k->size);
-	t = k->have ? g_strdup_printf("%s on disk", s1)
-	            : g_strdup_printf("%s on disk\n%s download", s1, s2);
+	t = k->have ? g_strdup_printf(_("%s on disk"), s1)
+	            : g_strdup_printf(_("%s on disk\n%s download"), s1, s2);
 	l = gtk_label_new(t);
 	gtk_label_set_xalign(GTK_LABEL(l), 1);
 	gtk_label_set_justify(GTK_LABEL(l), GTK_JUSTIFY_RIGHT);
@@ -223,11 +225,11 @@ static GtkWidget *row_for(struct pkg *k)
 	buttons = gtk_box_new(GTK_ORIENTATION_VERTICAL, 4);
 	gtk_widget_set_valign(buttons, GTK_ALIGN_CENTER);
 	if (k->have) {
-		btn = gtk_button_new_with_label("Remove");
+		btn = gtk_button_new_with_label(_("Remove"));
 		gtk_style_context_add_class(gtk_widget_get_style_context(btn), "destructive-action");
 		g_signal_connect(btn, "clicked", G_CALLBACK(on_remove), k->name);
 	} else {
-		btn = gtk_button_new_with_label("Install");
+		btn = gtk_button_new_with_label(_("Install"));
 		gtk_style_context_add_class(gtk_widget_get_style_context(btn), "suggested-action");
 		g_signal_connect(btn, "clicked", G_CALLBACK(on_install), k->name);
 	}
@@ -259,8 +261,8 @@ static void fill_list(void)
 		}
 	}
 	if (n == 0) {
-		GtkWidget *l = gtk_label_new(strcmp(shown_cat, "*") == 0 ? "No programs installed yet."
-			: pkgs && pkgs->len ? "Nothing found." : "No package list (are you online?).");
+		GtkWidget *l = gtk_label_new(strcmp(shown_cat, "*") == 0 ? _("No programs installed yet.")
+			: pkgs && pkgs->len ? _("Nothing found.") : _("No package list (are you online?)."));
 
 		g_object_set(l, "margin", 30, NULL);
 		gtk_list_box_insert(GTK_LIST_BOX(list), l, -1);
@@ -289,8 +291,8 @@ static void fill_categories(void)
 	for (GList *l = old; l; l = l->next)
 		gtk_widget_destroy(l->data);
 	g_list_free(old);
-	add_category("All programs", "");
-	add_category("Installed", "*");
+	add_category(_("All programs"), "");
+	add_category(_("Installed"), "*");
 	for (int i = 0; cat_order[i]; i++)
 		for (guint j = 0; pkgs && j < pkgs->len; j++)
 			if (strcmp(((struct pkg *)g_ptr_array_index(pkgs, j))->category, cat_order[i]) == 0) {
@@ -344,7 +346,7 @@ static int ask(const char *question, const char *detail, const char *yes, int de
 
 	if (detail && detail[0])
 		gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(d), "%s", detail);
-	gtk_dialog_add_button(GTK_DIALOG(d), "Cancel", GTK_RESPONSE_CANCEL);
+	gtk_dialog_add_button(GTK_DIALOG(d), _("Cancel"), GTK_RESPONSE_CANCEL);
 	b = gtk_dialog_add_button(GTK_DIALOG(d), yes, GTK_RESPONSE_ACCEPT);
 	gtk_style_context_add_class(gtk_widget_get_style_context(b),
 	                            destructive ? "destructive-action" : "suggested-action");
@@ -388,9 +390,9 @@ static void on_install(GtkButton *b, gpointer name)
 			g_string_append_printf(more, "%s%s", more->len ? ", " : "", d->title);
 	}
 	s = human(disk);
-	q = g_strdup_printf("Install %s?", k->title);
-	detail = g_strdup_printf("It needs %s of space.%s%s%s", s,
-		more->len ? " It brings: " : "", more->str, more->len ? "." : "");
+	q = g_strdup_printf(_("Install %s?"), k->title);
+	detail = g_strdup_printf(_("It needs %s of space.%s%s%s"), s,
+		more->len ? _(" It brings: ") : "", more->str, more->len ? "." : "");
 	if (ask(q, detail, "Install", 0))
 		run_action(args);
 	g_free(q); g_free(s); g_free(detail);
@@ -430,10 +432,10 @@ static void on_remove(GtkButton *b, gpointer name)
 	for (guint i = 0; i < users->len; i++)
 		g_string_append_printf(who, "%s%s", i ? ", " : "",
 		                       ((struct pkg *)g_ptr_array_index(users, i))->title);
-	q = g_strdup_printf("Remove %s?", k->title);
-	detail = users->len ? g_strdup_printf("%s needs it, so it is removed too.", who->str)
-	                    : g_strdup("Your own files made with it stay.");
-	if (ask(q, detail, users->len ? "Remove both" : "Remove", 1))
+	q = g_strdup_printf(_("Remove %s?"), k->title);
+	detail = users->len ? g_strdup_printf(_("%s needs it, so it is removed too."), who->str)
+	                    : g_strdup(_("Your own files made with it stay."));
+	if (ask(q, detail, users->len ? _("Remove both") : _("Remove"), 1))
 		run_action(users->len ? with : plain);
 	g_free(q); g_free(detail);
 	g_string_free(who, TRUE);
@@ -453,15 +455,15 @@ static void on_upgrade(GtkButton *b, gpointer d)
 /* Asks for the root password (modal). NULL = cancelled. */
 static char *ask_password(const char *error)
 {
-	GtkWidget *d = gtk_dialog_new_with_buttons("Software", GTK_WINDOW(win), GTK_DIALOG_MODAL,
-		"Cancel", GTK_RESPONSE_CANCEL, "OK", GTK_RESPONSE_OK, NULL);
+	GtkWidget *d = gtk_dialog_new_with_buttons(_("Software"), GTK_WINDOW(win), GTK_DIALOG_MODAL,
+		_("Cancel"), GTK_RESPONSE_CANCEL, _("OK"), GTK_RESPONSE_OK, NULL);
 	GtkWidget *box = gtk_dialog_get_content_area(GTK_DIALOG(d)), *entry, *l;
 	char *pw = NULL;
 
 	gtk_container_set_border_width(GTK_CONTAINER(box), 18);
 	gtk_box_set_spacing(GTK_BOX(box), 10);
-	l = gtk_label_new("Installing and removing programs needs the administrator (root) "
-	                  "password.");
+	l = gtk_label_new(_("Installing and removing programs needs the administrator (root) "
+	                  "password."));
 	gtk_label_set_line_wrap(GTK_LABEL(l), TRUE);
 	gtk_label_set_max_width_chars(GTK_LABEL(l), 40);
 	gtk_box_pack_start(GTK_BOX(box), l, FALSE, FALSE, 0);
@@ -547,23 +549,23 @@ static void on_done(GPid pid, gint st, gpointer d)
 			run_action(last_args);
 			return;
 		}
-		gtk_label_set_text(GTK_LABEL(status), "Nothing was changed.");
+		gtk_label_set_text(GTK_LABEL(status), _("Nothing was changed."));
 		return;
 	}
 	reload();
 	if (g_spawn_check_wait_status(st, NULL)) {
-		gtk_label_set_text(GTK_LABEL(status), "Done. Installed programs are in the "
-		                   "Start menu, or start them in a terminal.");
+		gtk_label_set_text(GTK_LABEL(status), _("Done. Installed programs are in the "
+		                   "Start menu, or start them in a terminal."));
 		gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(bar), 1);
 	} else {
 		GtkWidget *m = gtk_message_dialog_new(GTK_WINDOW(win), GTK_DIALOG_MODAL,
-			GTK_MESSAGE_ERROR, GTK_BUTTONS_CLOSE, "That did not work.");
+			GTK_MESSAGE_ERROR, GTK_BUTTONS_CLOSE, _("That did not work."));
 
 		gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(m), "%s", output->str);
 		gtk_dialog_run(GTK_DIALOG(m));
 		gtk_widget_destroy(m);
-		gtk_label_set_text(GTK_LABEL(status), "That did not work: nothing was changed, "
-		                   "or only part of it (see the message).");
+		gtk_label_set_text(GTK_LABEL(status), _("That did not work: nothing was changed, "
+		                   "or only part of it (see the message)."));
 	}
 }
 
@@ -590,7 +592,7 @@ static void run_action(char **args)
 	if (!g_spawn_async_with_pipes(NULL, (char **)argv->pdata, NULL,
 	                              G_SPAWN_DO_NOT_REAP_CHILD | G_SPAWN_STDERR_TO_DEV_NULL,
 	                              NULL, NULL, &pid, &in, &out, NULL, NULL)) {
-		gtk_label_set_text(GTK_LABEL(status), "Could not start my-admin.");
+		gtk_label_set_text(GTK_LABEL(status), _("Could not start my-admin."));
 		g_ptr_array_free(argv, TRUE);
 		return;
 	}
@@ -606,7 +608,7 @@ static void run_action(char **args)
 	g_string_truncate(output, 0);
 	step = steps = 0;
 	set_busy(1);
-	gtk_label_set_text(GTK_LABEL(status), "Working…");
+	gtk_label_set_text(GTK_LABEL(status), _("Working…"));
 	ch = g_io_channel_unix_new(out);
 	g_io_channel_set_flags(ch, G_IO_FLAG_NONBLOCK, NULL);
 	g_io_channel_set_close_on_unref(ch, TRUE);
@@ -620,7 +622,7 @@ static gboolean on_close(GtkWidget *w, GdkEvent *e, gpointer d)
 {
 	(void)w; (void)e; (void)d;
 	if (busy)
-		gtk_label_set_text(GTK_LABEL(status), "Please wait until this is finished.");
+		gtk_label_set_text(GTK_LABEL(status), _("Please wait until this is finished."));
 	return busy;
 }
 
@@ -646,7 +648,7 @@ static void start_refresh(void)
 	const char *argv[] = { MY_PKG, "refresh", NULL };
 	GPid pid;
 
-	gtk_label_set_text(GTK_LABEL(status), "Downloading the package list…");
+	gtk_label_set_text(GTK_LABEL(status), _("Downloading the package list…"));
 	set_busy(1);
 	gtk_progress_bar_pulse(GTK_PROGRESS_BAR(bar));
 	if (!g_spawn_async(NULL, (char **)argv, NULL, G_SPAWN_DO_NOT_REAP_CHILD |
@@ -662,12 +664,13 @@ int main(int argc, char **argv)
 {
 	GtkWidget *paned, *left, *right, *top, *scroll, *bottom;
 
+	i18n_init();
 	gtk_init(&argc, &argv);
 	is_root = geteuid() == 0;
 	output = g_string_new(NULL);
 
 	win = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-	gtk_window_set_title(GTK_WINDOW(win), "Software");
+	gtk_window_set_title(GTK_WINDOW(win), _("Software"));
 	gtk_window_set_default_size(GTK_WINDOW(win), 920, 600);
 	gtk_window_set_icon_name(GTK_WINDOW(win), "system-software-install");
 	g_signal_connect(win, "delete-event", G_CALLBACK(on_close), NULL);
@@ -691,9 +694,9 @@ int main(int argc, char **argv)
 	gtk_container_set_border_width(GTK_CONTAINER(right), 10);
 	top = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
 	search = gtk_search_entry_new();
-	gtk_entry_set_placeholder_text(GTK_ENTRY(search), "Search programs");
+	gtk_entry_set_placeholder_text(GTK_ENTRY(search), _("Search programs"));
 	g_signal_connect(search, "search-changed", G_CALLBACK(on_search), NULL);
-	upgrade_btn = gtk_button_new_with_label("Update all");
+	upgrade_btn = gtk_button_new_with_label(_("Update all"));
 	g_signal_connect(upgrade_btn, "clicked", G_CALLBACK(on_upgrade), NULL);
 	gtk_widget_set_no_show_all(upgrade_btn, TRUE);
 	gtk_box_pack_start(GTK_BOX(top), search, TRUE, TRUE, 0);

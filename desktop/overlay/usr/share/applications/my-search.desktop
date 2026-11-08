@@ -1,7 +1,9 @@
 [Desktop Entry]
 Type=Application
 Name=Search files
+Name[de]=Dateien suchen
 Comment=Find files by what they are about
+Comment[de]=Dateien nach ihrem Inhalt finden
 Icon=system-search
 Exec=my-search-gui
 Terminal=false

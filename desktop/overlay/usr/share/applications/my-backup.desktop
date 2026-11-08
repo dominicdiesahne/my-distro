@@ -1,6 +1,7 @@
 [Desktop Entry]
 Type=Application
 Name=Backup
+Name[de]=Datensicherung
 Comment=Back up your home folder to a USB stick or disk, and restore it
 Icon=document-save
 Exec=my-backup-gui

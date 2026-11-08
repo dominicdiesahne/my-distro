@@ -1,6 +1,7 @@
 [Desktop Entry]
 Type=Application
 Name=Software
+Name[de]=Software
 Comment=Install and remove programs
 Icon=system-software-install
 Exec=my-software

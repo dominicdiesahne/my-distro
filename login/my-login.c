@@ -15,6 +15,18 @@
  *      and go back to 1.
  * The X server keeps running the whole time because we stay connected.
  * The "Keyboard" button at the bottom shows an on-screen keyboard (xvkbd).
+ *
+ * "Switch user" (my-power switch-user) starts another X server with
+ * "my-login --once" on display :1 (console 8) or higher: it ends after one
+ * session, or when "Back" is clicked. /run/my-login/N says what display :N
+ * shows: "waiting" (this screen) or the name of the user whose session runs.
+ * Someone who has a session already is sent to it instead of a second one.
+ *
+ * Parental controls (/etc/my-distro/parental, set in "Users and system"):
+ * a user may only log in during their allowed hours and while their daily
+ * time is not used up. While a session runs, my-login counts its minutes
+ * (/var/lib/my-distro/usage), shows a notice 5 and 1 minutes before the
+ * end and then ends the session.
  */
 #define _GNU_SOURCE
 #include <X11/Xatom.h>
@@ -36,11 +48,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/select.h>
+#include <sys/stat.h>
 #include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
 
 #include "settings.h"
+#include "i18n.h"
 
 #define CARD_W    380
 #define CARD_H    400
@@ -65,9 +79,12 @@ static XftColor c_text, c_dim, c_accent, c_field, c_field_on, c_button,
 static Imlib_Image avatar, icon_reboot, icon_power, icon_keyboard;
 static pid_t keyboard_pid;      /* the on-screen keyboard, while it is shown */
 
-static char user[USER_MAX + 1], pass[PASS_MAX + 1], error[128];
+static char user[USER_MAX + 1], pass[PASS_MAX + 1], error[160];
 static int focus = F_USER;
-static struct rect r_user, r_pass, r_login, r_reboot, r_power, r_keyboard;
+static struct rect r_user, r_pass, r_login, r_reboot, r_power, r_keyboard, r_back;
+static int once;                  /* --once: a "Switch user" screen, see above */
+static int display_no;            /* N of display :N */
+static char display_name[32] = ":0";
 static char clock_text[32], date_text[64];
 
 /* Colors and wallpaper: the settings of the user shown on the screen (the
@@ -220,16 +237,16 @@ static void redraw(void)
 	XftDrawRect(draw, &c_accent, x, y, CARD_W, 2);
 
 	icon(avatar, cx - 32, y + 26, 64);
-	text(bold, &c_text, -cx, y + 96, 30, "Welcome");
+	text(bold, &c_text, -cx, y + 96, 30, _("Welcome"));
 
 	r_user = (struct rect){ x + 30, y + 160, CARD_W - 60, FIELD_H };
 	r_pass = (struct rect){ x + 30, y + 236, CARD_W - 60, FIELD_H };
 	r_login = (struct rect){ x + 30, y + 296, CARD_W - 60, 42 };
-	field(&r_user, "User", user, 0, focus == F_USER);
-	field(&r_pass, "Password", pass, 1, focus == F_PASS);
+	field(&r_user, _("User"), user, 0, focus == F_USER);
+	field(&r_pass, _("Password"), pass, 1, focus == F_PASS);
 
 	XftDrawRect(draw, &c_button, r_login.x, r_login.y, r_login.w, r_login.h);
-	text(bold, &c_button_text, -cx, r_login.y, r_login.h, "Log in");
+	text(bold, &c_button_text, -cx, r_login.y, r_login.h, _("Log in"));
 
 	if (error[0])
 		text(small, &c_error, -cx, y + 352, 30, error);
@@ -242,13 +259,23 @@ static void redraw(void)
 	r_power = (struct rect){ sw - 140, sh - 44, 124, 40 };
 	r_reboot = (struct rect){ sw - 264, sh - 44, 116, 40 };
 	icon(icon_reboot, r_reboot.x + 8, r_reboot.y + 10, 20);
-	text(font, &c_text, r_reboot.x + 36, r_reboot.y, r_reboot.h, "Reboot");
+	text(font, &c_text, r_reboot.x + 36, r_reboot.y, r_reboot.h, _("Reboot"));
 	icon(icon_power, r_power.x + 8, r_power.y + 10, 20);
-	text(font, &c_text, r_power.x + 36, r_power.y, r_power.h, "Power off");
+	text(font, &c_text, r_power.x + 36, r_power.y, r_power.h, _("Power off"));
 	r_keyboard = (struct rect){ sw - 400, sh - 44, 128, 40 };
 	icon(icon_keyboard, r_keyboard.x + 8, r_keyboard.y + 10, 20);
 	text(font, keyboard_pid ? &c_accent : &c_text, r_keyboard.x + 36, r_keyboard.y,
-	     r_keyboard.h, "Keyboard");
+	     r_keyboard.h, _("Keyboard"));
+	/* "Switch user" screen: back to the desktop that is already running */
+	r_back = (struct rect){ 0, 0, 0, 0 };
+	if (once) {
+		const char *b = _("Back to the other desktop");
+
+		r_back = (struct rect){ 200, sh - 44,
+		                        text_width(font, b) + 32, 40 };
+		XftDrawRect(draw, &c_field, r_back.x, r_back.y, r_back.w, r_back.h);
+		text(font, &c_text, r_back.x + 16, r_back.y, r_back.h, b);
+	}
 
 	XCopyArea(dpy, buf, win, DefaultGC(dpy, scr), 0, 0, sw, sh, 0, 0);
 	XFlush(dpy);
@@ -265,7 +292,8 @@ static int update_clock(void)
 
 	c.clock_seconds = 0;
 	settings_format_time(&c, tm, clock_text, sizeof clock_text);
-	strftime(date_text, sizeof date_text, "%A, %d %B %Y", tm);
+	/* TRANSLATORS: the date on the login screen, see "man strftime" */
+	strftime(date_text, sizeof date_text, _("%A, %d %B %Y"), tm);
 	return strcmp(old, clock_text) != 0;
 }
 
@@ -309,7 +337,7 @@ static void first_boot_setup(void)
 	if (pid == 0) {
 		clearenv();
 		setenv("HOME", "/root", 1);
-		setenv("DISPLAY", ":0", 1);
+		setenv("DISPLAY", display_name, 1);
 		setenv("PATH", "/sbin:/bin:/usr/sbin:/usr/bin", 1);
 		setenv("LANG", "en_US.UTF-8", 1);
 		setenv("NO_AT_BRIDGE", "1", 1);
@@ -318,6 +346,205 @@ static void first_boot_setup(void)
 	}
 	if (pid > 0)
 		waitpid(pid, NULL, 0);
+}
+
+/* --- Who is logged in where (fast user switching) -------------------------- */
+
+static void read_line(const char *path, char *buf, size_t len)
+{
+	FILE *f = fopen(path, "r");
+
+	buf[0] = '\0';
+	if (f) {
+		if (!fgets(buf, len, f))
+			buf[0] = '\0';
+		fclose(f);
+	}
+	buf[strcspn(buf, "\n")] = '\0';
+}
+
+/* /run/my-login/N: "waiting", or the user whose session runs on :N */
+static void set_state(const char *what)
+{
+	char path[64];
+	FILE *f;
+
+	mkdir("/run/my-login", 0755);
+	snprintf(path, sizeof path, "/run/my-login/%d", display_no);
+	if ((f = fopen(path, "w"))) {
+		fprintf(f, "%s\n", what);
+		fclose(f);
+	}
+}
+
+/* The display on which `name` already has a session, or -1 */
+static int session_of(const char *name)
+{
+	char path[64], state[64];
+
+	for (int n = 0; n <= 9; n++) {
+		if (n == display_no)
+			continue;
+		snprintf(path, sizeof path, "/run/my-login/%d", n);
+		read_line(path, state, sizeof state);
+		if (strcmp(state, name) == 0)
+			return n;
+	}
+	return -1;
+}
+
+/* Brings console vt to the front (display :N runs on console 7 + N) */
+static void show_console(int vt)
+{
+	char arg[8];
+	pid_t pid = fork();
+
+	snprintf(arg, sizeof arg, "%d", vt);
+	if (pid == 0) {
+		execl("/usr/bin/chvt", "chvt", arg, (char *)NULL);
+		_exit(127);
+	}
+	if (pid > 0)
+		waitpid(pid, NULL, 0);
+}
+
+/* --- Parental controls --------------------------------------------------------- */
+/*
+ * /etc/my-distro/parental, one line per user who has limits:
+ *     NAME FROM-TO MINUTES      e.g.  lena 08:00-20:00 120
+ * FROM-TO: when they may use the computer ("-" = any time; 22:00-06:00 goes
+ * over midnight); MINUTES: per day (0 = no limit). Today's use is counted
+ * in /var/lib/my-distro/usage/NAME ("2026-11-07 35"). Root has no limits.
+ */
+#define PARENTAL  "/etc/my-distro/parental"
+#define USAGE_DIR "/var/lib/my-distro/usage"
+
+struct limits { int from, to, minutes; };     /* from/to in minutes of the day, -1 = none */
+
+static int get_limits(const char *name, struct limits *l)
+{
+	char line[256], u[64], hours[32];
+	int minutes, h1, m1, h2, m2, found = 0;
+	FILE *f = fopen(PARENTAL, "r");
+
+	l->from = l->to = -1;
+	l->minutes = 0;
+	while (f && !found && fgets(line, sizeof line, f)) {
+		if (line[0] == '#' || sscanf(line, "%63s %31s %d", u, hours, &minutes) != 3 ||
+		    strcmp(u, name) != 0)
+			continue;
+		found = 1;
+		if (sscanf(hours, "%d:%d-%d:%d", &h1, &m1, &h2, &m2) == 4) {
+			l->from = h1 * 60 + m1;
+			l->to = h2 * 60 + m2;
+		}
+		l->minutes = minutes > 0 ? minutes : 0;
+	}
+	if (f)
+		fclose(f);
+	return found;
+}
+
+static void today(char *buf, size_t len)
+{
+	time_t now = time(NULL);
+
+	strftime(buf, len, "%Y-%m-%d", localtime(&now));
+}
+
+/* Minutes used today */
+static int used_today(const char *name)
+{
+	char path[128], line[64], date[16], day[16];
+	int used = 0;
+
+	snprintf(path, sizeof path, USAGE_DIR "/%s", name);
+	read_line(path, line, sizeof line);
+	today(day, sizeof day);
+	if (sscanf(line, "%15s %d", date, &used) != 2 || strcmp(date, day) != 0)
+		used = 0;
+	return used;
+}
+
+static void add_minute(const char *name)
+{
+	char path[128], day[16];
+	int used = used_today(name) + 1;
+	FILE *f;
+
+	mkdir("/var/lib/my-distro", 0755);
+	mkdir(USAGE_DIR, 0755);
+	snprintf(path, sizeof path, USAGE_DIR "/%s", name);
+	today(day, sizeof day);
+	if ((f = fopen(path, "w"))) {
+		fprintf(f, "%s %d\n", day, used);
+		fclose(f);
+	}
+}
+
+/* Minutes `name` may still use the computer now; -1 = no limit. With
+ * why != NULL: when it is 0, the reason, for the login screen. */
+static int minutes_left(const char *name, char *why, size_t len)
+{
+	struct limits l;
+	time_t now = time(NULL);
+	struct tm *tm = localtime(&now);
+	int m = tm->tm_hour * 60 + tm->tm_min, left = -1;
+
+	if (!get_limits(name, &l))
+		return -1;
+	if (l.from >= 0 && l.from != l.to) {
+		int inside = l.from < l.to ? m >= l.from && m < l.to : m >= l.from || m < l.to;
+
+		if (!inside) {
+			if (why)
+				snprintf(why, len, _("%s may use the computer from %02d:%02d to %02d:%02d."),
+				         name, l.from / 60, l.from % 60, l.to / 60, l.to % 60);
+			return 0;
+		}
+		left = (l.to - m + 24 * 60) % (24 * 60);
+	}
+	if (l.minutes > 0) {
+		int rest = l.minutes - used_today(name);
+
+		if (rest <= 0) {
+			if (why)
+				snprintf(why, len, _("Today's time on the computer (%d minutes) is used up."),
+				         l.minutes);
+			return 0;
+		}
+		if (left < 0 || rest < left)
+			left = rest;
+	}
+	return left;
+}
+
+/* A box at the top of the screen, over the session, for a few seconds:
+ * "5 minutes left" before parental controls end the session. */
+static Window notice;
+static time_t notice_until;
+
+static void show_notice(const char *msg)
+{
+	int w = text_width(bold, msg) + 60, h = 56;
+	XSetWindowAttributes a = { 0 };
+	XftDraw *d;
+
+	if (!notice) {
+		a.override_redirect = True;
+		notice = XCreateWindow(dpy, root, 0, 0, 10, 10, 0, CopyFromParent, InputOutput,
+		                       CopyFromParent, CWOverrideRedirect, &a);
+	}
+	XMoveResizeWindow(dpy, notice, (sw - w) / 2, 40, w, h);
+	XMapRaised(dpy, notice);
+	XSync(dpy, False);
+	d = XftDrawCreate(dpy, notice, vis, cmap);
+	XftDrawRect(d, &c_accent, 0, 0, w, h);
+	XftDrawStringUtf8(d, &c_button_text, bold, 30, (h + bold->ascent - bold->descent) / 2,
+	                  (const FcChar8 *)msg, strlen(msg));
+	XftDrawDestroy(d);
+	XFlush(dpy);
+	notice_until = time(NULL) + 15;
 }
 
 /* The first normal user (uid 1000 and up) is filled in for convenience. */
@@ -394,7 +621,7 @@ static void toggle_keyboard(void)
 		    setuid(nobody->pw_uid) != 0)
 			_exit(1);
 		clearenv();
-		setenv("DISPLAY", ":0", 1);
+		setenv("DISPLAY", display_name, 1);
 		setenv("HOME", "/tmp", 1);
 		setenv("PATH", "/usr/bin:/bin", 1);
 		execl("/usr/bin/xvkbd", "xvkbd", "-compact", "-no-keypad", "-geometry", geo,
@@ -459,7 +686,9 @@ static void run_session(struct passwd *pw)
 		setenv("USER", name, 1);
 		setenv("LOGNAME", name, 1);
 		setenv("SHELL", shell, 1);
-		setenv("DISPLAY", ":0", 1);
+		setenv("DISPLAY", display_name, 1);
+		/* the language: ~/.xinitrc reads the user's choice
+		 * (/usr/lib/my-distro/session-env) */
 		setenv("LANG", "en_US.UTF-8", 1);
 		setenv("PATH", uid == 0 ? "/sbin:/bin:/usr/sbin:/usr/bin"
 		                        : "/usr/local/bin:/usr/bin:/bin", 1);
@@ -468,8 +697,34 @@ static void run_session(struct passwd *pw)
 		      "else exec openbox; fi", (char *)NULL);
 		_exit(127);
 	}
+	set_state(name);
+	/* Wait for the logout. Every minute: count the time for parental
+	 * controls; 5 and 1 minutes before the end a notice, then the
+	 * session ends (TERM to all of its programs). */
+	for (int sec = 0; pid > 0 && waitpid(pid, NULL, WNOHANG) == 0; sec++) {
+		sleep(1);
+		if (notice && notice_until && time(NULL) > notice_until) {
+			XUnmapWindow(dpy, notice);
+			XFlush(dpy);
+			notice_until = 0;
+		}
+		if (uid == 0 || sec % 60 != 59)
+			continue;
+		add_minute(name);
+		int left = minutes_left(name, NULL, 0);
+		char msg[128];
+
+		if (left == 5 || left == 1) {
+			snprintf(msg, sizeof msg, ngettext("%d minute left on the computer today",
+			         "%d minutes left on the computer today", left), left);
+			show_notice(msg);
+		} else if (left == 0) {
+			kill(-pid, SIGTERM);
+		}
+	}
 	if (pid > 0)
 		waitpid(pid, NULL, 0);
+	set_state("waiting");
 
 	/* The session's leftovers (taskbar, desktop icons, open apps): first
 	 * everything in its process group, then everything the user still runs. */
@@ -504,12 +759,28 @@ static void submit(void)
 	memset(pass, 0, sizeof pass);           /* don't keep it around */
 	if (!pw) {
 		sleep(1);                            /* slows down guessing */
-		snprintf(error, sizeof error, "Wrong user name or password");
+		snprintf(error, sizeof error, "%s", _("Wrong user name or password"));
 		focus = F_PASS;
 		return;
 	}
+	/* Logged in already, on another console: go there instead (the screen
+	 * lock there asks for the password) */
+	int other = session_of(pw->pw_name);
+
+	if (other >= 0) {
+		show_console(7 + other);
+		if (once)
+			exit(0);
+		snprintf(error, sizeof error, _("%s is logged in on another screen (Ctrl+Alt+F%d)."),
+		         pw->pw_name, 7 + other);
+		return;
+	}
+	if (pw->pw_uid != 0 && minutes_left(pw->pw_name, error, sizeof error) == 0)
+		return;                              /* parental controls: not now */
 	error[0] = '\0';
 	run_session(pw);
+	if (once)
+		exit(0);              /* "Switch user" screen: one session only */
 	default_user();
 	load_theme();         /* they may have changed it in the session */
 	show();
@@ -570,6 +841,8 @@ static void click(int x, int y)
 		focus = F_PASS;
 	else if (inside(&r_login, x, y))
 		submit();
+	else if (once && inside(&r_back, x, y))
+		exit(0);                             /* second-login shows console 7 again */
 	else if (inside(&r_reboot, x, y))
 		kill(1, SIGTERM);                    /* our init: TERM = reboot */
 	else if (inside(&r_power, x, y))
@@ -579,16 +852,23 @@ static void click(int x, int y)
 	redraw();
 }
 
-int main(void)
+int main(int argc, char **argv)
 {
 	XSetWindowAttributes a = { 0 };
 	int fd;
 
+	once = argc > 1 && strcmp(argv[1], "--once") == 0;
+	i18n_init_system();                      /* the language set for the system */
 	dpy = XOpenDisplay(NULL);
 	if (!dpy) {
 		fprintf(stderr, "my-login: can't open display\n");
 		return 1;
 	}
+	/* ":1" or ":1.0": which display this is (its console is 7 + N) */
+	snprintf(display_name, sizeof display_name, "%s", DisplayString(dpy));
+	display_name[strcspn(display_name, ".")] = '\0';
+	display_no = atoi(display_name + 1);
+	set_state("waiting");
 	fd = ConnectionNumber(dpy);
 	fcntl(fd, F_SETFD, FD_CLOEXEC);          /* the session doesn't inherit it */
 	XSetErrorHandler(ignore_x_errors);
@@ -629,7 +909,8 @@ int main(void)
 	XDefineCursor(dpy, win, XCreateFontCursor(dpy, XC_left_ptr));
 	XDefineCursor(dpy, root, XCreateFontCursor(dpy, XC_left_ptr));
 
-	first_boot_setup();
+	if (!once)
+		first_boot_setup();
 	default_user();
 	load_theme();
 	show();

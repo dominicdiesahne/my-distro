@@ -94,7 +94,13 @@ KEEP = [
     "etc/my-distro/vpn",                         # imported VPNs
     "etc/cups/printers.conf", "etc/cups/classes.conf",   # printers (Bluetooth
     "etc/cups/ppd", "etc/cups/lpoptions",                # pairings are in /var)
+    "etc/cron",                                  # everyone's crontabs (crontab -e)
+    "etc/my-distro/language",                    # the system's language
+    "etc/my-distro/parental",                    # parental controls
 ]
+# (Not here, though updates never touch them either, because no update
+# package has them: /swapfile and /etc/my-distro/crypt, made by my-install.
+# The factory reset deletes what is listed here, and these must stay.)
 
 
 def read_conf():

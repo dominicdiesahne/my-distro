@@ -49,8 +49,6 @@ BR2_PACKAGE_PHP_EXT_PDO=y
 BR2_PACKAGE_PHP_EXT_PDO_SQLITE=y
 BR2_PACKAGE_PHP_EXT_MBSTRING=y
 BR2_PACKAGE_PERL=y
-BR2_PACKAGE_GDB=y
-BR2_PACKAGE_STRACE=y
 BR2_PACKAGE_JQ=y
 
 # --- Terminal tools ------------------------------------------------------------

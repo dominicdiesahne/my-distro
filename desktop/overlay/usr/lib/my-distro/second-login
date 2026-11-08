@@ -1,0 +1,17 @@
+#!/bin/sh
+# second-login :N vtM: one more login screen for "Switch user" (my-power
+# switch-user starts it as root). The X server takes console M and shows
+# my-login there; after one session (or "Back") it ends, and the first
+# desktop on console 7 comes back.
+# Log: /var/log/desktop-N.log
+display=${1:?usage: second-login :N vtM}
+vt=${2:?usage: second-login :N vtM}
+n=${display#:}
+case "$n" in [1-9]) ;; *) exit 2 ;; esac
+case "$vt" in vt[0-9]|vt[0-9][0-9]) ;; *) exit 2 ;; esac
+
+export PATH=/sbin:/bin:/usr/sbin:/usr/bin LANG=en_US.UTF-8 MY_LOGIN_VT=${vt#vt}
+xinit /usr/bin/my-login --once -- /usr/bin/Xorg "$display" "$vt" -nolisten tcp \
+	</dev/null >"/var/log/desktop-$n.log" 2>&1
+rm -f "/run/my-login/$n"
+chvt 7

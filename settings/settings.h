@@ -56,6 +56,11 @@ struct settings {
 	int lock_minutes;      /* lock the screen after this long without use; 0 = never */
 	int scale;             /* text and icons in percent: 100-200 (Xft.dpi = 96 * scale) */
 	int cursor_size;       /* mouse pointer in pixels: 24 (normal) - 96 */
+
+	/* Read by /usr/lib/my-distro/session-env at login, for the session: */
+	char language[32];     /* LANG, e.g. "de_DE.UTF-8"; "" = the system's */
+	char proxy[160];       /* "http://host:port" for web and updates; "" = none */
+	char no_proxy[160];    /* addresses reached without the proxy */
 };
 
 /* High-contrast themes ("contrast", "contrast-light"): plain colors, no

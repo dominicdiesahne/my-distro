@@ -11,6 +11,7 @@
  */
 #include "history.h"
 #include "settings.h"
+#include "i18n.h"
 
 #include <X11/Xatom.h>
 #include <X11/Xlib.h>
@@ -173,26 +174,26 @@ static void redraw(void)
 	XftDrawRect(draw, &c_head, 0, 0, ww, HEAD_H);
 	XftDrawRect(draw, &c_accent, 0, HEAD_H - 2, ww, 2);
 	if (file_mode[0]) {
-		text(bold, &c_text, 20, 8, 28, "Versions of");
+		text(bold, &c_text, 20, 8, 28, _("Versions of"));
 		text_fit_left(font, &c_dim, 20, 34, 22, file_mode, ww - 40);
 	} else {
-		text(bold, &c_text, 20, 8, 28, "Recent file changes");
+		text(bold, &c_text, 20, 8, 28, _("Recent file changes"));
 		text(font, &c_dim, 20, 34, 22, getuid() == 0
-		     ? "Every saved change on the system, newest first"
-		     : "Changes to your files, newest first");
+		     ? _("Every saved change on the system, newest first")
+		     : _("Changes to your files, newest first"));
 	}
 
 	/* Column titles */
 	y = HEAD_H;
-	text(small, &c_dim, 20, y, ROW_H, "TIME");
-	text(small, &c_dim, 200, y, ROW_H, "VERSION");
-	text(small, &c_dim, 290, y, ROW_H, file_mode[0] ? "SIZE" : "FILE");
+	text(small, &c_dim, 20, y, ROW_H, _("TIME"));
+	text(small, &c_dim, 200, y, ROW_H, _("VERSION"));
+	text(small, &c_dim, 290, y, ROW_H, file_mode[0] ? _("SIZE") : _("FILE"));
 
 	/* Rows */
 	if (nrows == 0)
 		text(font, &c_dim, 20, list_top() + 10, ROW_H,
-		     file_mode[0] ? "No saved versions of this file."
-		                  : "No changes yet. Edit a file and it shows up here.");
+		     file_mode[0] ? _("No saved versions of this file.")
+		                  : _("No changes yet. Edit a file and it shows up here."));
 	for (int i = scroll; i < nrows && i < scroll + vis_rows; i++) {
 		struct row *r = &rows[i];
 		int ry = list_top() + (i - scroll) * ROW_H;
@@ -203,12 +204,12 @@ static void redraw(void)
 			XftDrawRect(draw, &c_accent, 0, ry, 3, ROW_H);
 		strftime(line, sizeof line, "%a %d.%m. %H:%M:%S", localtime(&r->when));
 		text(font, &c_text, 20, ry, ROW_H, line);
-		snprintf(line, sizeof line, r->version == 0 ? "v0 (first)" : "v%d",
+		snprintf(line, sizeof line, r->version == 0 ? _("v0 (first)") : "v%d",
 		         r->version);
 		text(font, &c_accent, 200, ry, ROW_H, line);
 		if (file_mode[0]) {
 			snprintf(line, sizeof line, "%lld bytes%s", r->size,
-			         i == 0 ? "   (current)" : "");
+			         i == 0 ? _("   (current)") : "");
 			text(font, &c_text, 290, ry, ROW_H, line);
 		} else {
 			text_fit_left(font, &c_text, 290, ry, ROW_H, r->path, ww - 310);
@@ -248,7 +249,7 @@ static void restore_to(const char *path, int v)
 		set_status(0, err);
 		return;
 	}
-	snprintf(msg, sizeof msg, "Restored %s to version %d.", path, v);
+	snprintf(msg, sizeof msg, _("Restored %s to version %d."), path, v);
 	set_status(1, msg);
 	usleep(300000);                       /* let my-historyd save it */
 	load_rows();
@@ -257,7 +258,7 @@ static void restore_to(const char *path, int v)
 static int need_selection(void)
 {
 	if (sel < 0 || sel >= nrows) {
-		set_status(0, "Select a line first.");
+		set_status(0, _("Select a line first."));
 		return 0;
 	}
 	return 1;
@@ -268,7 +269,7 @@ static void act_undo_selected(void)
 	if (!need_selection())
 		return;
 	if (rows[sel].version == 0) {
-		set_status(0, "That's the oldest saved version, there is nothing before it.");
+		set_status(0, _("That's the oldest saved version, there is nothing before it."));
 		return;
 	}
 	restore_to(rows[sel].path, rows[sel].version - 1);
@@ -287,7 +288,7 @@ static void act_undo_last(void)
 			restore_to(rows[i].path, rows[i].version - 1);
 			return;
 		}
-	set_status(0, "Nothing to undo.");
+	set_status(0, _("Nothing to undo."));
 }
 
 static void act_view(void)
@@ -383,6 +384,7 @@ int main(int argc, char **argv)
 	if (argc > 1)
 		hist_abspath(argv[1], file_mode, sizeof file_mode);
 
+	i18n_init();
 	dpy = XOpenDisplay(NULL);
 	if (!dpy) {
 		fprintf(stderr, "my-history: can't open display\n");
@@ -410,13 +412,13 @@ int main(int argc, char **argv)
 	color(&c_err, cfg.pal.dark ? "#ff9a8f" : "#b3261e");
 
 	if (file_mode[0]) {
-		add_button("Restore this version", act_restore_selected);
-		add_button("View", act_view);
-		add_button("Refresh", act_refresh);
+		add_button(_("Restore this version"), act_restore_selected);
+		add_button(_("View"), act_view);
+		add_button(_("Refresh"), act_refresh);
 	} else {
-		add_button("Undo this change", act_undo_selected);
-		add_button("Undo last change", act_undo_last);
-		add_button("View", act_view);
+		add_button(_("Undo this change"), act_undo_selected);
+		add_button(_("Undo last change"), act_undo_last);
+		add_button(_("View"), act_view);
 	}
 
 	a.background_pixel = c_bg.pixel;
@@ -425,10 +427,10 @@ int main(int argc, char **argv)
 	win = XCreateWindow(dpy, RootWindow(dpy, scr), 80, 60, ww, wh, 0,
 	                    CopyFromParent, InputOutput, CopyFromParent,
 	                    CWBackPixel | CWEventMask, &a);
-	XStoreName(dpy, win, "File history");
+	XStoreName(dpy, win, _("File history"));
 	XChangeProperty(dpy, win, XInternAtom(dpy, "_NET_WM_NAME", False),
 	                XInternAtom(dpy, "UTF8_STRING", False), 8, PropModeReplace,
-	                (unsigned char *)"File history", 12);
+	                (unsigned char *)_("File history"), strlen(_("File history")));
 	XSetClassHint(dpy, win, &class);
 	hints.flags = PMinSize;
 	hints.min_width = 600;

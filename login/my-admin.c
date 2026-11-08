@@ -16,7 +16,8 @@
  *   my-admin --pkg install|remove|upgrade [--with-dependents] NAME...
  *                            my-pkg with that command (the Software app)
  *
- * It can only start these programs, with a clean environment. For --backup
+ * It can only start these programs, with a clean environment (only the
+ * session's language and proxy are passed on, checked). For --backup
  * the arguments are passed on when they are plain words and paths (no
  * options of other programs can sneak in that way). Package names are
  * checked: lower-case letters, digits and - _ . +, as in the package list.
@@ -70,6 +71,28 @@ static int valid_arg(const char *s)
 		return 0;
 	for (; *s; s++)
 		if (!isalnum((unsigned char)*s) && !strchr("/-_.: +", *s))
+			return 0;
+	return 1;
+}
+
+/* Values passed on from the user's session: the language (Settings app) and
+ * the proxy (for my-update). Only plain printable text, no spaces. The
+ * language names a locale and a translation: letters, digits and _.@:-
+ * only, never a path (a translation file from elsewhere could trick a
+ * program that runs as root). */
+static const char *pass_on[] = { "LANG", "LANGUAGE", "http_proxy", "https_proxy",
+                                 "no_proxy", NULL };
+static char kept[5][200];
+
+static int plain(const char *v, int is_language)
+{
+	if (!v || !*v || strlen(v) >= sizeof kept[0])
+		return 0;
+	if (is_language)
+		return strspn(v, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+		                 "0123456789_.@:-") == strlen(v);
+	for (; *v; v++)
+		if (*v <= ' ' || *v == 0x7f)
 			return 0;
 	return 1;
 }
@@ -143,6 +166,9 @@ int main(int argc, char **argv)
 		snprintf(display, sizeof display, "%s", getenv("DISPLAY"));
 	if (me)
 		snprintf(user, sizeof user, "%s", me->pw_name);
+	for (int i = 0; pass_on[i]; i++)
+		if (plain(getenv(pass_on[i]), i < 2))
+			snprintf(kept[i], sizeof kept[i], "%s", getenv(pass_on[i]));
 
 	if (setgid(0) != 0 || setuid(0) != 0)
 		return 1;
@@ -151,6 +177,9 @@ int main(int argc, char **argv)
 	setenv("PATH", "/usr/sbin:/usr/bin:/sbin:/bin", 1);
 	setenv("DISPLAY", display, 1);
 	setenv("LANG", "en_US.UTF-8", 1);
+	for (int i = 0; pass_on[i]; i++)
+		if (kept[i][0])
+			setenv(pass_on[i], kept[i], 1);
 	setenv("NO_AT_BRIDGE", "1", 1);
 	setenv("MY_SETUP_USER", user, 1);   /* who asked (my-setup: can't remove themselves) */
 

@@ -4,3 +4,6 @@
 # others administrators. Your own rules: /etc/sudoers.d/local (kept by
 # system updates; check it with visudo -c before you log out).
 %wheel ALL=(ALL:ALL) ALL
+
+# The proxy from Settings also for commands run with sudo (sudo my-update ...)
+Defaults env_keep += "http_proxy https_proxy ftp_proxy no_proxy HTTP_PROXY HTTPS_PROXY NO_PROXY"

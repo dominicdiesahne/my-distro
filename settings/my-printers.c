@@ -20,6 +20,8 @@
  */
 #include <ctype.h>
 #include <gtk/gtk.h>
+
+#include "i18n.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -99,7 +101,7 @@ static void read_printers(void)
 			/* "is idle", "now printing PDF-3", "disabled since ..." */
 			g_strlcpy(cur->state, g_str_has_prefix(state, "is ") ? state + 3 :
 			          g_str_has_prefix(state, "now printing") ? "printing" :
-			          g_str_has_prefix(state, "disabled") ? "switched off" : state,
+			          g_str_has_prefix(state, "disabled") ? _("switched off") : state,
 			          sizeof cur->state);
 			cur->is_default = !strcmp(name, defname);
 		} else if (cur && strstr(lines[i], "Description:")) {
@@ -141,7 +143,7 @@ static void fill_list(void)
 		GtkWidget *icon = gtk_image_new_from_icon_name("printer", GTK_ICON_SIZE_LARGE_TOOLBAR);
 		GtkWidget *name = gtk_label_new(NULL), *info = gtk_label_new(NULL);
 		char *m = g_markup_printf_escaped("<b>%s</b>%s\n<small>%s</small>", p->info[0] ? p->info : p->name,
-		                                  p->is_default ? "   (default)" : "", p->name);
+		                                  p->is_default ? _("   (default)") : "", p->name);
 
 		gtk_label_set_markup(GTK_LABEL(name), m);
 		gtk_label_set_xalign(GTK_LABEL(name), 0);
@@ -157,8 +159,8 @@ static void fill_list(void)
 	}
 	gtk_widget_show_all(list);
 	gtk_label_set_text(GTK_LABEL(status_label), nprinters ? "" :
-		"No printers yet. Click Add printer. (Is the print service running? "
-		"It starts at boot: /etc/init.d/S81cupsd)");
+		_("No printers yet. Click Add printer. (Is the print service running? "
+		"It starts at boot: /etc/init.d/S81cupsd)"));
 	update_buttons();
 }
 
@@ -172,8 +174,8 @@ static void on_row(GtkListBox *l, GtkListBoxRow *r, gpointer d)
 static const char *why(const char *out)
 {
 	return strstr(out, "Forbidden") || strstr(out, "Unauthorized") ?
-		"Your user may not change printers yet (it is not in the group lpadmin). "
-		"As root: addgroup YOUR-NAME lpadmin, then log in again." : out;
+		_("Your user may not change printers yet (it is not in the group lpadmin). "
+		"As root: addgroup YOUR-NAME lpadmin, then log in again.") : out;
 }
 
 static void on_remove(GtkButton *b, gpointer d)
@@ -187,7 +189,7 @@ static void on_remove(GtkButton *b, gpointer d)
 	(void)b; (void)d;
 	if (!p)
 		return;
-	q = g_strdup_printf("Remove the printer \"%s\"?", p->info[0] ? p->info : p->name);
+	q = g_strdup_printf(_("Remove the printer \"%s\"?"), p->info[0] ? p->info : p->name);
 	dlg = gtk_message_dialog_new(GTK_WINDOW(win), GTK_DIALOG_MODAL, GTK_MESSAGE_QUESTION,
 	                             GTK_BUTTONS_OK_CANCEL, "%s", q);
 	g_free(q);
@@ -198,7 +200,7 @@ static void on_remove(GtkButton *b, gpointer d)
 	argv[2] = p->name;
 	out = run(argv, &ok);
 	if (!ok)
-		message(GTK_MESSAGE_ERROR, "Could not remove the printer.", why(out));
+		message(GTK_MESSAGE_ERROR, _("Could not remove the printer."), why(out));
 	g_free(out);
 	fill_list();
 }
@@ -216,7 +218,7 @@ static void on_default(GtkButton *b, gpointer d)
 	argv[2] = p->name;
 	out = run(argv, &ok);
 	if (!ok)
-		message(GTK_MESSAGE_ERROR, "Could not make it the default printer.", why(out));
+		message(GTK_MESSAGE_ERROR, _("Could not make it the default printer."), why(out));
 	g_free(out);
 	fill_list();
 }
@@ -234,7 +236,7 @@ static void on_test(GtkButton *b, gpointer d)
 	argv[2] = p->name;
 	out = run(argv, &ok);
 	message(ok ? GTK_MESSAGE_INFO : GTK_MESSAGE_ERROR,
-	        ok ? "The test page is on its way." : "Could not print.", out);
+	        ok ? _("The test page is on its way.") : _("Could not print."), out);
 	g_free(out);
 	fill_list();
 }
@@ -320,7 +322,7 @@ static void on_devices(GObject *src, GAsyncResult *res, gpointer d)
 		GtkWidget *l = gtk_label_new(NULL);
 		char *esc = g_markup_escape_text(found[i].info[0] ? found[i].info : found[i].uri, -1);
 		char *t = g_strdup_printf("%s\n<small>%s</small>", esc,
-		                          found[i].network ? "in the network" : "USB");
+		                          found[i].network ? _("in the network") : _("USB"));
 
 		gtk_label_set_markup(GTK_LABEL(l), t);
 		gtk_label_set_xalign(GTK_LABEL(l), 0);
@@ -331,9 +333,9 @@ static void on_devices(GObject *src, GAsyncResult *res, gpointer d)
 	}
 	gtk_widget_show_all(add_list);
 	gtk_label_set_text(GTK_LABEL(add_status), nfound ?
-		"Choose your printer, or type its address below." :
-		"No printer found. Is it switched on, and in the same network (or plugged in)? "
-		"You can also type its address (IP or name) below.");
+		_("Choose your printer, or type its address below.") :
+		_("No printer found. Is it switched on, and in the same network (or plugged in)? "
+		"You can also type its address (IP or name) below."));
 }
 
 static void start_search(void)
@@ -342,7 +344,7 @@ static void start_search(void)
 		G_SUBPROCESS_FLAGS_STDERR_SILENCE, NULL,
 		"lpinfo", "--timeout", "10", "-l", "-v", NULL);
 
-	gtk_label_set_text(GTK_LABEL(add_status), "Looking for printers (10 seconds)…");
+	gtk_label_set_text(GTK_LABEL(add_status), _("Looking for printers (10 seconds)…"));
 	if (p) {
 		g_subprocess_communicate_utf8_async(p, NULL, NULL, on_devices, NULL);
 		g_object_unref(p);
@@ -419,12 +421,12 @@ static int add_printer(const char *uri, const char *info, const struct found *f)
 	if (f && (models[n] = find_driver(f)))
 		n++;
 	if (n == 0) {
-		message(GTK_MESSAGE_ERROR, "my-distro has no driver for this printer.",
-		        "Printers made since about 2015 work without a driver over the network "
-		        "(Wi-Fi or cable): connect it to your network and try again.");
+		message(GTK_MESSAGE_ERROR, _("my-distro has no driver for this printer."),
+		        _("Printers made since about 2015 work without a driver over the network "
+		        "(Wi-Fi or cable): connect it to your network and try again."));
 		return 0;
 	}
-	gtk_label_set_text(GTK_LABEL(add_status), "Adding the printer…");
+	gtk_label_set_text(GTK_LABEL(add_status), _("Adding the printer…"));
 	while (gtk_events_pending())
 		gtk_main_iteration();
 
@@ -438,10 +440,10 @@ static int add_printer(const char *uri, const char *info, const struct found *f)
 			break;
 	}
 	if (!ok)
-		message(GTK_MESSAGE_ERROR, "Could not add the printer.",
+		message(GTK_MESSAGE_ERROR, _("Could not add the printer."),
 		        strstr(out, "IPP Everywhere") || strstr(out, "everywhere") ?
-		        "It doesn't answer as a driverless printer (IPP Everywhere). Check "
-		        "the address; some older printers only work over their USB cable." : why(out));
+		        _("It doesn't answer as a driverless printer (IPP Everywhere). Check "
+		        "the address; some older printers only work over their USB cable.") : why(out));
 	g_free(out);
 	g_free(models[0]);
 	g_free(models[1]);
@@ -454,8 +456,8 @@ static void on_add(GtkButton *b, gpointer d)
 	int added = 0;
 
 	(void)b; (void)d;
-	add_dlg = gtk_dialog_new_with_buttons("Add printer", GTK_WINDOW(win), GTK_DIALOG_MODAL,
-		"Cancel", GTK_RESPONSE_CANCEL, "Add", GTK_RESPONSE_OK, NULL);
+	add_dlg = gtk_dialog_new_with_buttons(_("Add printer"), GTK_WINDOW(win), GTK_DIALOG_MODAL,
+		_("Cancel"), GTK_RESPONSE_CANCEL, _("Add"), GTK_RESPONSE_OK, NULL);
 	gtk_window_set_default_size(GTK_WINDOW(add_dlg), 480, 400);
 	box = gtk_dialog_get_content_area(GTK_DIALOG(add_dlg));
 	gtk_container_set_border_width(GTK_CONTAINER(box), 12);
@@ -470,9 +472,9 @@ static void on_add(GtkButton *b, gpointer d)
 	gtk_container_add(GTK_CONTAINER(scroll), add_list);
 	gtk_box_pack_start(GTK_BOX(box), scroll, TRUE, TRUE, 0);
 	row = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
-	gtk_box_pack_start(GTK_BOX(row), gtk_label_new("Or its address:"), FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(row), gtk_label_new(_("Or its address:")), FALSE, FALSE, 0);
 	add_address = gtk_entry_new();
-	gtk_entry_set_placeholder_text(GTK_ENTRY(add_address), "e.g. 192.168.1.20 or printer.local");
+	gtk_entry_set_placeholder_text(GTK_ENTRY(add_address), _("e.g. 192.168.1.20 or printer.local"));
 	gtk_box_pack_start(GTK_BOX(row), add_address, TRUE, TRUE, 0);
 	gtk_box_pack_start(GTK_BOX(box), row, FALSE, FALSE, 0);
 	add_ok = gtk_dialog_get_widget_for_response(GTK_DIALOG(add_dlg), GTK_RESPONSE_OK);
@@ -488,7 +490,7 @@ static void on_add(GtkButton *b, gpointer d)
 			char *uri;
 
 			if (strpbrk(addr, " /\"'\\")) {
-				gtk_label_set_text(GTK_LABEL(add_status), "Type only the address, like 192.168.1.20.");
+				gtk_label_set_text(GTK_LABEL(add_status), _("Type only the address, like 192.168.1.20."));
 				continue;
 			}
 			uri = g_strdup_printf("ipp://%s/ipp/print", addr);
@@ -499,14 +501,14 @@ static void on_add(GtkButton *b, gpointer d)
 
 			added = add_printer(f->uri, f->info[0] ? f->info : f->model, f);
 		} else {
-			gtk_label_set_text(GTK_LABEL(add_status), "Choose a printer, or type its address.");
+			gtk_label_set_text(GTK_LABEL(add_status), _("Choose a printer, or type its address."));
 		}
 	}
 	gtk_widget_destroy(add_dlg);
 	add_dlg = NULL;
 	fill_list();
 	if (added && nprinters)
-		gtk_label_set_text(GTK_LABEL(status_label), "Added. Print a test page to try it.");
+		gtk_label_set_text(GTK_LABEL(status_label), _("Added. Print a test page to try it."));
 }
 
 /* --- Scanning ----------------------------------------------------------------------------- */
@@ -538,7 +540,7 @@ static void on_scanners(GObject *src, GAsyncResult *res, gpointer d)
 	g_free(out);
 	gtk_combo_box_set_active(GTK_COMBO_BOX(scan_combo), 0);
 	gtk_label_set_text(GTK_LABEL(scan_status), n ? "" :
-		"No scanner found. Is it switched on, and plugged in or in the same network?");
+		_("No scanner found. Is it switched on, and plugged in or in the same network?"));
 	gtk_dialog_set_response_sensitive(GTK_DIALOG(scan_dlg), GTK_RESPONSE_OK, n > 0);
 }
 
@@ -551,14 +553,14 @@ static void on_scanned(GObject *src, GAsyncResult *res, gpointer d)
 	g_subprocess_communicate_utf8_finish(G_SUBPROCESS(src), res, NULL, &err, NULL);
 	ok = g_subprocess_get_if_exited(G_SUBPROCESS(src)) && g_subprocess_get_exit_status(G_SUBPROCESS(src)) == 0;
 	if (ok) {
-		const char *argv[] = { "my-notify", "-i", "scanner", "Scanned",
+		const char *argv[] = { "my-notify", "-i", "scanner", _("Scanned"),
 		                       scan_file, NULL };
 
 		g_spawn_async(NULL, (char **)argv, NULL, G_SPAWN_SEARCH_PATH, NULL, NULL, NULL, NULL);
 	}
 	if (scan_dlg) {
-		gtk_label_set_text(GTK_LABEL(scan_status), ok ? "Done: the picture is in your Pictures folder." :
-		                   err && err[0] ? err : "The scan did not work.");
+		gtk_label_set_text(GTK_LABEL(scan_status), ok ? _("Done: the picture is in your Pictures folder.") :
+		                   err && err[0] ? err : _("The scan did not work."));
 		gtk_dialog_set_response_sensitive(GTK_DIALOG(scan_dlg), GTK_RESPONSE_OK, TRUE);
 	} else if (!ok) {
 		unlink(scan_file);
@@ -593,7 +595,7 @@ static void on_scan_response(GtkDialog *dlg, int response, gpointer d)
 		"--mode", gtk_combo_box_get_active_id(GTK_COMBO_BOX(scan_mode)),
 		"-o", scan_file, NULL);
 	if (p) {
-		gtk_label_set_text(GTK_LABEL(scan_status), "Scanning…");
+		gtk_label_set_text(GTK_LABEL(scan_status), _("Scanning…"));
 		gtk_dialog_set_response_sensitive(dlg, GTK_RESPONSE_OK, FALSE);
 		g_subprocess_communicate_utf8_async(p, NULL, NULL, on_scanned, NULL);
 		g_object_unref(p);
@@ -613,8 +615,8 @@ static void on_scan(GtkButton *b, gpointer d)
 		gtk_window_present(GTK_WINDOW(scan_dlg));
 		return;
 	}
-	scan_dlg = gtk_dialog_new_with_buttons("Scan", GTK_WINDOW(win), 0,
-		"Close", GTK_RESPONSE_CLOSE, "Scan", GTK_RESPONSE_OK, NULL);
+	scan_dlg = gtk_dialog_new_with_buttons(_("Scan"), GTK_WINDOW(win), 0,
+		_("Close"), GTK_RESPONSE_CLOSE, _("Scan"), GTK_RESPONSE_OK, NULL);
 	box = gtk_dialog_get_content_area(GTK_DIALOG(scan_dlg));
 	gtk_container_set_border_width(GTK_CONTAINER(box), 16);
 	gtk_box_set_spacing(GTK_BOX(box), 10);
@@ -623,22 +625,22 @@ static void on_scan(GtkButton *b, gpointer d)
 	gtk_grid_set_column_spacing(GTK_GRID(grid), 10);
 	scan_combo = gtk_combo_box_text_new();
 	scan_res = gtk_combo_box_text_new();
-	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(scan_res), "150", "150 dpi (screen, e-mail)");
-	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(scan_res), "300", "300 dpi (documents)");
-	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(scan_res), "600", "600 dpi (photos)");
+	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(scan_res), "150", _("150 dpi (screen, e-mail)"));
+	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(scan_res), "300", _("300 dpi (documents)"));
+	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(scan_res), "600", _("600 dpi (photos)"));
 	gtk_combo_box_set_active(GTK_COMBO_BOX(scan_res), 1);
 	scan_mode = gtk_combo_box_text_new();
-	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(scan_mode), "Color", "Color");
-	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(scan_mode), "Gray", "Gray");
+	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(scan_mode), "Color", _("Color"));
+	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(scan_mode), "Gray", _("Gray"));
 	gtk_combo_box_set_active(GTK_COMBO_BOX(scan_mode), 0);
-	gtk_grid_attach(GTK_GRID(grid), gtk_label_new("Scanner"), 0, 0, 1, 1);
+	gtk_grid_attach(GTK_GRID(grid), gtk_label_new(_("Scanner")), 0, 0, 1, 1);
 	gtk_grid_attach(GTK_GRID(grid), scan_combo, 1, 0, 1, 1);
-	gtk_grid_attach(GTK_GRID(grid), gtk_label_new("Quality"), 0, 1, 1, 1);
+	gtk_grid_attach(GTK_GRID(grid), gtk_label_new(_("Quality")), 0, 1, 1, 1);
 	gtk_grid_attach(GTK_GRID(grid), scan_res, 1, 1, 1, 1);
-	gtk_grid_attach(GTK_GRID(grid), gtk_label_new("Colors"), 0, 2, 1, 1);
+	gtk_grid_attach(GTK_GRID(grid), gtk_label_new(_("Colors")), 0, 2, 1, 1);
 	gtk_grid_attach(GTK_GRID(grid), scan_mode, 1, 2, 1, 1);
 	gtk_box_pack_start(GTK_BOX(box), grid, FALSE, FALSE, 0);
-	scan_status = gtk_label_new("Looking for scanners…");
+	scan_status = gtk_label_new(_("Looking for scanners…"));
 	gtk_label_set_line_wrap(GTK_LABEL(scan_status), TRUE);
 	gtk_label_set_max_width_chars(GTK_LABEL(scan_status), 50);
 	gtk_box_pack_start(GTK_BOX(box), scan_status, FALSE, FALSE, 0);
@@ -666,9 +668,10 @@ int main(int argc, char **argv)
 {
 	GtkWidget *box, *scroll, *row, *add;
 
+	i18n_init();
 	gtk_init(&argc, &argv);
 	win = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-	gtk_window_set_title(GTK_WINDOW(win), "Printers");
+	gtk_window_set_title(GTK_WINDOW(win), _("Printers"));
 	gtk_window_set_default_size(GTK_WINDOW(win), 600, 420);
 	gtk_window_set_icon_name(GTK_WINDOW(win), "printer");
 	g_signal_connect(win, "destroy", G_CALLBACK(gtk_main_quit), NULL);
@@ -690,17 +693,17 @@ int main(int argc, char **argv)
 	gtk_box_pack_start(GTK_BOX(box), status_label, FALSE, FALSE, 0);
 
 	row = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
-	add = button("Add printer…", G_CALLBACK(on_add));
+	add = button(_("Add printer…"), G_CALLBACK(on_add));
 	gtk_style_context_add_class(gtk_widget_get_style_context(add), "suggested-action");
-	btn_remove = button("Remove", G_CALLBACK(on_remove));
-	btn_default = button("Make default", G_CALLBACK(on_default));
-	btn_test = button("Test page", G_CALLBACK(on_test));
+	btn_remove = button(_("Remove"), G_CALLBACK(on_remove));
+	btn_default = button(_("Make default"), G_CALLBACK(on_default));
+	btn_test = button(_("Test page"), G_CALLBACK(on_test));
 	gtk_box_pack_start(GTK_BOX(row), add, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(row), btn_remove, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(row), btn_default, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(row), btn_test, FALSE, FALSE, 0);
-	gtk_box_pack_end(GTK_BOX(row), button("Scan…", G_CALLBACK(on_scan)), FALSE, FALSE, 0);
-	gtk_box_pack_end(GTK_BOX(row), button("More settings", G_CALLBACK(on_web)), FALSE, FALSE, 0);
+	gtk_box_pack_end(GTK_BOX(row), button(_("Scan…"), G_CALLBACK(on_scan)), FALSE, FALSE, 0);
+	gtk_box_pack_end(GTK_BOX(row), button(_("More settings"), G_CALLBACK(on_web)), FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(box), row, FALSE, FALSE, 0);
 
 	gtk_widget_show_all(win);

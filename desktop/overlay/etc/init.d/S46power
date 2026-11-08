@@ -1,12 +1,57 @@
 #!/bin/sh
-# Starts my-lidd: closing a laptop's lid locks the screen and suspends
-# (settings: /etc/my-distro/power.conf). Restarted if it crashes.
+# Power: starts my-lidd (closing a laptop's lid locks the screen and
+# suspends), sets how fast the CPU may run, and turns on the swap file that
+# hibernation writes to (installed systems). Settings: /etc/my-distro/power.conf.
+# my-lidd is restarted if it crashes.
 # Log: /var/log/power.log
 PIDFILE=/run/my-lidd.keepalive
+CONF=/etc/my-distro/power.conf
+
+# conf KEY DEFAULT: a value from power.conf
+conf() {
+	v=$(sed -n "s/^[[:space:]]*$1[[:space:]]*=[[:space:]]*//p" $CONF 2>/dev/null | tail -n 1)
+	echo "${v:-$2}"
+}
+
+# CPU speed (cpufreq). The kernel's driver is intel_pstate or amd-pstate on
+# newer CPUs (governors "powersave" = adjust to the load, "performance" =
+# full speed, plus an energy preference), acpi-cpufreq on older ones
+# (schedutil = adjust to the load). "balanced" picks the load-following one.
+cpu_speed() {
+	mode=$(conf cpu balanced)
+	set -- /sys/devices/system/cpu/cpu[0-9]*/cpufreq
+	[ -d "$1" ] || { echo "cpu: no frequency scaling (VM or unsupported CPU)"; return; }
+	for c in "$@"; do
+		avail=$(cat "$c/scaling_available_governors" 2>/dev/null)
+		case "$mode" in
+		performance) gov=performance; epp=performance ;;
+		powersave)   gov=powersave; epp=power
+		             # acpi-cpufreq's "powersave" means the lowest speed
+		             # always; conservative follows the load, slowly
+		             case "$avail" in *conservative*) gov=conservative ;; esac ;;
+		*)           gov=schedutil; epp=balance_performance
+		             case "$avail" in *schedutil*) ;; *) gov=powersave ;; esac ;;
+		esac
+		case " $avail " in *" $gov "*) echo "$gov" >"$c/scaling_governor" ;; esac
+		[ -w "$c/energy_performance_preference" ] &&
+			echo "$epp" >"$c/energy_performance_preference" 2>/dev/null
+	done
+	echo "cpu: $mode ($(cat "$1/scaling_driver" 2>/dev/null), $(cat "$1/scaling_governor"))"
+}
+
+# Hibernation: my-install makes /swapfile (installed systems only); the
+# kernel line tells the kernel where it is (resume=, resume_offset=).
+# Lower priority than zram, so normal swapping still goes to RAM first.
+swap_file() {
+	[ -f /swapfile ] || return
+	grep -q '^/swapfile ' /proc/swaps && return
+	swapon -p 10 /swapfile && echo "swap file on (for hibernation)"
+}
 
 case "$1" in
 start)
-	printf "Starting lid switch: "
+	printf "Starting power management: "
+	{ cpu_speed; swap_file; } >>/var/log/power.log 2>&1
 	/usr/bin/my-keepalive -a /usr/sbin/my-lidd </dev/null >>/var/log/power.log 2>&1 &
 	echo $! > $PIDFILE
 	echo "OK"
