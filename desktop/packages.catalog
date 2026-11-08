@@ -1,0 +1,258 @@
+# The programs of the Software app (my-pkg): what `make packages` writes into
+# the package list for each Buildroot package from packages.fragment.
+#
+# [name]       the Buildroot package (as in BR2_PACKAGE_NAME, lower case, -)
+# title        the name people see (Software app, Start menu)
+# category     Office, Graphics, Internet, Programming, Tools, Games or Sound
+# description  what it is and how to start it; empty: the Buildroot help text
+# run          the command for the Start menu (none: no entry, e.g. command-
+#              line tools). %f = a file: the Start menu asks for one first.
+# terminal     yes: runs in a terminal window (xterm)
+# hold         yes: the terminal stays open when the program ends
+# icon         an Adwaita icon name or a full path (like /etc/my-panel/menu)
+# mime         file types it opens (for the file manager and the file chooser)
+# needs        packages it needs at run time that Buildroot doesn't build
+#              before it (they are installed with it)
+#
+# Packages from packages.fragment without an entry here (and the libraries
+# the programs need) are listed as "Libraries": installed and removed with
+# the programs, not shown in the Software app.
+
+# --- Office -------------------------------------------------------------------------
+
+[mupdf]
+title = PDF viewer (MuPDF)
+category = Office
+run = mupdf-x11 %f
+icon = x-office-document
+mime = application/pdf;application/epub+zip;application/oxps
+description = Shows PDF documents, e-books (EPUB) and XPS files: small and very
+  fast. Arrow keys and Page Up/Down turn pages, + and - zoom, / searches.
+  Also brings mutool, which merges, splits and converts PDFs in a terminal.
+
+[gnuplot]
+title = gnuplot (plots)
+category = Office
+run = gnuplot
+terminal = yes
+icon = applications-science
+description = Draws functions and data as plots, from commands or a script.
+  "set terminal dumb" draws in the terminal, "set terminal png" and "set output
+  'plot.png'" save a picture. Try: plot sin(x)
+
+# --- Graphics -----------------------------------------------------------------------
+
+[feh]
+title = Image viewer (feh)
+category = Graphics
+run = feh --scale-down --start-at %f
+icon = image-x-generic
+mime = image/png;image/jpeg;image/gif;image/bmp;image/x-portable-pixmap
+description = Shows pictures: opens one and pages through the others in its
+  folder with the arrow keys or the mouse wheel. + and - zoom, f full screen,
+  q quits. Also makes slide shows (feh -D 5 ~/Pictures).
+
+[imagemagick]
+title = ImageMagick
+category = Graphics
+description = Converts and changes pictures in a terminal: other formats,
+  sizes, crops, text on pictures, many pictures at once. Example: magick
+  photo.jpg -resize 50% small.png
+
+# --- Internet -----------------------------------------------------------------------
+
+[dillo]
+title = Dillo web browser
+category = Internet
+run = dillo
+icon = web-browser
+description = A second web browser, tiny and very fast (FLTK). It has no
+  JavaScript, so it is best for documentation, news and simple pages.
+
+[lynx]
+title = Lynx (text web browser)
+category = Internet
+run = lynx
+terminal = yes
+icon = applications-internet
+description = The web as text, in a terminal. Arrow keys follow links, g opens
+  an address, q quits. Works over SSH and on slow connections.
+
+[irssi]
+title = irssi (IRC chat)
+category = Internet
+run = irssi
+terminal = yes
+icon = applications-internet
+description = Chat on IRC networks in a terminal. Example: /connect
+  irc.libera.chat, then /join #linux.
+
+[openssh]
+title = SSH client (OpenSSH)
+category = Internet
+description = Log in to other computers and copy files over an encrypted
+  connection: ssh, scp, sftp, and ssh-keygen for your own keys. (Only the
+  client: nobody can log in to this computer with it.)
+
+[rsync]
+title = rsync
+category = Tools
+description = Copies and synchronizes folders, also to other computers over
+  SSH; it only copies what changed. Example: rsync -av ~/Documents /media/USB/
+
+# --- Programming --------------------------------------------------------------------
+
+[vim]
+title = Vim
+category = Programming
+run = vim
+terminal = yes
+icon = accessories-text-editor
+description = The classic text editor of Unix, with syntax highlighting. i
+  starts typing, Esc stops, :w saves, :q quits. vimtutor teaches the rest in
+  half an hour.
+
+[ruby]
+title = Ruby
+category = Programming
+description = The Ruby programming language: ruby file.rb runs a script, irb
+  is an interactive prompt.
+
+[php]
+title = PHP
+category = Programming
+description = The PHP language on the command line, with SQLite, cURL, OpenSSL
+  and multibyte strings. php -S localhost:8000 serves the current folder for
+  testing web pages.
+
+[perl]
+title = Perl
+category = Programming
+description = The Perl programming language: perl file.pl runs a script.
+
+[gdb]
+title = GDB debugger
+category = Programming
+description = Stops a program while it runs and shows what it is doing: gdb
+  ./program, then run, bt (where it crashed), break, step, print.
+
+[strace]
+title = strace
+category = Programming
+description = Shows every system call a program makes (files it opens,
+  network, ...): strace -f program. Good for finding out why something fails.
+
+[jq]
+title = jq (JSON)
+category = Programming
+description = Reads, filters and changes JSON on the command line. Example:
+  curl -s https://api.github.com/repos/dominicdiesahne/my-distro | jq .stargazers_count
+
+# --- Tools --------------------------------------------------------------------------
+
+[tmux]
+title = tmux (terminal multiplexer)
+category = Tools
+run = tmux
+terminal = yes
+icon = utilities-terminal
+description = Several terminals in one window, side by side or as tabs, and
+  sessions that keep running when you close the window. Ctrl-B then % or "
+  splits, Ctrl-B d detaches, tmux attach brings it back.
+
+[ncdu]
+title = Disk usage (ncdu)
+category = Tools
+run = ncdu /
+terminal = yes
+icon = drive-harddisk
+description = Shows which folders use the most space, biggest first, and lets
+  you delete what you don't need (d). Arrow keys move, q quits.
+
+[p7zip]
+title = 7-Zip (7zr)
+category = Tools
+description = Packs and unpacks 7z archives in a terminal: 7zr x file.7z
+  unpacks, 7zr a archive.7z folder packs.
+
+[zip]
+title = zip
+category = Tools
+description = Makes .zip archives (unzip is in my-distro already): zip -r
+  archive.zip folder.
+
+[bash]
+title = Bash
+category = Tools
+description = The shell most Linux systems use (my-distro's own is BusyBox's
+  ash). For scripts that need bash: #!/bin/bash.
+
+[zsh]
+title = Zsh
+category = Tools
+description = An interactive shell with better completion and history than
+  ash. Start it with zsh; chsh changes your login shell.
+
+[neofetch]
+title = System info (neofetch)
+category = Tools
+run = neofetch
+terminal = yes
+hold = yes
+icon = computer
+needs = bash
+description = Shows the system, kernel, CPU, memory and screen next to a logo,
+  in the terminal. Nice for screenshots.
+
+# --- Games --------------------------------------------------------------------------
+
+[lbreakout2]
+title = LBreakout2
+category = Games
+run = lbreakout2
+icon = input-gaming
+description = Breakout: keep the ball in play with the paddle and clear the
+  bricks. Many levels and bonuses; mouse or keyboard.
+
+[ltris]
+title = LTris
+category = Games
+run = ltris
+icon = input-gaming
+description = Falling blocks: fill whole lines to clear them. Alone, against
+  the computer or two players.
+
+[prboom]
+title = Doom (shareware)
+category = Games
+run = /usr/games/prboom -window -width 800 -height 600
+icon = applications-games
+needs = doom-wad
+description = The 1993 shooter, episode 1 of the shareware version, with the
+  PrBoom engine. Arrow keys move, Ctrl shoots, Space opens doors, Esc menu.
+
+[opentyrian]
+title = OpenTyrian
+category = Games
+run = opentyrian
+icon = applications-games
+needs = opentyrian-data
+description = Tyrian, a fast vertical shoot 'em up from 1995, now free. Arrow
+  keys fly, Space fires.
+
+[sl]
+title = Steam locomotive (sl)
+category = Games
+run = sl
+terminal = yes
+icon = utilities-terminal
+description = A joke for people who type sl instead of ls: a steam train
+  drives across the terminal.
+
+# --- Sound --------------------------------------------------------------------------
+
+[espeak]
+title = Text to speech (eSpeak)
+category = Sound
+description = Reads text aloud, in English, German and many other languages:
+  espeak "Hello", espeak -v de "Hallo", espeak -f file.txt.

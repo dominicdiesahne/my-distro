@@ -1,0 +1,18 @@
+#!/bin/sh
+# Programs from the Software app after a system update (or "Undo last
+# update"): if they were made for another version than the one that runs now
+# and my-update couldn't install the new ones (no internet then), my-pkg
+# tries now, in the background, waiting for the network for a few minutes.
+case "$1" in
+start)
+	[ -x /usr/bin/my-pkg ] || exit 0
+	/usr/bin/my-pkg after-update --check >/dev/null 2>&1
+	[ $? -eq 10 ] || exit 0
+	( /usr/bin/my-pkg after-update --wait 2>&1 | logger -t my-pkg ) &
+	;;
+stop|restart) ;;
+*)
+	echo "Usage: $0 {start}"
+	exit 1
+	;;
+esac

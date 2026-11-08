@@ -11,6 +11,7 @@ xeyes=face-smile
 my-history=document-open-recent
 my-search-gui=system-search
 my-install=drive-harddisk
+my-software=system-software-install
 my-ide=/usr/lib/nvim/share/icons/hicolor/128x128/apps/nvim.png
 xvkbd=input-keyboard
 XVkbd=input-keyboard

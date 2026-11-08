@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Software
+Comment=Install and remove programs
+Icon=system-software-install
+Exec=my-software
+Terminal=false
+Categories=Settings;System;PackageManager;

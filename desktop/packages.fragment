@@ -1,0 +1,85 @@
+# Extra programs for the package manager (my-pkg, the Software app). NOT part
+# of the image: `make packages` builds them on top of buildroot.fragment in
+# the same build tree and packs each one (and each library they need that
+# the image doesn't have) as its own package. desktop/packages.catalog has
+# their names, categories and Start menu entries.
+#
+# A program may bring new libraries, but must not change an option of a
+# package that is in the image (it would not be rebuilt, and installed
+# systems have the image's version): `make packages` stops if one does.
+
+# --- Office and documents ------------------------------------------------------
+BR2_PACKAGE_MUPDF=y
+BR2_PACKAGE_GNUPLOT=y
+
+# --- Graphics ------------------------------------------------------------------
+# (feh needs imlib2's JPEG loader, so that is in the image: buildroot.fragment)
+BR2_PACKAGE_FEH=y
+BR2_PACKAGE_IMAGEMAGICK=y
+
+# --- Internet ------------------------------------------------------------------
+BR2_PACKAGE_DILLO=y
+BR2_PACKAGE_LYNX=y
+BR2_PACKAGE_IRSSI=y
+BR2_PACKAGE_OPENSSH=y
+BR2_PACKAGE_OPENSSH_CLIENT=y
+# no SSH server: it would need its own user, host keys and a start script
+# BR2_PACKAGE_OPENSSH_SERVER is not set
+BR2_PACKAGE_OPENSSH_KEY_UTILS=y
+BR2_PACKAGE_RSYNC=y
+
+# --- Programming ---------------------------------------------------------------
+BR2_PACKAGE_VIM=y
+# Node.js is not in yet: it builds V8, which alone takes hours on the build
+# machine. To add it, uncomment these lines and give it a [nodejs] entry in
+# packages.catalog (it runs parts of its build in QEMU and with the build
+# machine's Python; make packages rebuilds those build tools by itself):
+# BR2_PACKAGE_NODEJS=y
+# BR2_PACKAGE_HOST_PYTHON3_BZIP2=y
+# BR2_PACKAGE_HOST_PYTHON3_SSL=y
+# BR2_PACKAGE_HOST_QEMU_LINUX_USER_MODE=y
+BR2_PACKAGE_RUBY=y
+# PHP: the php command, with HTTPS, SQLite, JSON and UTF-8 strings
+BR2_PACKAGE_PHP=y
+BR2_PACKAGE_PHP_SAPI_CLI=y
+# BR2_PACKAGE_PHP_SAPI_CGI is not set
+BR2_PACKAGE_PHP_EXT_OPENSSL=y
+BR2_PACKAGE_PHP_EXT_CURL=y
+BR2_PACKAGE_PHP_EXT_SQLITE=y
+BR2_PACKAGE_PHP_EXT_PDO=y
+BR2_PACKAGE_PHP_EXT_PDO_SQLITE=y
+BR2_PACKAGE_PHP_EXT_MBSTRING=y
+BR2_PACKAGE_PERL=y
+BR2_PACKAGE_GDB=y
+BR2_PACKAGE_STRACE=y
+BR2_PACKAGE_JQ=y
+
+# --- Terminal tools ------------------------------------------------------------
+BR2_PACKAGE_TMUX=y
+BR2_PACKAGE_NCDU=y
+BR2_PACKAGE_P7ZIP=y
+BR2_PACKAGE_ZIP=y
+# bash and zsh are only offered when BusyBox's own shell may have company
+# (this only shows them in the config; BusyBox itself doesn't change)
+BR2_PACKAGE_BUSYBOX_SHOW_OTHERS=y
+BR2_PACKAGE_BASH=y
+BR2_PACKAGE_ZSH=y
+BR2_PACKAGE_NEOFETCH=y
+
+# --- Games ---------------------------------------------------------------------
+# The SDL 1.2 games draw into an X window (SDL's X11 video), not the console
+BR2_PACKAGE_SDL=y
+BR2_PACKAGE_SDL_X11=y
+# BR2_PACKAGE_SDL_FBCON is not set
+BR2_PACKAGE_LBREAKOUT2=y
+BR2_PACKAGE_LBREAKOUT2_AUDIO=y
+BR2_PACKAGE_LTRIS=y
+BR2_PACKAGE_LTRIS_AUDIO=y
+BR2_PACKAGE_PRBOOM=y
+BR2_PACKAGE_DOOM_WAD=y
+BR2_PACKAGE_OPENTYRIAN=y
+BR2_PACKAGE_SL=y
+
+# --- Sound ---------------------------------------------------------------------
+BR2_PACKAGE_ESPEAK=y
+BR2_PACKAGE_ESPEAK_AUDIO_BACKEND_ALSA=y

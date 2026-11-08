@@ -1,7 +1,7 @@
 /*
  * my-admin: opens "Users and system" (my-setup --manage) as root, after
- * checking the root password. The Disks window and the Backup window use it
- * the same way.
+ * checking the root password. The Disks window, the Backup window and the
+ * Software app use it the same way.
  *
  * Installed setuid root (like my-power), so a normal user can start it.
  * The window, started as that user, shows the password field and writes the
@@ -13,10 +13,13 @@
  *   my-admin --disks         my-disks --manage        (the Disks window)
  *   my-admin --backup ARGS   my-backup ARGS           (backups with the system
  *                                                     settings, see my-backup)
+ *   my-admin --pkg install|remove|upgrade [--with-dependents] NAME...
+ *                            my-pkg with that command (the Software app)
  *
  * It can only start these programs, with a clean environment. For --backup
  * the arguments are passed on when they are plain words and paths (no
- * options of other programs can sneak in that way).
+ * options of other programs can sneak in that way). Package names are
+ * checked: lower-case letters, digits and - _ . +, as in the package list.
  *
  * Exit codes: 2 = wrong password, 1 = other error; otherwise the program's.
  */
@@ -29,6 +32,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+
+#define MY_PKG  "/usr/bin/my-pkg"
+#define MAX_PKG 64                       /* names in one --pkg command */
 
 static int root_password_ok(const char *typed)
 {
@@ -68,11 +74,48 @@ static int valid_arg(const char *s)
 	return 1;
 }
 
+/* A package name from the list: a-z, 0-9, - _ . +, starting with a letter or digit */
+static int valid_package(const char *s)
+{
+	size_t n = strlen(s);
+
+	if (n == 0 || n > 64 || !(islower((unsigned char)s[0]) || isdigit((unsigned char)s[0])))
+		return 0;
+	for (; *s; s++)
+		if (!islower((unsigned char)*s) && !isdigit((unsigned char)*s) && !strchr("-_.+", *s))
+			return 0;
+	return 1;
+}
+
+/* --pkg CMD [--with-dependents] NAME...: checks it all, fills args for my-pkg */
+static int pkg_args(int argc, char **argv, char **args)
+{
+	int n = 0;
+
+	if (argc < 3 || argc - 2 > MAX_PKG)
+		return 0;
+	if (strcmp(argv[2], "install") && strcmp(argv[2], "remove") && strcmp(argv[2], "upgrade"))
+		return 0;
+	args[n++] = "my-pkg";
+	args[n++] = argv[2];
+	for (int i = 3; i < argc; i++) {
+		if (strcmp(argv[i], "--with-dependents") == 0 && strcmp(argv[2], "remove") == 0)
+			args[n++] = argv[i];
+		else if (valid_package(argv[i]))
+			args[n++] = argv[i];
+		else
+			return 0;
+	}
+	args[n] = NULL;
+	return 1;
+}
+
 int main(int argc, char **argv)
 {
 	char pass[256] = "", display[16] = ":0", user[64] = "";
 	struct passwd *me = getpwuid(getuid());
 	const char *mode = argc > 1 ? argv[1] : "";
+	char *pkg_argv[MAX_PKG + 4];
 
 	if (strcmp(mode, "--backup") == 0)
 		for (int i = 2; i < argc; i++)
@@ -80,6 +123,10 @@ int main(int argc, char **argv)
 				fprintf(stderr, "my-admin: odd argument\n");
 				return 1;
 			}
+	if (strcmp(mode, "--pkg") == 0 && !pkg_args(argc, argv, pkg_argv)) {
+		fprintf(stderr, "usage: my-admin --pkg install|remove|upgrade [--with-dependents] NAME...\n");
+		return 1;
+	}
 
 	if (!fgets(pass, sizeof pass, stdin))
 		pass[0] = '\0';
@@ -114,7 +161,9 @@ int main(int argc, char **argv)
 	else if (strcmp(mode, "--backup") == 0) {
 		argv[1] = "my-backup";
 		execv("/usr/bin/my-backup", argv + 1);
-	} else
+	} else if (strcmp(mode, "--pkg") == 0)
+		execv(MY_PKG, pkg_argv);
+	else
 		execl("/usr/bin/my-setup", "my-setup", "--manage", (char *)NULL);
 	return 1;
 }

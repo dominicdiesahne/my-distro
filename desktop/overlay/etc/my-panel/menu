@@ -26,6 +26,7 @@ Eject USB stick|my-eject|media-eject
 Settings|my-settings|preferences-desktop
 Users and system|my-setup|system-users
 System update|my-setup --update|software-update-available
+Software|my-software|system-software-install
 Disks|my-disks|drive-harddisk
 Backup|my-backup-gui|document-save
 System monitor|xterm -name monitor -T "System monitor" -e htop|computer

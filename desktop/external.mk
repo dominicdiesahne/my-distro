@@ -22,3 +22,8 @@ NETSURF_POST_PATCH_HOOKS += NETSURF_ICON_AS_PNG
 # found no driver and the screen stayed black. Lazy binding for these two.
 XSERVER_XORG_SERVER_CONF_ENV += LDFLAGS="$(TARGET_LDFLAGS) -Wl,-z,lazy"
 XDRIVER_XF86_VIDEO_FBDEV_CONF_ENV += LDFLAGS="$(TARGET_LDFLAGS) -Wl,-z,lazy"
+
+# PrBoom (Doom, a package of the Software app) is from 2008 and defines its
+# own "false" and "true", which C23 (GCC 15's default) made keywords: build
+# it as C17.
+PRBOOM_CONF_ENV += CFLAGS="$(TARGET_CFLAGS) -std=gnu17"

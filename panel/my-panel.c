@@ -5,13 +5,15 @@
  *   [ â˜° Start ] [ window ] [ window ] ...                    [ Mon 04.11.  14:32 ]
  *
  * - Start button opens the app menu. The entries come from /etc/my-panel/menu,
- *   one "Label|command|icon" per line, "-" for a separator line.
+ *   one "Label|command|icon" per line, "-" for a separator line. Programs
+ *   from the Software app (my-pkg writes /var/lib/my-pkg/menu, same format)
+ *   go after the first group; the menu is read again when that file changes.
  *   `killall -USR1 my-panel` opens it too (Openbox binds that to Super+Space).
  *   Pressing and releasing the Windows key (Super) on its own opens and
  *   closes it as well: XInput 2 reports every key to us, even while Openbox
  *   holds the keyboard, so Super+L and the other shortcuts still work (another
  *   key between press and release means it was a shortcut, not the menu).
- *   When the menu is taller than the screen it gets two columns.
+ *   When the menu is taller than the screen it gets more columns.
  * - One button per open window, with the app's icon. Click: bring it to the
  *   front; click the window that is already in front: minimise it. The x on
  *   the button (shown under the mouse and on the active window) closes it.
@@ -80,16 +82,17 @@
 #define ITEM_H      30
 #define SEP_H       11
 #define MAX_TASKS   64
-#define MAX_ITEMS   48
+#define MAX_ITEMS   128
 #define TITLE_MAX   200
 #define ICON_SIZE   20
-#define MAX_CACHE   64
+#define MAX_CACHE   160
 #define CLOSE_W     22       /* the x on a window button */
 #define CAL_W       296      /* calendar popup */
 #define CAL_TOP     92       /* height of the big time + date at its top */
 #define CAL_CELL    38
 
 #define MENU_FILE  "/etc/my-panel/menu"
+#define PKG_MENU   "/var/lib/my-pkg/menu"    /* programs from the Software app */
 #define ICONS_FILE "/etc/my-panel/icons"
 
 enum { HOVER_BLUETOOTH = -8, HOVER_BATTERY = -7, HOVER_VOLUME = -6, HOVER_WIFI = -5, HOVER_UPDATE = -4,
@@ -187,6 +190,7 @@ static int nicon_cache;
 static struct { char cls[64]; char icon[64]; } class_icons[MAX_CACHE];
 static int nclass_icons;
 static volatile sig_atomic_t menu_requested;   /* set by SIGUSR1 */
+static time_t pkg_menu_time;      /* when PKG_MENU was last changed (0: none) */
 
 static Atom A_ICON, A_CLIENT_LIST, A_ACTIVE, A_NAME, A_UTF8, A_STATE, A_HIDDEN,
 	A_SKIP_TASKBAR, A_TYPE, A_TYPE_DOCK, A_TYPE_DESKTOP, A_STRUT,
@@ -1232,8 +1236,8 @@ static void draw_menu(void)
 	XftDrawRect(menu_draw, &c_button, 0, 0, menu_w, HEADER_H);
 	XftDrawRect(menu_draw, &c_accent, 0, HEADER_H - 2, menu_w, 2);
 	text(menu_draw, bold, &c_accent, 16, 0, HEADER_H, "my-distro");
-	if (menu_w > MENU_W)          /* line between the two columns */
-		XftDrawRect(menu_draw, &c_sep, MENU_W, HEADER_H + 6, 1, menu_h - HEADER_H - 12);
+	for (int x = MENU_W; x < menu_w; x += MENU_W)   /* lines between columns */
+		XftDrawRect(menu_draw, &c_sep, x, HEADER_H + 6, 1, menu_h - HEADER_H - 12);
 
 	for (int i = 0; i < nitems; i++) {
 		struct item *it = &items[i];
@@ -1268,83 +1272,110 @@ static void add_item(const char *label, const char *cmd, const char *icon)
 	it->icon = theme_icon(icon);
 }
 
+/* Adds the entries of a menu file. With stop_at_line set, it stops after the
+ * first "-" line and returns 1 (0: the file ended or is missing). */
+static int read_menu_file(FILE *f, int stop_at_line)
+{
+	char line[400];
+
+	while (f && fgets(line, sizeof line, f)) {
+		char *bar;
+
+		line[strcspn(line, "\r\n")] = '\0';
+		if (line[0] == '#' || line[0] == '\0')
+			continue;
+		if (strcmp(line, "-") == 0) {
+			add_item("", "", NULL);
+			if (stop_at_line)
+				return 1;
+			continue;
+		}
+		bar = strchr(line, '|');
+		if (bar) {
+			char *icon = strchr(bar + 1, '|');   /* optional 3rd field */
+
+			*bar = '\0';
+			if (icon)
+				*icon++ = '\0';
+			add_item(line, bar + 1, icon);
+		}
+	}
+	return 0;
+}
+
+/* The menu file's first group (the apps), the Software app's programs in a
+ * group of their own, then the rest of the menu file. */
 static void load_menu(void)
 {
 	FILE *f = fopen(MENU_FILE, "r");
-	char line[400];
+	FILE *pkg = fopen(PKG_MENU, "r");
+	int before;
 
-	if (f) {
-		while (fgets(line, sizeof line, f)) {
-			char *bar;
-
-			line[strcspn(line, "\r\n")] = '\0';
-			if (line[0] == '#' || line[0] == '\0')
-				continue;
-			if (strcmp(line, "-") == 0) {
-				add_item("", "", NULL);
-				continue;
-			}
-			bar = strchr(line, '|');
-			if (bar) {
-				char *icon = strchr(bar + 1, '|');   /* optional 3rd field */
-
-				*bar = '\0';
-				if (icon)
-					*icon++ = '\0';
-				add_item(line, bar + 1, icon);
-			}
-		}
-		fclose(f);
+	nitems = 0;
+	if (read_menu_file(f, 1) && pkg) {
+		before = nitems;
+		read_menu_file(pkg, 0);
+		if (nitems > before)
+			add_item("", "", NULL);     /* line after the programs */
 	}
+	read_menu_file(f, 0);
+	if (f)
+		fclose(f);
+	if (pkg)
+		fclose(pkg);
 	if (nitems == 0)
 		add_item("Terminal", "xterm", "utilities-terminal");
 }
 
-/* Places the entries: one column, or two when one doesn't fit on the screen
- * (above or below the panel). Sets menu_w and menu_h. */
-static void layout_menu(void)
+static time_t pkg_menu_mtime(void)
 {
-	int y = HEADER_H + 6, split = -1, max_h = sh - panel_h - 2 * PAD;
+	struct stat st;
+
+	return stat(PKG_MENU, &st) == 0 ? st.st_mtime : 0;
+}
+
+/* Places the entries in ncols columns: a new column starts when the next
+ * entry would make this one taller than `target` pixels, or at a separator
+ * close to that (the separator is then not drawn). Sets menu_w and menu_h. */
+static void place_items(int ncols, int target)
+{
+	int top = HEADER_H + 6, y = top, col = 0, bottom = top;
 
 	for (int i = 0; i < nitems; i++) {
-		items[i].x = 0;
-		items[i].y = y;
-		items[i].h = items[i].cmd[0] ? item_h : SEP_H;
-		y += items[i].h;
-	}
-	menu_w = MENU_W;
-	menu_h = y + 6;
-	if (menu_h <= max_h || nitems < 2)
-		return;
+		int sep = !items[i].cmd[0];
+		int h = sep ? SEP_H : item_h;
 
-	/* The second column starts about halfway; at a separator if there is
-	 * one close by (it is then not drawn) */
-	for (int i = 0; i < nitems && split < 0; i++)
-		if (items[i].y + items[i].h > (menu_h + HEADER_H) / 2)
-			split = i;
-	for (int d = 0; d <= 4; d++) {
-		if (split + d < nitems && !items[split + d].cmd[0]) {
-			split += d;
-			break;
+		if (col < ncols - 1 && y > top &&
+		    (y + h > top + target || (sep && y - top > target * 3 / 4))) {
+			col++;
+			y = top;
 		}
-		if (split - d > 0 && !items[split - d].cmd[0]) {
-			split -= d;
-			break;
-		}
-	}
-	y = HEADER_H + 6;
-	for (int i = split; i < nitems; i++) {
-		items[i].x = MENU_W;
+		if (sep && y == top)
+			h = 0;                  /* no line at the top of a column */
+		items[i].x = col * MENU_W;
 		items[i].y = y;
-		if (i == split && !items[i].cmd[0])
-			items[i].h = 0;
-		y += items[i].h;
+		items[i].h = h;
+		y += h;
+		if (y > bottom)
+			bottom = y;
 	}
-	menu_w = 2 * MENU_W;
-	menu_h = (split > 0 ? items[split - 1].y + items[split - 1].h : 0);
-	if (y > menu_h)
-		menu_h = y;
-	menu_h += 6;
+	menu_w = (col + 1) * MENU_W;
+	menu_h = bottom + 6;
+}
+
+/* One column, or as many as it takes to fit on the screen (above or below
+ * the panel). */
+static void layout_menu(void)
+{
+	int body = 0, max_h = sh - panel_h - 2 * PAD;
+
+	for (int i = 0; i < nitems; i++)
+		body += items[i].cmd[0] ? item_h : SEP_H;
+	for (int ncols = 1; ncols <= 8; ncols++) {
+		place_items(ncols, (body + ncols - 1) / ncols);
+		if (menu_h <= max_h)
+			return;
+	}
 }
 
 /* (Re)makes the menu's picture in its current size */
@@ -2087,6 +2118,7 @@ int main(int argc, char **argv)
 	imlib_set_cache_size(4 * 1024 * 1024);
 
 	load_class_icons();
+	pkg_menu_time = pkg_menu_mtime();
 	load_menu();
 	create_windows();
 
@@ -2138,6 +2170,15 @@ int main(int argc, char **argv)
 			draw_panel();
 		if (cal_open)
 			draw_calendar();     /* its big clock */
+
+		/* The Software app installed or removed a program: read the
+		 * menu again (it may need another column now) */
+		if (pkg_menu_mtime() != pkg_menu_time && !menu_open) {
+			pkg_menu_time = pkg_menu_mtime();
+			load_menu();
+			layout_menu();
+			size_menu_window();
+		}
 
 		/* The Settings app (or you) changed the settings file */
 		if (settings_mtime(NULL) != settings_time && !menu_open && !cal_open) {
