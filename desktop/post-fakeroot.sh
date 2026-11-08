@@ -23,3 +23,8 @@ python3 "$T/usr/bin/my-update" keep-list | while read -r k; do
 	cp -a "$T/$k" "$F/$k"
 done
 grep -q '^root:' "$F/etc/shadow" || { echo "post-fakeroot: factory copy failed"; exit 1; }
+
+# The system's own files, for my-pkg (the Software app): a package may never
+# replace or remove one of them. Paths relative to /, files and links.
+( cd "$T" && find . \( -type f -o -type l \) ! -path './usr/share/my-distro/factory/*' |
+	sed 's|^\./||' | LC_ALL=C sort ) | gzip -9n >"$T/usr/share/my-distro/base-files.gz"

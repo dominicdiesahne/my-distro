@@ -39,6 +39,12 @@ the taskbar, the login screen, the file history daemon and the search indexer.
   an *Update to …* button in the taskbar of installed systems. One click (and
   the root password) downloads it, checks its signature and installs it;
   your files, users and settings stay. See [System updates](#system-updates).
+- **Software app and package manager** (`settings/my-software.c`, `my-pkg`):
+  install and remove about 30 more programs without a new image: a PDF
+  viewer, an image viewer, a second web browser, Vim, tmux, Ruby,
+  PHP, Perl, games and more, by category or search, with what each needs.
+  They appear in the Start menu, stay after system updates (in the version
+  for the new system) and go with a factory reset. See [Software](#software).
 - **Graphical login** (`login/my-login.c`): checks passwords against
   `/etc/shadow`, drops root rights and starts your desktop as you.
 - **Taskbar** (`panel/my-panel.c`): Start menu with icons, a button per window
@@ -294,7 +300,8 @@ The keyboard layout is German (`desktop/overlay/etc/X11/xorg.conf.d/00-keyboard.
    `S00reset` (a factory reset, if one was asked for),
    udev, `S20zram` (compressed swap), `S35firewall`, network (DHCP),
    `S45sound`, `S46power` (lid switch), `S48time` (clock from the internet),
-   `S50history` (file history), `S90desktop`. Daemons run under
+   `S49packages` (Software app programs after an update), `S50history`
+   (file history), `S90desktop`. Daemons run under
    `my-keepalive`, which starts them again if they crash.
 4. `S90desktop` starts the X server with **`my-login`** as its only client.
 5. After login, `my-login` drops root rights and runs `~/.xinitrc` as you,
@@ -325,7 +332,8 @@ time zone and other settings. While the image is built,
 `/usr/share/my-distro/factory` (root only). `my-reset` marks a reset and
 restarts; at the next start `S00reset` deletes all of them, puts the factory
 copies back and runs `installed-fixups`. Then the setup runs as after
-installing. The system's own files stay in the version they have.
+installing. The system's own files stay in the version they have; programs
+from the Software app are removed first (`my-pkg remove --all`).
 
 ### System-wide undo
 
@@ -428,18 +436,115 @@ says that a new ISO is out. Systems before 0.8 have no updater: install the
 From a terminal: `my-update check --notes`, and as root `my-update install`
 or `my-update rollback`.
 
+## Software
+
+**Software** in the Start menu lists the programs that are not in the image,
+by category (Office, Graphics, Internet, Programming, Tools, Games, Sound),
+with a search field, a description and the size of each. **Install** asks for
+the root password (once, while the window is open), downloads the program
+and what it needs, and shows how far it is; **Remove** takes it away again.
+Installed programs with a window get an entry in the Start menu (after the
+first group); the others run in a terminal (`ruby`, `php`, `ssh`, ...).
+
+On the **live ISO** this works too, but like everything there the programs
+are only in RAM: they are gone when it shuts down. On an installed system
+they stay.
+
+From a terminal: `my-pkg search pdf`, `my-pkg info vim`, `my-pkg list`
+(`--installed`), and as root `my-pkg install vim tmux`, `my-pkg remove vim`,
+`my-pkg upgrade`.
+
+| Program | Category | | Program | Category |
+|---|---|---|---|---|
+| MuPDF (PDF viewer) | Office | | Ruby, PHP, Perl | Programming |
+| gnuplot | Office | | GDB, strace, jq | Programming |
+| feh (image viewer) | Graphics | | tmux, ncdu, rsync | Tools |
+| ImageMagick | Graphics | | 7-Zip, zip, Bash, Zsh, neofetch | Tools |
+| Dillo (web browser) | Internet | | LBreakout2, LTris | Games |
+| Lynx, irssi, OpenSSH client | Internet | | Doom (shareware), OpenTyrian, sl | Games |
+| Vim | Programming | | eSpeak (text to speech) | Sound |
+
+### How it works
+
+Every release carries, next to the update package, a **package list**
+`my-pkg-index.json` (name, version, description, category, size, the
+packages it needs and the SHA-256 sum of its file), its signature
+`my-pkg-index.json.sig`, and one `pkg-NAME-VERSION.tar.xz` per package.
+The list is signed with the same key as the update (Ed25519): `my-pkg`
+checks it with `/etc/my-distro/update-key.pem` and every download against
+the sum in the list, so only packages made by the maintainer get installed.
+Where it looks is in `/etc/my-distro/pkg.conf` (the release of the installed
+version). Packages are built for one version of the system and the list
+says which; `my-pkg` refuses a list for another version.
+
+- **Installing** unpacks the package into `/` and writes down every file in
+  `/var/lib/my-pkg/NAME.list` (and its version in `NAME.info`). It refuses
+  to replace a file of the system (`/usr/share/my-distro/base-files.gz`, made
+  when the image is built), of another package, or any file that is just
+  there. The packages it needs come first.
+- **Removing** deletes exactly the listed files. If another installed program
+  needs it, it says so and stops (the Software app asks to remove both).
+  Libraries go with the last program that needs them.
+- **System updates** replace the system but keep `/var`, so the list of your
+  programs stays. Right after the update, `my-update` runs `my-pkg
+  after-update`, which installs your programs again from the new version's
+  list; without internet it tries again at the next start
+  (`/etc/init.d/S49packages`). *Undo last update* does the same backwards.
+- **Factory reset** removes all of them (`my-pkg remove --all`) before it
+  resets `/var`.
+
+### Building the packages
+
+```bash
+make desktop            # the image first (its update package lists its files)
+make packages           # out/packages/: the .tar.xz files and the list
+make release-packages   # signs the list (same key as release-files)
+```
+
+`make packages` builds the programs of `desktop/packages.fragment` on top of
+the image's configuration in the same Buildroot tree, so they use exactly
+the image's libraries. Buildroot records which package installed which file
+(`build/packages-file-list.txt`) and what each package needs (`make
+show-info`); `desktop/make-packages.py` packs each package's files that are
+not in the image into its own `.tar.xz` and turns needs on other extra
+packages into dependencies. Then the tree is put back to the image's
+packages, so the next `make desktop` doesn't include them. The first run
+takes about an hour; `make packages PKG_JOBS=4` uses fewer
+compilers at once if the build machine runs out of memory.
+
+Upload everything in `out/packages/` to the same GitHub release as the
+update package. To test without a release: `cd out/packages && python3 -m
+http.server`, and in the VM put `url = http://10.0.2.2:8000/` into
+`/etc/my-distro/pkg.conf`.
+
+### Adding a program to the catalog
+
+1. Find it in Buildroot (`make -C ~/my-distro-build/buildroot-*
+   O=~/my-distro-build/desktop-out menuconfig`, `/` searches) and add its
+   `BR2_PACKAGE_...=y` line to `desktop/packages.fragment`.
+2. Give it an entry in `desktop/packages.catalog`: title, category,
+   description, and for a Start menu entry the command (`run`), `terminal =
+   yes` for terminal programs, an icon. Libraries it needs need no entry.
+3. `make packages`. It stops if the program would change an option of a
+   package that is in the image (that package would not be rebuilt): put that
+   option into `desktop/buildroot.fragment` instead and run `make desktop`
+   first.
+
 ## Project layout
 
 | Path | What it is |
 |---|---|
-| `Makefile` | `make desktop` (ISO and update package), `make release-files` (signature), `make run-iso`; `make` / `make run` for the minimal version |
+| `Makefile` | `make desktop` (ISO and update package), `make release-files` (signature), `make packages` / `make release-packages` (Software app), `make run-iso`; `make` / `make run` for the minimal version |
 | `init/init.c` | PID 1 |
-| `login/` | Login screen `my-login`, screen lock `my-lock` with `my-checkpass`, lid switch `my-lidd`, `my-power` (reboot, power off, suspend, brightness, eject USB sticks for normal users), `my-admin` (root password check for Users and system), `my-vpnctl` (the VPN window's root part) |
+| `login/` | Login screen `my-login`, screen lock `my-lock` with `my-checkpass`, lid switch `my-lidd`, `my-power` (reboot, power off, suspend, brightness, eject USB sticks for normal users), `my-admin` (root password check for Users and system and the Software app), `my-vpnctl` (the VPN window's root part) |
 | `desktop/overlay/usr/lib/my-distro/vpn` | Connects and disconnects a WireGuard VPN (run by `my-vpnctl`) |
 | `desktop/overlay/usr/sbin/my-reset`, `etc/init.d/S00reset`, `desktop/post-fakeroot.sh` | Factory reset, and the factory copy it puts back |
 | `desktop/overlay/usr/bin/my-record`, `my-camera` | Screen recording, webcam |
 | `desktop/overlay/usr/sbin/my-install` | Installer (shell script) |
 | `desktop/overlay/usr/bin/my-update` | System updates (Python), settings in `desktop/overlay/etc/my-distro/update.conf`, public key `update-key.pem` |
+| `desktop/overlay/usr/bin/my-pkg`, `settings/my-software.c` | Package manager and the Software app; `settings/my-pick-file.c` asks for a file for Start menu entries like the PDF viewer |
+| `desktop/overlay/usr/lib/my-distro/mydistro.py` | What `my-update` and `my-pkg` share: downloads, versions, the signature check |
+| `desktop/packages.fragment`, `desktop/packages.catalog`, `desktop/make-packages.py` | The programs `make packages` builds, how the Software app shows them, and how they are cut out of the build |
 | `desktop/overlay/etc/my-distro/version` | The version number (the welcome text and `my-update` read it) |
 | `panel/` | Taskbar `my-panel` (with volume and battery), `my-screenshot`, `my-clipd` (keeps copied text) |
 | `settings/my-notifyd.c`, `settings/my-notify.c` | Notifications: the daemon that shows them, and the command that sends one |
@@ -496,7 +601,9 @@ change the next time they start.
   `BR2_TARGET_GENERIC_ROOT_PASSWD` in `desktop/buildroot.fragment`. A new
   user's home is a copy of `/etc/skel`, made in `desktop/post-build.sh`.
   The setup runs while `/etc/my-distro/setup-done` is missing.
-- **Add a program:** find it in Buildroot
+- **Add a program** to the Software app instead of the image: see
+  [Adding a program to the catalog](#adding-a-program-to-the-catalog).
+- **Add a program to the image:** find it in Buildroot
   (`make -C ~/my-distro-build/buildroot-* O=~/my-distro-build/desktop-out menuconfig`),
   add its `BR2_PACKAGE_...=y` line to `desktop/buildroot.fragment`, run `make desktop`.
 - **Start menu:** `desktop/overlay/etc/my-panel/menu` (`Label|command|icon`).

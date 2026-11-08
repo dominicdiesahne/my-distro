@@ -11,7 +11,13 @@
  * rights can't be used for anything else. The only argument it passes on is
  * "--update" (open the window on its System update page).
  *
- * Exit codes: 2 = wrong password, 1 = other error; otherwise my-setup's.
+ * The Software app (my-software) uses it the same way to install and remove
+ * programs: "my-admin --pkg install|remove|upgrade [--with-dependents] NAME..."
+ * runs /usr/bin/my-pkg with that command (and nothing else). Names are
+ * checked: lower-case letters, digits and - _ . +, as in the package list.
+ *
+ * Exit codes: 2 = wrong password, 1 = other error; otherwise my-setup's
+ * (or my-pkg's).
  */
 #define _GNU_SOURCE
 #include <crypt.h>
@@ -24,6 +30,8 @@
 #include <unistd.h>
 
 #define PROGRAM "/usr/bin/my-setup"
+#define MY_PKG  "/usr/bin/my-pkg"
+#define MAX_PKG 64                       /* names in one --pkg command */
 
 static int root_password_ok(const char *typed)
 {
@@ -50,11 +58,54 @@ static int valid_display(const char *d)
 	return 1;
 }
 
+/* A package name from the list: a-z, 0-9, - _ . +, starting with a letter or digit */
+static int valid_package(const char *s)
+{
+	size_t n = strlen(s);
+
+	if (n == 0 || n > 64 || !(islower((unsigned char)s[0]) || isdigit((unsigned char)s[0])))
+		return 0;
+	for (; *s; s++)
+		if (!islower((unsigned char)*s) && !isdigit((unsigned char)*s) && !strchr("-_.+", *s))
+			return 0;
+	return 1;
+}
+
+/* --pkg CMD [--with-dependents] NAME...: checks it all, fills args for my-pkg */
+static int pkg_args(int argc, char **argv, char **args)
+{
+	int n = 0;
+
+	if (argc < 3 || argc - 2 > MAX_PKG)
+		return 0;
+	if (strcmp(argv[2], "install") && strcmp(argv[2], "remove") && strcmp(argv[2], "upgrade"))
+		return 0;
+	args[n++] = "my-pkg";
+	args[n++] = argv[2];
+	for (int i = 3; i < argc; i++) {
+		if (strcmp(argv[i], "--with-dependents") == 0 && strcmp(argv[2], "remove") == 0)
+			args[n++] = argv[i];
+		else if (valid_package(argv[i]))
+			args[n++] = argv[i];
+		else
+			return 0;
+	}
+	args[n] = NULL;
+	return 1;
+}
+
 int main(int argc, char **argv)
 {
 	char pass[256] = "", display[16] = ":0", user[64] = "";
 	struct passwd *me = getpwuid(getuid());
 	int update = argc > 1 && strcmp(argv[1], "--update") == 0;
+	int pkg = argc > 1 && strcmp(argv[1], "--pkg") == 0;
+	char *pkg_argv[MAX_PKG + 4];
+
+	if (pkg && !pkg_args(argc, argv, pkg_argv)) {
+		fprintf(stderr, "usage: my-admin --pkg install|remove|upgrade [--with-dependents] NAME...\n");
+		return 1;
+	}
 
 	if (!fgets(pass, sizeof pass, stdin))
 		pass[0] = '\0';
@@ -81,6 +132,10 @@ int main(int argc, char **argv)
 	setenv("LANG", "en_US.UTF-8", 1);
 	setenv("NO_AT_BRIDGE", "1", 1);
 	setenv("MY_SETUP_USER", user, 1);   /* who asked: can't remove themselves */
+	if (pkg) {
+		execv(MY_PKG, pkg_argv);
+		return 1;
+	}
 	if (update)
 		execl(PROGRAM, "my-setup", "--manage", "--update", (char *)NULL);
 	else

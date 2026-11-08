@@ -14,3 +14,8 @@ define NETSURF_ICON_AS_PNG
 		$(@D)/netsurf/frontends/gtk/res/netsurf.xpm
 endef
 NETSURF_POST_PATCH_HOOKS += NETSURF_ICON_AS_PNG
+
+# PrBoom (Doom, a package of the Software app) is from 2008 and defines its
+# own "false" and "true", which C23 (GCC 15's default) made keywords: build
+# it as C17.
+PRBOOM_CONF_ENV += CFLAGS="$(TARGET_CFLAGS) -std=gnu17"

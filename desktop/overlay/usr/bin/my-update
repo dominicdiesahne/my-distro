@@ -35,9 +35,12 @@ doesn't start after an update, log in as root on the text console
 On the live system nothing survives a reboot, so it only tells you that a new
 ISO is out.
 
+Programs installed with the Software app (my-pkg) are not part of the
+update package, so it leaves them alone; afterwards my-pkg installs their
+versions for the new system (or at the next start, when that fails).
+
 Settings: /etc/my-distro/update.conf
 """
-import hashlib
 import json
 import os
 import shutil
@@ -45,12 +48,19 @@ import subprocess
 import sys
 import tarfile
 import time
-import urllib.request
 
-VERSION_FILE = "/etc/my-distro/version"
+# Downloads, versions and the signature check, shared with my-pkg:
+# /usr/lib/my-distro/mydistro.py (found next to this script, also when the
+# build runs it from the image folder)
+sys.dont_write_bytecode = True
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                                "..", "lib", "my-distro"))
+from mydistro import (say, read_conf as read_conf_file, installed_version,  # noqa: E402
+                      version_tuple, is_live, need_root, fetch, download, verify)
+
 CONF_FILE = "/etc/my-distro/update.conf"
-PUBLIC_KEY = "/etc/my-distro/update-key.pem"
 FIXUPS = "/usr/lib/my-distro/installed-fixups"
+MY_PKG = "/usr/bin/my-pkg"
 # Downloads and the unpacked new system. It must be on the same filesystem as
 # / (moving files into place is then a rename, never a copy); /var/cache
 # would not do, Buildroot links it to /tmp, which is in RAM.
@@ -75,6 +85,7 @@ KEEP = [
     "etc/hostname", "etc/hosts", "etc/fstab",
     "etc/X11/xorg.conf.d/00-keyboard.conf",
     "etc/my-distro/setup-done", "etc/my-distro/update.conf",
+    "etc/my-distro/pkg.conf",                    # where the Software app looks
     "etc/wpa_supplicant.conf",                   # saved Wi-Fi networks
     "etc/nftables.d",                            # your own firewall rules
     "etc/sudoers.d/local",                       # your own sudo rules
@@ -84,56 +95,8 @@ KEEP = [
 ]
 
 
-def say(*args):
-    print(*args, flush=True)
-
-
 def read_conf():
-    conf = dict(DEFAULTS)
-    try:
-        with open(CONF_FILE) as f:
-            for line in f:
-                line = line.strip()
-                if line and not line.startswith("#") and "=" in line:
-                    key, value = line.split("=", 1)
-                    conf[key.strip()] = value.strip()
-    except OSError:
-        pass
-    return conf
-
-
-def installed_version():
-    try:
-        with open(VERSION_FILE) as f:
-            return f.read().strip()
-    except OSError:
-        return "0"
-
-
-def version_tuple(v):
-    """'v0.7.1' -> (0, 7, 1), to compare versions."""
-    parts = []
-    for p in v.strip().lstrip("vV").split("."):
-        digits = "".join(c for c in p if c.isdigit())
-        parts.append(int(digits) if digits else 0)
-    return tuple(parts)
-
-
-def is_live():
-    try:
-        with open("/proc/cmdline") as f:
-            return "rdinit=" in f.read()
-    except OSError:
-        return False
-
-
-def fetch(url, timeout=30):
-    req = urllib.request.Request(url, headers={
-        "User-Agent": "my-distro-updater",
-        "Accept": "application/vnd.github+json",
-    })
-    with urllib.request.urlopen(req, timeout=timeout) as r:
-        return r.read()
+    return read_conf_file(CONF_FILE, DEFAULTS)
 
 
 def latest_release(conf):
@@ -236,47 +199,6 @@ def cmd_watch(args):
 
 # --- install ---------------------------------------------------------------------
 
-def download(url, path):
-    req = urllib.request.Request(url, headers={"User-Agent": "my-distro-updater"})
-    with urllib.request.urlopen(req, timeout=60) as r, open(path + ".part", "wb") as f:
-        total = int(r.headers.get("Content-Length") or 0)
-        done, shown = 0, -10
-        while True:
-            chunk = r.read(1 << 16)
-            if not chunk:
-                break
-            f.write(chunk)
-            done += len(chunk)
-            if total > 1 << 20:                  # progress only for big files
-                pct = done * 100 // total
-                if pct >= shown + 10:
-                    say("  %3d %%  (%d of %d MB)" % (pct, done >> 20, total >> 20))
-                    shown = pct
-    os.replace(path + ".part", path)
-
-
-def sha256_of(path):
-    h = hashlib.sha256()
-    with open(path, "rb") as f:
-        for chunk in iter(lambda: f.read(1 << 20), b""):
-            h.update(chunk)
-    return h.hexdigest()
-
-
-def verify(package, sumfile, sigfile):
-    """The signature of the sum file, then the package's sum. Raises if wrong."""
-    r = subprocess.run(["openssl", "pkeyutl", "-verify", "-pubin", "-inkey", PUBLIC_KEY,
-                        "-rawin", "-in", sumfile, "-sigfile", sigfile],
-                       stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
-    if r.returncode != 0:
-        raise RuntimeError("the signature is not valid: this update was not made by "
-                           "the maintainer of my-distro, or it was changed")
-    with open(sumfile) as f:
-        expected = f.read().split()[0].lower()
-    if sha256_of(package) != expected:
-        raise RuntimeError("the download is damaged (SHA-256 sum does not match)")
-
-
 def kept(rel):
     return any(rel == k or rel.startswith(k + "/") for k in KEEP)
 
@@ -376,10 +298,16 @@ def previous_version():
     return None
 
 
+def reinstall_programs():
+    """The programs from the Software app were made for the old version: get
+    them for the version that is on the disk now. If that fails (offline),
+    my-pkg tries again at the next start (/etc/init.d/S49packages)."""
+    if os.access(MY_PKG, os.X_OK):
+        subprocess.run([MY_PKG, "after-update"])
+
+
 def cmd_install(args):
-    if os.geteuid() != 0:
-        say("Installing updates needs root: run it as root, or use System update "
-            "in \"Users and system\".")
+    if not need_root("Installing updates", "System update in \"Users and system\""):
         return 1
     if is_live() and "--force-live" not in args:
         say("This is the live system: it runs from RAM and forgets an update at the "
@@ -437,6 +365,7 @@ def cmd_install(args):
     shutil.rmtree(staging, ignore_errors=True)
     os.remove(package)
     os.sync()
+    reinstall_programs()
     write_status(None)
     say("Done: my-distro %s is installed. Restart the computer to finish." % rel["version"])
     say("(my-distro %s is saved: \"my-update rollback\" goes back to it.)" % mine)
@@ -444,9 +373,7 @@ def cmd_install(args):
 
 
 def cmd_rollback(args):
-    if os.geteuid() != 0:
-        say("Going back needs root: run it as root, or use System update in "
-            "\"Users and system\".")
+    if not need_root("Going back", "System update in \"Users and system\""):
         return 1
     old = previous_version()
     if not old:
@@ -455,6 +382,15 @@ def cmd_rollback(args):
         return 1
     mine = installed_version()
     say("Going back from my-distro %s to %s..." % (mine, old))
+    try:
+        with open(os.path.join(PREVIOUS, ADDED)) as f:
+            added = [line.rstrip("\n") for line in f if line.strip()]
+    except OSError:
+        added = []
+    # The older version has no Software app (my-pkg came with the update):
+    # remove the programs installed with it while my-pkg is still there.
+    if MY_PKG in added and os.access(MY_PKG, os.X_OK):
+        subprocess.run([MY_PKG, "remove", "--all"])
 
     # 1. the files the update replaced: move them back (renames on the same
     #    disk, so each file is the old or the new one, never half)
@@ -479,11 +415,6 @@ def cmd_rollback(args):
 
     # 2. what the update added: remove it (files first, then the folders it
     #    made, deepest first, only if they are empty)
-    try:
-        with open(os.path.join(PREVIOUS, ADDED)) as f:
-            added = [line.rstrip("\n") for line in f if line.strip()]
-    except OSError:
-        added = []
     removed = 0
     for path in added:
         if kept(path.lstrip("/")) or not os.path.lexists(path):
@@ -507,6 +438,7 @@ def cmd_rollback(args):
         subprocess.run([FIXUPS, "/"])
     shutil.rmtree(PREVIOUS, ignore_errors=True)
     os.sync()
+    reinstall_programs()
     write_status(None)
     say("  %d files restored, %d removed." % (restored, removed))
     say("Done: my-distro %s is back. Restart the computer to finish." % installed_version())

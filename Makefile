@@ -6,6 +6,9 @@
 #   make desktop       build the desktop system with Buildroot (Xorg + Openbox),
 #                      the bootable ISO out/my-distro.iso and the update package
 #   make release-files sign the update package for a GitHub release
+#   make packages      build the extra programs of the Software app (my-pkg):
+#                      out/packages/, one .tar.xz each and the package list
+#   make release-packages  sign that package list for the same release
 #   make run-desktop   boot the desktop in a QEMU window
 #   make run-iso       boot the ISO in a QEMU window
 #   make run-install   boot the ISO with an empty disk, to test the installer
@@ -48,12 +51,26 @@ BR_MAKE := env PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 # Use hardware acceleration if this user can open /dev/kvm.
 KVM := $(shell [ -w /dev/kvm ] && echo -enable-kvm)
 
-.PHONY: all run desktop release-files run-desktop run-iso run-install run-disk clean distclean
+.PHONY: all run desktop release-files packages release-packages run-desktop run-iso \
+	run-install run-disk clean distclean
 
 UPDATE      := out/my-distro-update.tar.xz
 # The files Buildroot put on its ISO (kernel, initrd, GRUB, boot menu)
 ISO_FILES   := $(BR_OUT)/build/buildroot-fs/rootfs.iso9660.tmp
 SIGNING_KEY ?= $(HOME)/.config/my-distro/update-signing-key.pem
+
+# The Software app's packages (make packages)
+PKG_OUT   := out/packages
+PKG_INDEX := $(PKG_OUT)/my-pkg-index.json
+PKG_WORK  := $(BR_OUT)/my-pkg-work
+PKG_TOOL  := python3 desktop/make-packages.py
+# make packages PKG_JOBS=4: fewer compilers at once (big C++ programs need ~1 GB each)
+PKG_JOBS  ?=
+# Takes what `make packages` built out of the build tree again, so the image
+# is built without it; the image packages whose files it had overwritten are
+# installed again.
+PKG_CLEAN = r=$$($(PKG_TOOL) clean $(BR_OUT) $(UPDATE)) || exit 1; \
+	for p in $$r; do $(BR_MAKE) $$p-reinstall || exit 1; done
 
 all: $(BZIMAGE) $(INITRAMFS)
 
@@ -146,6 +163,9 @@ desktop: $(BR_DIR)/Makefile
 > $(BR_MAKE) qemu_x86_64_defconfig
 > cd $(BR_OUT) && $(BR_DIR)/support/kconfig/merge_config.sh -m .config $(BR_SRC)/desktop/buildroot.fragment
 > $(BR_MAKE) olddefconfig
+> # The Software app's programs (make packages) are built in this tree too:
+> # take them out of the root filesystem, they are not part of the image.
+> $(PKG_CLEAN)
 > $(BR_MAKE) my-init-dirclean my-panel-dirclean my-login-dirclean my-history-dirclean my-search-dirclean my-settings-dirclean my-ide-dirclean
 > # Buildroot doesn't notice changes to the kernel fragment by itself.
 > if ls -d $(BR_OUT)/build/linux-[0-9]* >/dev/null 2>&1 && \
@@ -162,9 +182,10 @@ desktop: $(BR_DIR)/Makefile
 > if ! cmp -s desktop/busybox.fragment $(BR_OUT)/.busybox.fragment; then \
 >   $(BR_MAKE) busybox-dirclean; fi
 > # Nor changes to a package's own options (EAP for wpa_supplicant in 0.9.4,
-> # screen capture for FFmpeg): build these again when their BR2_PACKAGE_*_
-> # lines differ from the last build (or there is no record of it yet).
-> for p in wpa_supplicant:WPA_SUPPLICANT ffmpeg:FFMPEG; do \
+> # screen capture for FFmpeg, JPEG for imlib2 in 0.9.5): build these again
+> # when their BR2_PACKAGE_*_ lines differ from the last build (or there is
+> # no record of it yet).
+> for p in wpa_supplicant:WPA_SUPPLICANT ffmpeg:FFMPEG imlib2:IMLIB2; do \
 >   n=$${p%%:*}; v=$${p##*:}; \
 >   ls -d $(BR_OUT)/build/$$n-[0-9]* >/dev/null 2>&1 || continue; \
 >   if [ ! -f $(BR_OUT)/.config.last ] || \
@@ -217,6 +238,51 @@ release-files:
 > openssl pkeyutl -verify -pubin -inkey desktop/overlay/etc/my-distro/update-key.pem \
 >   -rawin -in $(UPDATE).sha256 -sigfile $(UPDATE).sha256.sig
 > @echo "Upload to the release: out/my-distro.iso $(UPDATE) $(UPDATE).sha256 $(UPDATE).sha256.sig"
+
+# --- Software app packages (my-pkg) -------------------------------------------
+#
+# Extra programs users install without a new image: desktop/packages.fragment
+# says which, desktop/packages.catalog how they look in the Software app.
+# They are built on top of the image's configuration in the same tree (so
+# they link against exactly the image's libraries); desktop/make-packages.py
+# then packs each package's files that the image doesn't have into its own
+# .tar.xz and writes the package list. Afterwards the tree is the image's
+# again. Needs a finished `make desktop` (its update package tells which
+# files the image has). The first run builds for about an hour.
+packages: $(BR_DIR)/Makefile
+> [ -f $(UPDATE) ] && [ -f $(BR_OUT)/.config.last ] || { echo "Build the image first: make desktop"; exit 1; }
+> rm -rf $(PKG_WORK)
+> mkdir -p $(PKG_WORK)
+> # What the image has, then the image plus the packages
+> cp $(BR_OUT)/.config.last $(BR_OUT)/.config
+> $(BR_MAKE) -s --no-print-directory show-info > $(PKG_WORK)/base-info.json
+> cp desktop/packages.fragment $(PKG_WORK)/packages.fragment
+> cd $(BR_OUT) && $(BR_DIR)/support/kconfig/merge_config.sh -m .config $(PKG_WORK)/packages.fragment
+> $(BR_MAKE) olddefconfig
+> $(BR_MAKE) -s --no-print-directory show-info > $(PKG_WORK)/info.json
+> # Stops if the packages would change the image's own packages; build tools
+> # whose options changed are built again.
+> r=$$($(PKG_TOOL) check-config $(BR_OUT) $(PKG_WORK) desktop/packages.fragment) || exit 1; \
+>   for p in $$r; do $(BR_MAKE) $$p-dirclean || exit 1; done
+> # Build everything and finalize the target folder as for the image (strip
+> # programs, remove headers and manuals), but make no image
+> $(BR_MAKE) $(if $(PKG_JOBS),BR2_JLEVEL=$(PKG_JOBS)) target-finalize
+> $(PKG_TOOL) cut $(BR_OUT) $(PKG_WORK) $(BR_DIR) $(UPDATE) desktop/packages.catalog $(PKG_OUT)
+> cp $(BR_OUT)/.config $(BR_OUT)/.config.packages-last
+> # Back to the image's configuration and files
+> cp $(BR_OUT)/.config.last $(BR_OUT)/.config
+> $(PKG_CLEAN)
+> @echo "Packages: $(PKG_OUT) ($$(du -sh $(PKG_OUT) | cut -f1)); sign the list with: make release-packages"
+
+# Signs the package list with the same key and in the same way as
+# release-files signs the update (Ed25519 over the whole file). The list has
+# the SHA-256 sum of every package, so this one signature covers them all.
+release-packages:
+> [ -f $(PKG_INDEX) ] || { echo "No $(PKG_INDEX): run make packages first"; exit 1; }
+> openssl pkeyutl -sign -rawin -inkey $(SIGNING_KEY) -in $(PKG_INDEX) -out $(PKG_INDEX).sig
+> openssl pkeyutl -verify -pubin -inkey desktop/overlay/etc/my-distro/update-key.pem \
+>   -rawin -in $(PKG_INDEX) -sigfile $(PKG_INDEX).sig
+> @echo "Upload everything in $(PKG_OUT)/ to the same release as the update package."
 
 # Boot the ISO like a VM would (BIOS, 2 GB RAM).
 run-iso:

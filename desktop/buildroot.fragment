@@ -152,6 +152,8 @@ BR2_PACKAGE_XLIB_LIBXFT=y
 BR2_PACKAGE_IMLIB2=y
 BR2_PACKAGE_IMLIB2_X=y
 BR2_PACKAGE_IMLIB2_PNG=y
+# JPEG pictures too (wallpapers; the image viewer feh from the Software app)
+BR2_PACKAGE_IMLIB2_JPEG=y
 
 # File manager with desktop icons (PCManFM, a GTK 3 app). GTK on X11 needs
 # an OpenGL library; Mesa's software renderer is enough for a file manager.

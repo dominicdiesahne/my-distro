@@ -5,7 +5,8 @@
 # Deleted: all users and their home folders (files, settings, browser data),
 # passwords (back to the demo ones), the computer name, saved Wi-Fi networks
 # and VPNs, the time zone, keyboard layout, file history, your own firewall
-# and sudo rules, and the saved version for "Undo last update". At the next
+# and sudo rules, programs installed with the Software app (my-pkg) and the
+# saved version for "Undo last update". At the next
 # start the setup asks for your user name and passwords again.
 #
 #   my-reset            asks, then restarts and resets (as root; in recovery
@@ -57,6 +58,9 @@ esac
 
 # --- The reset itself -----------------------------------------------------------
 echo "Factory reset: deleting users, files and settings..."
+# Programs from the Software app: their files are in /usr, the list of them
+# in /var (which is reset below), so remove them first
+[ -x /usr/bin/my-pkg ] && /usr/bin/my-pkg remove --all
 for k in $(/usr/bin/my-update keep-list); do
 	case "$k" in
 	# made at every start, or needed to start at all (the disk's boot loader

@@ -22,6 +22,7 @@ Eject USB stick|my-eject|media-eject
 Settings|my-settings|preferences-desktop
 Users and system|my-setup|system-users
 System update|my-setup --update|software-update-available
+Software|my-software|system-software-install
 System monitor|xterm -name monitor -T "System monitor" -e htop|computer
 System logs|my-logs|text-x-generic
 Install to disk|xterm -name my-install -T "Install my-distro" -e /usr/sbin/my-install|drive-harddisk

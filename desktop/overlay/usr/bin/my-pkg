@@ -1,0 +1,769 @@
+#!/usr/bin/env python3
+"""my-pkg: installs, updates and removes programs without a new system image.
+
+The programs come from the same place as system updates: every release of
+my-distro on GitHub carries a package list (my-pkg-index.json) and one
+.tar.xz per program, built for that version of the system (`make packages`).
+The list is signed with the maintainer's key, like the update package, and
+names the SHA-256 sum of every package. So a package is only installed when
+the list is genuine and the download matches it.
+
+    my-pkg refresh              download the package list (any user)
+    my-pkg search WORDS         programs whose name or description has all WORDS
+    my-pkg info PKG             everything about one package
+    my-pkg list [--installed]   all programs (--all: with the libraries)
+    my-pkg install PKG...       install, with what they need (root)
+    my-pkg remove PKG...        remove; --with-dependents also removes the
+                                programs that need them (root)
+    my-pkg upgrade              newer versions of everything installed (root)
+
+Installing unpacks a package into / and writes down every file it brought in
+/var/lib/my-pkg/NAME.list; removing deletes exactly those files. A package
+never replaces a file of the system (/usr/share/my-distro/base-files.gz
+lists them), of another package, or one that is just there: it is refused
+instead. Libraries a program needs are installed with it and removed with
+the last program that needs them.
+
+System updates replace the system but keep /var, so the list of your
+programs stays; my-update then runs "my-pkg after-update", which installs
+their versions for the new system (at the next start when that fails:
+/etc/init.d/S49packages). A factory reset removes them all (remove --all).
+
+On the live system programs are installed into RAM, like everything else
+there: they are gone after a restart.
+
+Settings: /etc/my-distro/pkg.conf
+"""
+import fcntl
+import gzip
+import json
+import os
+import shutil
+import subprocess
+import sys
+import tarfile
+import time
+
+# Downloads, versions and the signature check, shared with my-update
+sys.dont_write_bytecode = True
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                                "..", "lib", "my-distro"))
+from mydistro import (say, read_conf, installed_version, is_live,  # noqa: E402
+                      need_root, download, sha256_of, signature_ok)
+
+CONF_FILE = "/etc/my-distro/pkg.conf"
+DEFAULTS = {
+    # {version} = the installed system's version: its release has its packages
+    "url": "https://github.com/dominicdiesahne/my-distro/releases/download/v{version}/",
+}
+INDEX = "my-pkg-index.json"         # on the server, with INDEX + ".sig"
+DB = "/var/lib/my-pkg"              # what is installed (kept by updates)
+MENU = os.path.join(DB, "menu")     # the Start menu's entries (my-panel reads it)
+BASE_FILES = "/usr/share/my-distro/base-files.gz"   # the system's own files
+LIBRARIES = "Libraries"             # category of packages that are no programs
+USE_INSTEAD = "the Software app"
+
+# Tools that update a cache after files arrive in a folder (if they exist)
+CACHES = [
+    ("/usr/share/icons/hicolor/", ["gtk-update-icon-cache", "-q", "-f", "-t",
+                                   "/usr/share/icons/hicolor"]),
+    ("/usr/share/glib-2.0/schemas/", ["glib-compile-schemas", "/usr/share/glib-2.0/schemas"]),
+    ("/usr/share/mime/packages/", ["update-mime-database", "/usr/share/mime"]),
+    ("/usr/share/fonts/", ["fc-cache", "-s"]),
+    ("/usr/lib/gdk-pixbuf-2.0/", ["gdk-pixbuf-query-loaders", "--update-cache"]),
+]
+
+
+class Failed(Exception):
+    """An error to show as it is (no traceback)."""
+
+
+def human(size):
+    if size >= 1 << 20:
+        return "%.1f MB" % (size / (1 << 20))
+    return "%d KB" % max(1, (size + 1023) >> 10)
+
+
+# --- The package list (index) ----------------------------------------------------
+
+def index_file():
+    """root keeps the list in /var/lib/my-pkg, users in their own cache."""
+    if os.geteuid() == 0:
+        return os.path.join(DB, "index.json")
+    return os.path.join(os.path.expanduser("~"), ".cache", "my-distro", "pkg-index.json")
+
+
+def server_url():
+    url = read_conf(CONF_FILE, DEFAULTS)["url"].replace("{version}", installed_version())
+    return url if url.endswith("/") else url + "/"
+
+
+def refresh(quiet=False):
+    """Downloads the list and its signature; keeps it only if it is genuine."""
+    path = index_file()
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    url = server_url()
+    if not quiet:
+        say("Downloading the package list from %s" % url)
+    try:
+        download(url + INDEX + ".sig", path + ".sig.new", quiet=True)
+        download(url + INDEX, path + ".new", quiet=True)
+    except Exception as e:
+        raise Failed("Could not download the package list (%s). Are you online?" % e)
+    if not signature_ok(path + ".new", path + ".sig.new"):
+        raise Failed("The package list is not signed by the maintainer of my-distro "
+                     "(or it was changed): not used.")
+    parse_index(path + ".new")                   # raises if it is broken
+    os.replace(path + ".sig.new", path + ".sig")
+    os.replace(path + ".new", path)
+    os.chmod(path, 0o644)
+    return load_index()
+
+
+def parse_index(path):
+    with open(path) as f:
+        data = json.load(f)
+    if data.get("format") != 1 or not isinstance(data.get("packages"), list):
+        raise Failed("The package list has a format this my-pkg doesn't know: "
+                     "update the system first.")
+    data["by_name"] = {p["name"]: p for p in data["packages"]}
+    return data
+
+
+def load_index():
+    """The newest genuine list we have (root: only its own), or None."""
+    paths = [os.path.join(DB, "index.json")]
+    if os.geteuid() != 0:
+        paths.append(index_file())
+    paths = [p for p in paths if os.path.exists(p) and os.path.exists(p + ".sig")]
+    for p in sorted(paths, key=os.path.getmtime, reverse=True):
+        if signature_ok(p, p + ".sig"):
+            try:
+                return parse_index(p)
+            except (OSError, ValueError, KeyError, Failed):
+                continue
+    return None
+
+
+def need_index():
+    idx = load_index()
+    if idx is None:
+        idx = refresh()
+    return idx
+
+
+def check_system(idx):
+    mine = installed_version()
+    if idx.get("system") != mine:
+        raise Failed("These packages are made for my-distro %s, but this is my-distro %s. "
+                     "Packages only work on the version they were built for: update the "
+                     "system (or wait until the packages for %s are out)."
+                     % (idx.get("system"), mine, mine))
+
+
+# --- What is installed ---------------------------------------------------------------
+
+def installed():
+    """name -> what we wrote down when it was installed"""
+    found = {}
+    try:
+        names = os.listdir(DB)
+    except OSError:
+        return found
+    for f in names:
+        if f.endswith(".info"):
+            try:
+                with open(os.path.join(DB, f)) as fh:
+                    info = json.load(fh)
+                found[info["name"]] = info
+            except (OSError, ValueError, KeyError):
+                pass
+    return found
+
+
+def read_list(name):
+    """The files (and the folders it made, ending in /) of a package."""
+    files, dirs = [], []
+    try:
+        with open(os.path.join(DB, name + ".list")) as f:
+            for line in f:
+                line = line.rstrip("\n")
+                if line.endswith("/"):
+                    dirs.append(line.rstrip("/"))
+                elif line:
+                    files.append(line)
+    except OSError:
+        pass
+    return files, dirs
+
+
+def write_list(name, files, dirs):
+    path = os.path.join(DB, name + ".list")
+    with open(path + ".new", "w") as f:
+        for p in sorted(files):
+            f.write(p + "\n")
+        for d in sorted(dirs):
+            f.write(d + "/\n")
+    os.replace(path + ".new", path)
+
+
+def write_info(info):
+    path = os.path.join(DB, info["name"] + ".info")
+    with open(path + ".new", "w") as f:
+        json.dump(info, f, indent=1)
+    os.chmod(path + ".new", 0o644)
+    os.replace(path + ".new", path)
+
+
+def owners(skip=None):
+    """path -> package, for the files and folders of all installed packages"""
+    own = {}
+    for name in installed():
+        if name == skip:
+            continue
+        files, dirs = read_list(name)
+        for p in files + dirs:
+            own[p] = name
+    return own
+
+
+def base_files():
+    """The files of the system itself (relative paths), made when the image
+    was built (desktop/post-fakeroot.sh)."""
+    try:
+        with gzip.open(BASE_FILES, "rt") as f:
+            return set(line.rstrip("\n") for line in f)
+    except OSError:
+        raise Failed("%s is missing: can't tell the system's files apart." % BASE_FILES)
+
+
+def write_menu():
+    """The Start menu's entries of all installed programs (my-panel reads the
+    file again when it changes)."""
+    lines = []
+    for info in installed().values():
+        for label, cmd, icon in info.get("menu", []):
+            lines.append("%s|%s|%s\n" % (label, cmd, icon))
+    if not lines:
+        if os.path.exists(MENU):
+            os.remove(MENU)
+        return
+    with open(MENU + ".new", "w") as f:
+        f.write("# Written by my-pkg: the programs from the Software app\n")
+        f.writelines(sorted(lines, key=str.lower))
+    os.chmod(MENU + ".new", 0o644)
+    os.replace(MENU + ".new", MENU)
+
+
+def update_caches(paths):
+    for folder, cmd in CACHES:
+        if any(p.startswith(folder) for p in paths) and shutil.which(cmd[0]):
+            subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+def lock():
+    """Only one my-pkg changes the system at a time."""
+    os.makedirs(DB, mode=0o755, exist_ok=True)
+    f = open(os.path.join(DB, "lock"), "w")
+    try:
+        fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        say("Waiting for another my-pkg to finish...")
+        fcntl.flock(f, fcntl.LOCK_EX)
+    return f
+
+
+# --- Installing ------------------------------------------------------------------------
+
+def real_path(rel):
+    """Where a path from a package really ends up: folders on the way may be
+    links (/lib64 -> lib), the last part is taken as it is."""
+    rel = os.path.normpath(rel).lstrip("/")
+    if rel in ("", ".") or rel == ".." or rel.startswith("../"):
+        raise Failed("the package has a bad path: %s" % rel)
+    parent, base = os.path.split("/" + rel)
+    return os.path.join(os.path.realpath(parent), base)
+
+
+def make_dirs(path, my_dirs):
+    """Like os.makedirs, and writes down every folder it made."""
+    if os.path.isdir(path):
+        return
+    make_dirs(os.path.dirname(path), my_dirs)
+    os.mkdir(path, 0o755)
+    my_dirs.add(path)
+
+
+def install_one(pkg, tarpath, auto, base, done, total):
+    name = pkg["name"]
+    old = installed().get(name)
+    old_files, old_dirs = read_list(name)
+    others = owners(skip=name)
+    with tarfile.open(tarpath, "r:xz") as tar:
+        members = tar.getmembers()
+        files, dirs, problems = [], [], []
+        for m in members:
+            if os.path.normpath(m.name) == ".":
+                continue                         # the top folder ("./"): / itself
+            dst = real_path(m.name)
+            if m.isdir():
+                if os.path.lexists(dst) and not os.path.isdir(dst):
+                    problems.append("%s is a file here, the package has a folder" % dst)
+                dirs.append((m, dst))
+            elif m.isfile() or m.issym():
+                if dst.lstrip("/") in base:
+                    problems.append("%s is part of the system" % dst)
+                elif dst in others:
+                    problems.append("%s belongs to %s" % (dst, others[dst]))
+                elif os.path.isdir(dst) and not os.path.islink(dst):
+                    problems.append("%s is a folder here" % dst)
+                elif os.path.lexists(dst) and dst not in old_files:
+                    problems.append("%s is already there (not from a package)" % dst)
+                files.append((m, dst))
+            else:
+                problems.append("%s is not a file, folder or link" % m.name)
+        if problems:
+            raise Failed("%s was not installed: it would replace files it doesn't own:\n  %s"
+                         % (name, "\n  ".join(problems[:10]) +
+                            ("\n  ..." if len(problems) > 10 else "")))
+
+        say("[%d/%d] Installing %s %s..." % (done, total, name, pkg["version"]))
+        new_files = set(dst for m, dst in files)
+        # Written down first, so a remove after a crash still finds everything
+        write_list(name, new_files | set(old_files), old_dirs)
+        my_dirs = set(old_dirs)
+        for m, dst in sorted(dirs, key=lambda d: len(d[1])):
+            if not os.path.lexists(dst):
+                os.makedirs(dst, mode=0o755, exist_ok=True)
+                os.chmod(dst, m.mode & 0o7777)
+                my_dirs.add(dst)
+            elif dst in others:
+                my_dirs.add(dst)                 # shared with another package
+        for m, dst in files:
+            make_dirs(os.path.dirname(dst), my_dirs)
+            tmp = dst + ".my-pkg-new"
+            if os.path.lexists(tmp):
+                os.remove(tmp)
+            if m.issym():
+                os.symlink(m.linkname, tmp)
+            else:
+                with tar.extractfile(m) as src, open(tmp, "wb") as out:
+                    shutil.copyfileobj(src, out, 1 << 20)
+                os.chown(tmp, 0, 0)
+                os.chmod(tmp, m.mode & 0o7777)
+            os.replace(tmp, dst)                 # each file is old or new, never half
+
+    # An upgrade: files the new version doesn't have any more
+    for f in set(old_files) - new_files:
+        if f.lstrip("/") not in base and f not in others and os.path.lexists(f):
+            os.remove(f)
+    for d in sorted(set(old_dirs), key=len, reverse=True):
+        if d not in others:
+            try:
+                os.rmdir(d)                      # only if it is empty
+                my_dirs.discard(d)
+            except OSError:
+                pass
+    write_list(name, new_files, [d for d in my_dirs if os.path.isdir(d)])
+    write_info({
+        "name": name, "version": pkg["version"], "system": installed_version(),
+        "title": pkg.get("title", name), "category": pkg.get("category", ""),
+        "dependencies": pkg.get("dependencies", []), "menu": pkg.get("menu", []),
+        "installed_size": pkg.get("installed_size", 0),
+        "auto": auto if old is None else (old.get("auto", False) and auto),
+        "installed": time.strftime("%Y-%m-%d %H:%M"),
+    })
+    return new_files
+
+
+def plan(names, idx, inst, asked=True):
+    """The packages to install for NAMES, what they need first, as (package,
+    auto) pairs; auto = only there because another package needs it. asked:
+    you asked for NAMES (else they keep what they were: upgrade, after an
+    update). Packages whose version is installed for this system are left out."""
+    order, seen = [], set()
+
+    def visit(name, auto, chain):
+        if name in chain:
+            return                               # a loop: the first visit does it
+        pkg = idx["by_name"].get(name)
+        if pkg is None:
+            if chain:
+                raise Failed("%s needs %s, which is not in the package list." % (chain[-1], name))
+            raise Failed("There is no package called %s (my-pkg search finds them)." % name)
+        for dep in pkg.get("dependencies", []):
+            visit(dep, True, chain + [name])
+        if name not in seen:
+            seen.add(name)
+            order.append((pkg, auto))
+
+    for n in names:
+        visit(n, False if asked else inst.get(n, {}).get("auto", False), [])
+    if asked:                                    # also when another one needs it
+        order = [(p, a and p["name"] not in names) for p, a in order]
+    todo = []
+    for pkg, auto in order:
+        have = inst.get(pkg["name"])
+        if have and have["version"] == pkg["version"] and \
+                have.get("system") == installed_version():
+            if asked and pkg["name"] in names:
+                say("%s %s is installed already." % (pkg["name"], pkg["version"]))
+                if have.get("auto"):
+                    have["auto"] = False         # you asked for it now
+                    write_info(have)
+            continue
+        if have:
+            auto = have.get("auto", False) and auto
+        todo.append((pkg, auto))
+    return todo
+
+
+def install(todo, idx):
+    """Downloads all, checks them against the signed list, then installs."""
+    if not todo:
+        return 0
+    check_system(idx)
+    if is_live():
+        say("This is the live system: programs are installed into RAM and are gone "
+            "after a restart.")
+    need = sum(p.get("installed_size", 0) + p.get("size", 0) for p, a in todo)
+    st = os.statvfs("/")
+    if st.f_blocks and st.f_bavail * st.f_frsize < need + (50 << 20):
+        raise Failed("Not enough free space: these need %s." % human(need))
+    base = base_files()
+    cache = os.path.join(DB, "download")
+    os.makedirs(cache, mode=0o700, exist_ok=True)
+    url = server_url()
+    total, step = 2 * len(todo), 0
+    try:
+        for pkg, auto in todo:
+            step += 1
+            say("[%d/%d] Downloading %s %s (%s)..." % (step, total, pkg["name"],
+                                                       pkg["version"], human(pkg["size"])))
+            path = os.path.join(cache, os.path.basename(pkg["file"]))
+            download(url + pkg["file"], path)
+            if sha256_of(path) != pkg["sha256"].lower():
+                raise Failed("The download of %s is damaged or was changed (its SHA-256 "
+                             "sum is not the one in the signed list): not installed."
+                             % pkg["name"])
+        changed = set()
+        for pkg, auto in todo:
+            step += 1
+            path = os.path.join(cache, os.path.basename(pkg["file"]))
+            changed |= install_one(pkg, path, auto, base, step, total)
+    finally:
+        shutil.rmtree(cache, ignore_errors=True)
+        write_menu()
+    update_caches(changed)
+    os.sync()
+    say("Done: installed %s." % ", ".join(p["name"] for p, a in todo))
+    return 0
+
+
+# --- Removing ----------------------------------------------------------------------------
+
+def remove_one(name, base, quiet=False):
+    files, dirs = read_list(name)
+    others = owners(skip=name)
+    if not quiet:
+        say("Removing %s..." % name)
+    for f in files:
+        if f.lstrip("/") in base:
+            say("  kept %s: it is part of the system now" % f)
+        elif f in others:
+            pass                                 # another package has it too
+        elif os.path.lexists(f) and not (os.path.isdir(f) and not os.path.islink(f)):
+            os.remove(f)
+    for d in sorted(dirs, key=len, reverse=True):
+        if d not in others:
+            try:
+                os.rmdir(d)                      # only if it is empty
+            except OSError:
+                pass
+    for ext in (".list", ".info"):
+        try:
+            os.remove(os.path.join(DB, name + ext))
+        except OSError:
+            pass
+    return files
+
+
+def unneeded(inst):
+    """Libraries (installed only because something needed them) that nothing
+    installed needs any more."""
+    needed = set()
+
+    def keep(name):
+        if name in needed or name not in inst:
+            return
+        needed.add(name)
+        for d in inst[name].get("dependencies", []):
+            keep(d)
+
+    for name, info in inst.items():
+        if not info.get("auto"):
+            keep(name)
+    return [n for n in inst if n not in needed]
+
+
+# --- Commands ------------------------------------------------------------------------------
+
+def cmd_refresh(args):
+    idx = refresh()
+    say("%d packages for my-distro %s." % (len(idx["packages"]), idx.get("system")))
+    if idx.get("system") != installed_version():
+        say("(This is my-distro %s: they can't be installed here.)" % installed_version())
+    return 0
+
+
+def is_program(pkg):
+    return pkg.get("category") != LIBRARIES
+
+
+def show_line(pkg, inst):
+    mark = "*" if pkg["name"] in inst else " "
+    say("%s %-18s %-14s %9s  %s" % (mark, pkg["name"], pkg["version"][:14],
+                                     human(pkg.get("installed_size", 0)),
+                                     pkg.get("title", "")))
+
+
+def cmd_search(args):
+    words = [w.lower() for w in args if not w.startswith("--")]
+    if not words:
+        say("usage: my-pkg search WORDS")
+        return 1
+    idx, inst = need_index(), installed()
+    found = 0
+    for pkg in idx["packages"]:
+        text = " ".join([pkg["name"], pkg.get("title", ""), pkg.get("category", ""),
+                         pkg.get("description", "")]).lower()
+        if all(w in text for w in words) and (is_program(pkg) or "--all" in args):
+            show_line(pkg, inst)
+            found += 1
+    if not found:
+        say("Nothing found.")
+    return 0 if found else 1
+
+
+def cmd_info(args):
+    if len(args) != 1:
+        say("usage: my-pkg info PKG")
+        return 1
+    idx, inst = load_index(), installed()
+    pkg = (idx or {}).get("by_name", {}).get(args[0])
+    have = inst.get(args[0])
+    if not pkg and not have:
+        raise Failed("There is no package called %s." % args[0])
+    pkg = pkg or have
+    say("%s (%s)" % (pkg.get("title", args[0]), args[0]))
+    say("  Version:      %s" % pkg["version"])
+    say("  Category:     %s" % pkg.get("category", ""))
+    if "size" in pkg:
+        say("  Download:     %s" % human(pkg["size"]))
+    say("  Installed:    %s" % (("yes, version %s (%s)" % (have["version"],
+                                 "with another program" if have.get("auto") else "by you"))
+                                if have else "no"))
+    say("  Size on disk: %s" % human(pkg.get("installed_size", 0)))
+    say("  Needs:        %s" % (", ".join(pkg.get("dependencies", [])) or "-"))
+    needed_by = sorted(n for n, i in inst.items() if args[0] in i.get("dependencies", []))
+    if needed_by:
+        say("  Needed by:    %s" % ", ".join(needed_by))
+    for label, cmd, icon in pkg.get("menu", []):
+        say("  Start menu:   %s (%s)" % (label, cmd))
+    say("")
+    say(pkg.get("description", ""))
+    return 0
+
+
+def cmd_list(args):
+    inst = installed()
+    idx = load_index()
+    if "--porcelain" in args:
+        return list_porcelain(idx, inst)
+    if idx is None and "--installed" not in args:
+        idx = refresh(quiet=True)
+    if "--installed" in args:
+        if not inst:
+            say("No programs are installed with my-pkg.")
+        for name in sorted(inst):
+            info = inst[name]
+            say("* %-18s %-14s %9s  %s%s" % (name, info["version"][:14],
+                                             human(info.get("installed_size", 0)),
+                                             info.get("title", ""),
+                                             "  (library)" if info.get("category") == LIBRARIES
+                                             else ""))
+        return 0
+    last = None
+    for pkg in sorted(idx["packages"], key=lambda p: (p.get("category", ""), p["name"])):
+        if not is_program(pkg) and "--all" not in args:
+            continue
+        if pkg.get("category") != last:
+            last = pkg.get("category")
+            say("\n%s" % last)
+        show_line(pkg, inst)
+    say("\n* = installed.  my-pkg info NAME tells more.")
+    return 0
+
+
+def clean(text):
+    return " ".join(str(text).split())
+
+
+def list_porcelain(idx, inst):
+    """For the Software app: @key=value lines, then one tab-separated line per
+    package: name, version, installed version (- = no), category, download
+    size, size on disk, needs (comma-separated, - = nothing), title,
+    description."""
+    say("@system=%s" % installed_version())
+    say("@index_system=%s" % (idx.get("system", "") if idx else ""))
+    say("@live=%d" % is_live())
+    say("@root=%d" % (os.geteuid() == 0))
+    seen = set()
+    for pkg in (idx["packages"] if idx else []):
+        have = inst.get(pkg["name"])
+        seen.add(pkg["name"])
+        say("\t".join([pkg["name"], pkg["version"], have["version"] if have else "-",
+                       pkg.get("category", ""), str(pkg.get("size", 0)),
+                       str(pkg.get("installed_size", 0)),
+                       ",".join(pkg.get("dependencies", [])) or "-",
+                       clean(pkg.get("title", pkg["name"])), clean(pkg.get("description", ""))]))
+    for name, have in inst.items():             # installed, but no longer in the list
+        if name not in seen:
+            say("\t".join([name, have["version"], have["version"], have.get("category", ""),
+                           "0", str(have.get("installed_size", 0)),
+                           ",".join(have.get("dependencies", [])) or "-",
+                           clean(have.get("title", name)), "(not in the package list)"]))
+    return 0
+
+
+def cmd_install(args):
+    names = [a for a in args if not a.startswith("--")]
+    if not names:
+        say("usage: my-pkg install PKG...")
+        return 1
+    if not need_root("Installing programs", USE_INSTEAD):
+        return 1
+    with lock():
+        idx = refresh()
+        return install(plan(names, idx, installed()), idx)
+
+
+def cmd_upgrade(args):
+    if not need_root("Upgrading programs", USE_INSTEAD):
+        return 1
+    with lock():
+        idx = refresh()
+        inst = installed()
+        todo = plan([n for n in inst if n in idx["by_name"]], idx, inst, asked=False)
+        if not todo:
+            say("Everything is up to date.")
+            return 0
+        for p, a in todo:
+            old = inst.get(p["name"])
+            say("  %s: %s -> %s" % (p["name"], old["version"] if old else "new", p["version"]))
+        return install(todo, idx)
+
+
+def cmd_remove(args):
+    names = [a for a in args if not a.startswith("--")]
+    if not names and "--all" not in args:
+        say("usage: my-pkg remove [--with-dependents] PKG... | --all")
+        return 1
+    if not need_root("Removing programs", USE_INSTEAD):
+        return 1
+    with lock():
+        inst = installed()
+        if "--all" in args:                      # the factory reset
+            names = list(inst)
+        for n in names:
+            if n not in inst:
+                raise Failed("%s is not installed." % n)
+        going = set(names)
+        while True:                              # what needs them goes too, or nothing
+            needs = {n: sorted(going & set(i.get("dependencies", [])))
+                     for n, i in inst.items() if n not in going}
+            needs = {n: d for n, d in needs.items() if d}
+            if not needs:
+                break
+            if "--with-dependents" not in args:
+                raise Failed("Not removed: %s. Remove them together with: "
+                             "my-pkg remove --with-dependents %s"
+                             % ("; ".join("%s needs %s" % (n, ", ".join(d))
+                                          for n, d in sorted(needs.items())),
+                                " ".join(names)))
+            going |= set(needs)
+        base = base_files() if inst else set()
+        changed = []
+        for n in sorted(going):
+            changed += remove_one(n, base)
+        rest = {n: i for n, i in installed().items()}
+        for n in unneeded(rest):
+            say("  also removing %s (nothing needs it any more)" % n)
+            changed += remove_one(n, base, quiet=True)
+        write_menu()
+        update_caches(changed)
+        os.sync()
+        say("Done.")
+        return 0
+
+
+def cmd_after_update(args):
+    """After a system update (or rollback): the programs were made for the
+    old version. Install their versions for this one. --check: only say if
+    that is needed (exit code 10); --wait: wait for the network (at the start)."""
+    inst = installed()
+    mine = installed_version()
+    stale = sorted(n for n, i in inst.items() if i.get("system") != mine)
+    if not stale:
+        return 0
+    if "--check" in args:
+        return 10
+    if not need_root("Reinstalling programs", "my-update"):
+        return 1
+    with lock():
+        say("Installing your programs for my-distro %s: %s" % (mine, ", ".join(stale)))
+        tries = 20 if "--wait" in args else 1
+        for attempt in range(tries):
+            try:
+                idx = refresh(quiet=True)
+                break
+            except Failed as e:
+                if attempt == tries - 1:
+                    raise Failed("%s They are installed again at the next start." % e)
+                time.sleep(30)
+        if idx.get("system") != mine:
+            raise Failed("The packages for my-distro %s are not out yet: your programs "
+                         "stay as they are and are installed again at the next start." % mine)
+        for n in stale:
+            if n not in idx["by_name"]:
+                say("  %s is not available for my-distro %s: kept as it is (remove it "
+                    "with: my-pkg remove %s)" % (n, mine, n))
+                inst[n]["system"] = mine         # don't try again at every start
+                write_info(inst[n])
+        avail = [n for n in stale if n in idx["by_name"]]
+        return install(plan(avail, idx, inst, asked=False), idx)
+
+
+def main():
+    args = sys.argv[1:]
+    cmds = {"refresh": cmd_refresh, "search": cmd_search, "info": cmd_info,
+            "list": cmd_list, "install": cmd_install, "remove": cmd_remove,
+            "upgrade": cmd_upgrade, "after-update": cmd_after_update}
+    if not args or args[0] not in cmds:
+        say("usage: my-pkg refresh | search WORDS | info PKG | list [--installed] |\n"
+            "              install PKG... | remove PKG... | upgrade")
+        return 1
+    try:
+        return cmds[args[0]](args[1:])
+    except KeyboardInterrupt:
+        return 130
+    except Failed as e:
+        say(str(e))
+        return 1
+    except Exception as e:
+        say("my-pkg failed: %s" % e)
+        return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())
