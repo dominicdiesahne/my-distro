@@ -55,7 +55,12 @@ struct settings {
 
 	int lock_minutes;      /* lock the screen after this long without use; 0 = never */
 	int scale;             /* text and icons in percent: 100-200 (Xft.dpi = 96 * scale) */
+	int cursor_size;       /* mouse pointer in pixels: 24 (normal) - 96 */
 };
+
+/* High-contrast themes ("contrast", "contrast-light"): plain colors, no
+ * picture behind the desktop, and GTK's own high-contrast style. */
+int settings_high_contrast(const struct settings *s);
 
 /* All built-in themes, ending with { NULL } */
 extern const struct palette themes[];

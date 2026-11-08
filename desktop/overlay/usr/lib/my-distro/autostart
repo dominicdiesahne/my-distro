@@ -12,4 +12,5 @@ my-keepalive my-clipd &              # keeps copied text when its program closes
 my-keepalive my-indexd &             # keeps the search index of your files up to date
 my-keepalive my-lock --watch &       # locks the screen after a while without use
 my-update watch &                    # looks for system updates (the taskbar shows them)
+my-keepalive my-bluetooth --watch &  # sound to Bluetooth headphones while they are connected
 my-keepalive pcmanfm --desktop &     # wallpaper and the icons on the desktop

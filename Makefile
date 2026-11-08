@@ -25,6 +25,11 @@ BUILDROOT_VERSION := 2026.08.1
 # and case-insensitive, which breaks the kernel source tree.
 BUILD ?= $(HOME)/my-distro-build
 JOBS  ?= $(shell nproc)
+# make desktop BUILD=...: make would hand BUILD down to every package's own
+# make (on their command line and in the environment), and NetSurf's build
+# has a variable of that name. Keep it here.
+MAKEOVERRIDES := $(filter-out BUILD=%,$(MAKEOVERRIDES))
+unexport BUILD
 
 KERNEL_TAR  := $(BUILD)/linux-$(KERNEL_VERSION).tar.xz
 KERNEL_DIR  := $(BUILD)/linux-$(KERNEL_VERSION)
@@ -158,13 +163,32 @@ desktop: $(BR_DIR)/Makefile
 > X=$$(ls -d $(BR_OUT)/build/xserver_xorg-server-* 2>/dev/null | head -1); \
 >   if [ -n "$$X" ] && [ -f "$$X/config.log" ] && ! grep -q -- '--enable-screensaver' "$$X/config.log"; then \
 >   $(BR_MAKE) xserver_xorg-server-dirclean; fi
+> # The same for what 0.9.5 added: Xorg draws with the graphics chip (glamor)
+> # only when Mesa's EGL was there before it was built, GTK prints to CUPS
+> # only when CUPS was. Build them again if theirs were built without.
+> X=$$(ls -d $(BR_OUT)/build/xserver_xorg-server-* 2>/dev/null | head -1); \
+>   if [ -n "$$X" ] && [ -f "$$X/config.log" ] && ! grep -q -- '--enable-glamor' "$$X/config.log"; then \
+>   $(BR_MAKE) xserver_xorg-server-dirclean; fi
+> # Xorg's drivers built with "bind now" don't load (see external.mk):
+> # build them again with lazy binding.
+> for d in modesetting:xserver_xorg-server fbdev:xdriver_xf86-video-fbdev; do \
+>   f=$(BR_OUT)/target/usr/lib/xorg/modules/drivers/$${d%%:*}_drv.so; \
+>   if [ -f "$$f" ] && $(BR_OUT)/host/bin/x86_64-linux-readelf -d "$$f" | grep -q BIND_NOW; then \
+>     $(BR_MAKE) $${d##*:}-dirclean; fi; \
+> done
+> G=$$(ls -d $(BR_OUT)/build/libgtk3-* 2>/dev/null | head -1); \
+>   if [ -n "$$G" ] && [ -f "$$G/.stamp_configured" ] && ! grep -rqs 'print_backends=file,cups' "$$G/build/meson-logs/meson-log.txt"; then \
+>   $(BR_MAKE) libgtk3-dirclean; fi
 > # Nor changes to BusyBox's (it builds in a minute, so start it again)
 > if ! cmp -s desktop/busybox.fragment $(BR_OUT)/.busybox.fragment; then \
 >   $(BR_MAKE) busybox-dirclean; fi
 > # Nor changes to a package's own options (EAP for wpa_supplicant in 0.9.4,
-> # screen capture for FFmpeg): build these again when their BR2_PACKAGE_*_
-> # lines differ from the last build (or there is no record of it yet).
-> for p in wpa_supplicant:WPA_SUPPLICANT ffmpeg:FFMPEG; do \
+> # screen capture for FFmpeg; 0.9.5: Mesa's drivers, the parts of libdrm
+> # they need, Bluetooth firmware, fsck.fat): build these again when their
+> # BR2_PACKAGE_*_ lines differ from the last build (or there is no record
+> # of it yet).
+> for p in wpa_supplicant:WPA_SUPPLICANT ffmpeg:FFMPEG libdrm:LIBDRM mesa3d:MESA3D \
+>          linux-firmware:LINUX_FIRMWARE dosfstools:DOSFSTOOLS; do \
 >   n=$${p%%:*}; v=$${p##*:}; \
 >   ls -d $(BR_OUT)/build/$$n-[0-9]* >/dev/null 2>&1 || continue; \
 >   if [ ! -f $(BR_OUT)/.config.last ] || \

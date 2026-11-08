@@ -142,6 +142,47 @@ the taskbar, the login screen, the file history daemon and the search indexer.
   reset. The factory reset (*Users and system* → *Factory reset*, or
   `my-reset`) deletes all users, files and settings and keeps the system;
   the setup starts again.
+- **Bluetooth** (`settings/my-bluetooth.c`): a Bluetooth sign in the
+  taskbar (accent color while something is connected) opens the window:
+  switch it on and off, search, pair (it shows or asks for the PIN when the
+  device wants one), connect, disconnect, forget. Keyboards, mice,
+  headphones and speakers. BlueZ underneath; drivers and firmware for
+  Intel, Realtek, MediaTek, Qualcomm and Broadcom chips and USB dongles.
+  Headphones get the sound through bluez-alsa (no sound server): while they
+  are connected, programs you start play there (see
+  [Limitations](#limitations)).
+- **Printing** (`settings/my-printers.c`, Start menu *Printers*): CUPS with
+  driverless printing (IPP Everywhere / AirPrint: nearly every network
+  printer since ~2015 needs no driver), Gutenprint and HPLIP for older
+  USB printers. *Add printer…* finds them in the network and on USB, or
+  takes an address. Print from the browser, any GTK program or `lp FILE`.
+  The printer **PDF** saves what you print as a PDF in `~/PDF`. CUPS only
+  listens on this computer; *More settings* opens its web page
+  (`http://localhost:631`).
+- **Scanning**: *Scan…* in the Printers window (SANE, with sane-airscan for
+  network scanners and all-in-one printers); pictures go to `~/Pictures`.
+- **3D graphics**: Mesa with real drivers: AMD (radeonsi, r600; Vulkan:
+  radv), VMware/VirtualBox (svga), QEMU (virgl), and llvmpipe (fast
+  software 3D on the CPU) on any other computer, Intel included. Xorg
+  draws with the graphics chip (glamor). `glxinfo -B` shows the renderer,
+  `glxgears` is a quick test.
+- **Disks** (`settings/my-disks.c`, Start menu *Disks*): the disks and
+  partitions; format a USB stick, SD card or partition as FAT32, exFAT,
+  ext4 or NTFS, and check and repair a filesystem. It asks for the root
+  password. Partitions the running system uses can't be chosen; other
+  partitions on that disk and every internal disk need their name typed
+  in after a red warning.
+- **Backup** (`settings/my-backup-gui.c`, `my-backup`): copies your home
+  folder to a USB stick or disk, each time only what changed (rsync with
+  hard links: every backup looks complete). Optionally also the system's
+  settings (Wi-Fi, VPNs, printers, Bluetooth, users; root password).
+  *Restore* puts a chosen backup back. A notification says when it's done.
+- **Accessibility** (Settings, *Accessibility*): high-contrast themes (dark
+  and light, also in the first-boot setup), size of text and icons, a
+  bigger mouse pointer, a magnifier (Super+Z, `panel/my-zoom.c`), reading
+  the selected text aloud (Super+R, eSpeak, `panel/my-speak.c`) and an
+  on-screen keyboard (Super+K, Start menu, and the *Keyboard* button on
+  the login screen).
 
 ## Try it
 
@@ -170,7 +211,7 @@ cd my-distro
 make desktop
 ```
 
-The result is **`out/my-distro.iso`** (~240 MB). Build files go to
+The result is **`out/my-distro.iso`** (~500 MB). Build files go to
 `~/my-distro-build` (change with `make desktop BUILD=/some/path`), not into
 the repository. Kali on WSL: `setup-kali.sh` fixes the usual Kali/WSL update
 problems and installs the tools.
@@ -185,6 +226,8 @@ make run-iso      # QEMU
 be a 64-bit type, otherwise the kernel can't start and the screen stays black),
 2048 MB RAM, 2 CPUs, no hard disk. Settings, Storage: put `my-distro.iso` in
 the optical drive. Display: graphics controller *VMSVGA*. Start.
+(The live system keeps its files in RAM, about 1 GB: 2 GB of RAM works,
+3 GB is more comfortable. An installed system needs much less.)
 
 **VMware:** new VM from the ISO, *Other Linux 6.x kernel 64-bit*, 2 GB RAM.
 **Hyper-V:** Generation 2 VM, 2048 MB RAM, **Secure Boot off**, ISO in the DVD drive.
@@ -208,10 +251,11 @@ boot loader is not signed. The live system runs from RAM and changes nothing
 on the PC's disk unless you run *Install to disk*.
 
 What works: Intel and AMD graphics (the screen's resolution, several
-monitors; no 3D acceleration), wired network with Intel or Realtek cards,
-Wi-Fi (below), laptop touchpads (I2C) and USB keyboards and mice, NVMe,
-SATA and USB disks, Intel HD Audio. NVIDIA graphics only get the basic
-firmware screen.
+monitors; 3D with the graphics chip on AMD, with llvmpipe on Intel), wired
+network with Intel or Realtek cards,
+Wi-Fi (below), Bluetooth, laptop touchpads (I2C) and USB keyboards and
+mice, NVMe, SATA and USB disks, Intel HD Audio, printers (network and
+USB). NVIDIA graphics only get the basic firmware screen.
 
 **Wi-Fi:** click the Wi-Fi bars in the taskbar (or Start menu, *Wi-Fi*),
 pick a network, type its password. my-distro remembers it
@@ -278,6 +322,9 @@ the rest is the system (ext4). It boots with BIOS and UEFI alike.
 | Print / Alt+Print / Shift+Print | Screenshot: screen / window / area |
 | Super+Shift+R | Start / stop recording the screen |
 | Super+L | Lock the screen |
+| Super+Z, Super+plus / Super+minus | Magnifier on/off, bigger / smaller |
+| Super+R | Read the selected text aloud (again: stop) |
+| Super+K | On-screen keyboard on/off |
 | Volume keys, brightness keys, Sleep key | Louder, quieter, mute; brighter, darker; lock and suspend |
 | Alt+Tab, Alt+F4 | Switch / close windows |
 | Ctrl+Alt+F1 / Ctrl+Alt+F7 | Text console / back to the desktop |
@@ -292,9 +339,11 @@ The keyboard layout is German (`desktop/overlay/etc/X11/xorg.conf.d/00-keyboard.
 2. The kernel starts our init, `/sbin/my-init` (`init/init.c`).
 3. init mounts `/proc`, `/sys`, `/dev`, `/tmp` and runs `/etc/init.d/rcS`:
    `S00reset` (a factory reset, if one was asked for),
-   udev, `S20zram` (compressed swap), `S35firewall`, network (DHCP),
-   `S45sound`, `S46power` (lid switch), `S48time` (clock from the internet),
-   `S50history` (file history), `S90desktop`. Daemons run under
+   udev, `S20zram` (compressed swap), the system D-Bus, `S35firewall`,
+   `S40bluetoothd` and `S41bluealsa` (Bluetooth and its sound), network
+   (DHCP), `S45sound`, `S46power` (lid switch), `S48time` (clock from the
+   internet), `S50avahi-daemon` (finds printers), `S50history` (file
+   history), `S81cupsd` (printing), `S90desktop`. Daemons run under
    `my-keepalive`, which starts them again if they crash.
 4. `S90desktop` starts the X server with **`my-login`** as its only client.
 5. After login, `my-login` drops root rights and runs `~/.xinitrc` as you,
@@ -360,6 +409,47 @@ similarity, plus a small bonus for exact word matches.
 Use the **Search files** window (Super+S) or `my-search what you are looking for`.
 The model is English; German text works poorly. PDFs and office files are found
 by name only.
+
+### Bluetooth
+
+BlueZ's `bluetoothd` runs as root. The Bluetooth window talks to it over the
+system D-Bus (`org.bluez`: adapters, devices, Pair, Connect), like
+`bluetoothctl` in a terminal does; members of `netdev` may
+(`/etc/dbus-1/system.d/my-bluetooth.conf`). While pairing, the window is
+bluetoothd's *agent*: bluetoothd asks it "does the device show 123456?" or
+"which PIN?", and it asks you. Paired devices are *trusted*, so they
+connect by themselves later; pairings are kept in `/var/lib/bluetooth`.
+
+Sound: `bluealsad` (bluez-alsa) makes a connected headphone an ALSA
+device. `my-bluetooth --watch` (started at login) sees it connect and
+writes a few marked lines into `~/.asoundrc` that make it the default
+output; they go again when it disconnects.
+
+### Printing
+
+`cupsd` listens on `localhost:631` and its socket only, so the firewall
+stays closed. The Printers window uses CUPS's tools: `lpinfo -v` finds
+printers (USB, and in the network through Avahi/mDNS: the firewall lets in
+only those multicast answers, and Avahi announces nothing), `lpadmin -m
+everywhere` sets up a driverless printer (CUPS asks the printer what it
+can do), `lpinfo --device-id … -m` finds a Gutenprint or HPLIP driver for
+an older USB one. Members of `lpadmin` may change printers. The *PDF*
+printer is `/usr/lib/cups/backend/my-pdf`: it saves the PDF that CUPS made
+into the folder `PDF` of whoever printed.
+
+### Backup
+
+`my-backup backup /media/STICK` makes
+`/media/STICK/my-backup/COMPUTER-USER/2026-11-07_183000/home`, a copy of
+your home folder. rsync's `--link-dest` hard-links every file that didn't
+change to the previous backup's copy, so each backup is complete, but only
+changes take room. A backup is finished when its `done` file is there;
+`my-backup list` and `my-backup restore DISK NAME` (copies it back; files
+made later stay). With `--settings` (as root; the window asks for the
+password and runs it through `my-admin`) the settings that system updates
+keep go to `system/` too. FAT and exFAT can't hold hard links or
+permissions: there each backup is a full copy (format the stick as ext4
+in *Disks* for incremental backups; ext4 sticks made there belong to you).
 
 ## IDE (LazyVim)
 
@@ -434,7 +524,11 @@ or `my-update rollback`.
 |---|---|
 | `Makefile` | `make desktop` (ISO and update package), `make release-files` (signature), `make run-iso`; `make` / `make run` for the minimal version |
 | `init/init.c` | PID 1 |
-| `login/` | Login screen `my-login`, screen lock `my-lock` with `my-checkpass`, lid switch `my-lidd`, `my-power` (reboot, power off, suspend, brightness, eject USB sticks for normal users), `my-admin` (root password check for Users and system), `my-vpnctl` (the VPN window's root part) |
+| `login/` | Login screen `my-login`, screen lock `my-lock` with `my-checkpass`, lid switch `my-lidd`, `my-power` (reboot, power off, suspend, brightness, eject USB sticks for normal users), `my-admin` (root password check for Users and system, Disks and Backup), `my-vpnctl` (the VPN window's root part) |
+| `settings/my-bluetooth.c`, `my-printers.c`, `my-disks.c`, `my-backup-gui.c` | The Bluetooth, Printers (and Scan), Disks and Backup windows |
+| `desktop/overlay/usr/lib/my-distro/disk-tool`, `usr/bin/my-backup` | What Disks does as root (format, fsck); the backup command |
+| `panel/my-zoom.c`, `panel/my-speak.c`, `desktop/overlay/usr/bin/my-keyboard` | Magnifier, read aloud, on-screen keyboard |
+| `desktop/overlay/etc/cups/`, `usr/lib/cups/backend/my-pdf`, `etc/init.d/S81cupsd`, `S41bluealsa` | Printing settings, the PDF printer, start scripts |
 | `desktop/overlay/usr/lib/my-distro/vpn` | Connects and disconnects a WireGuard VPN (run by `my-vpnctl`) |
 | `desktop/overlay/usr/sbin/my-reset`, `etc/init.d/S00reset`, `desktop/post-fakeroot.sh` | Factory reset, and the factory copy it puts back |
 | `desktop/overlay/usr/bin/my-record`, `my-camera` | Screen recording, webcam |
@@ -460,6 +554,7 @@ or `my-update rollback`.
 | `desktop/post-build.sh` | Last changes to the root filesystem (Openbox shortcuts, user home) |
 | `desktop/users.table` | User accounts |
 | `desktop/make-wallpaper.py` | Draws the wallpapers, one per theme, and the clock icon (Python + Pillow) |
+| `desktop/make-bluetooth-icon.py` | Draws the Bluetooth icon (Python, no extra modules) |
 | `config/`, `rootfs/` | The minimal version |
 
 ## Customize
@@ -473,7 +568,7 @@ the taskbar and clock notice the change by themselves):
 
 | Setting | Values |
 |---|---|
-| `theme` | `teal`, `ocean`, `violet`, `ember`, `forest`, `light` |
+| `theme` | `teal`, `ocean`, `violet`, `ember`, `forest`, `light`, `contrast`, `contrast-light` (high contrast) |
 | `accent` | `#rrggbb`, or empty for the theme's color |
 | `wallpaper` | `theme`, `color` (plain), or the path of a picture |
 | `wallpaper_mode` | `crop`, `fit`, `center`, `tile`, `stretch` |
@@ -482,6 +577,8 @@ the taskbar and clock notice the change by themselves):
 | `date_format` | `strftime` format, e.g. `%a %d.%m.` |
 | `panel_position` | `bottom` or `top` |
 | `panel_height`, `font_size` | 28-56 pixels, 8-16 points |
+| `scale` | size of text and icons, 100-200 (percent) |
+| `cursor_size` | mouse pointer: 24 (normal), 32, 48, 64, 96 pixels |
 
 Defaults for all users are in `/etc/my-distro/settings`
 (`desktop/overlay/etc/my-distro/settings` in this repository). The login
@@ -528,10 +625,18 @@ make run    # boots in the terminal; quit with Ctrl-A, then X
 - VPN: WireGuard only (no OpenVPN). When you change networks while a VPN
   with "all traffic" is connected, disconnect and connect it again.
 - Screen recordings have no sound.
-- Graphics drivers set the screen up, but there is no 3D acceleration
-  (Mesa's software renderer only).
 - Sound plays on one card at a time (ALSA, no sound server). The digital
   microphones of some new laptops (Intel SOF) don't work yet.
+- Bluetooth headphones: programs started while they are connected play
+  there; ones that were already playing keep the old output until you start
+  them again (no sound server moves them). The taskbar's speaker and the
+  volume keys change the computer's own sound card, not the headphones
+  (use the headphones' buttons). Headset microphones (HFP) are untested.
+- 3D on Intel graphics runs on the CPU (llvmpipe): Mesa's iris, crocus and
+  anv drivers need clang and libclc in the build, which are not in yet.
+- Accessibility: there is no full screen reader yet (Orca needs AT-SPI's
+  Python bindings, which Buildroot doesn't have); read aloud speaks the
+  selected text only, with an English voice by default.
 - mpv decodes videos on the CPU (no graphics acceleration): HD video is
   fine on most PCs, 4K is too much.
 

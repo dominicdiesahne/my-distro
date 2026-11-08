@@ -1,0 +1,8 @@
+  <!-- my-distro 0.9.5: magnifier, read aloud, on-screen keyboard -->
+  <keybind key="W-z"><action name="Execute"><command>my-zoom</command></action></keybind>
+  <keybind key="W-plus"><action name="Execute"><command>my-zoom in</command></action></keybind>
+  <keybind key="W-KP_Add"><action name="Execute"><command>my-zoom in</command></action></keybind>
+  <keybind key="W-minus"><action name="Execute"><command>my-zoom out</command></action></keybind>
+  <keybind key="W-KP_Subtract"><action name="Execute"><command>my-zoom out</command></action></keybind>
+  <keybind key="W-r"><action name="Execute"><command>my-speak</command></action></keybind>
+  <keybind key="W-k"><action name="Execute"><command>my-keyboard</command></action></keybind>

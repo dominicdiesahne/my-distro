@@ -14,6 +14,7 @@
  *   4. wait until the user logs out, stop what the session left running,
  *      and go back to 1.
  * The X server keeps running the whole time because we stay connected.
+ * The "Keyboard" button at the bottom shows an on-screen keyboard (xvkbd).
  */
 #define _GNU_SOURCE
 #include <X11/Xatom.h>
@@ -61,11 +62,12 @@ static XftDraw *draw;
 static XftFont *font, *bold, *small, *huge;
 static XftColor c_text, c_dim, c_accent, c_field, c_field_on, c_button,
 	c_button_text, c_error;
-static Imlib_Image avatar, icon_reboot, icon_power;
+static Imlib_Image avatar, icon_reboot, icon_power, icon_keyboard;
+static pid_t keyboard_pid;      /* the on-screen keyboard, while it is shown */
 
 static char user[USER_MAX + 1], pass[PASS_MAX + 1], error[128];
 static int focus = F_USER;
-static struct rect r_user, r_pass, r_login, r_reboot, r_power;
+static struct rect r_user, r_pass, r_login, r_reboot, r_power, r_keyboard;
 static char clock_text[32], date_text[64];
 
 /* Colors and wallpaper: the settings of the user shown on the screen (the
@@ -243,6 +245,10 @@ static void redraw(void)
 	text(font, &c_text, r_reboot.x + 36, r_reboot.y, r_reboot.h, "Reboot");
 	icon(icon_power, r_power.x + 8, r_power.y + 10, 20);
 	text(font, &c_text, r_power.x + 36, r_power.y, r_power.h, "Power off");
+	r_keyboard = (struct rect){ sw - 400, sh - 44, 128, 40 };
+	icon(icon_keyboard, r_keyboard.x + 8, r_keyboard.y + 10, 20);
+	text(font, keyboard_pid ? &c_accent : &c_text, r_keyboard.x + 36, r_keyboard.y,
+	     r_keyboard.h, "Keyboard");
 
 	XCopyArea(dpy, buf, win, DefaultGC(dpy, scr), 0, 0, sw, sh, 0, 0);
 	XFlush(dpy);
@@ -354,6 +360,51 @@ static struct passwd *check_password(void)
 	return typed && strcmp(typed, hash) == 0 ? pw : NULL;
 }
 
+/*
+ * The on-screen keyboard (xvkbd): its keys are typed into the login screen
+ * like real ones (XTEST). It runs as the user "nobody", not as root like this
+ * program: xvkbd can run commands from its menus.
+ */
+static void stop_keyboard(void)
+{
+	if (keyboard_pid > 0) {
+		kill(keyboard_pid, SIGTERM);
+		waitpid(keyboard_pid, NULL, 0);
+	}
+	keyboard_pid = 0;
+}
+
+static void toggle_keyboard(void)
+{
+	char geo[64];
+	int kw = sw * 2 / 3, kh = kw / 3;
+	pid_t pid;
+
+	if (keyboard_pid) {
+		stop_keyboard();
+		return;
+	}
+	snprintf(geo, sizeof geo, "%dx%d+%d+%d", kw, kh, (sw - kw) / 2, sh - kh - 60);
+	pid = fork();
+	if (pid == 0) {
+		struct passwd *nobody = getpwnam("nobody");
+
+		setsid();
+		if (!nobody || setgroups(0, NULL) != 0 || setgid(nobody->pw_gid) != 0 ||
+		    setuid(nobody->pw_uid) != 0)
+			_exit(1);
+		clearenv();
+		setenv("DISPLAY", ":0", 1);
+		setenv("HOME", "/tmp", 1);
+		setenv("PATH", "/usr/bin:/bin", 1);
+		execl("/usr/bin/xvkbd", "xvkbd", "-compact", "-no-keypad", "-geometry", geo,
+		      (char *)NULL);
+		_exit(127);
+	}
+	if (pid > 0)
+		keyboard_pid = pid;
+}
+
 static void grab_keyboard(void)
 {
 	for (int i = 0; i < 50; i++) {
@@ -393,6 +444,7 @@ static void run_session(struct passwd *pw)
 	snprintf(home, sizeof home, "%s", pw->pw_dir);
 	snprintf(shell, sizeof shell, "%s", pw->pw_shell);
 
+	stop_keyboard();          /* the desktop has its own (Start menu) */
 	hide();
 	pid = fork();
 	if (pid == 0) {
@@ -522,6 +574,8 @@ static void click(int x, int y)
 		kill(1, SIGTERM);                    /* our init: TERM = reboot */
 	else if (inside(&r_power, x, y))
 		kill(1, SIGUSR2);                    /* our init: USR2 = power off */
+	else if (inside(&r_keyboard, x, y))
+		toggle_keyboard();
 	redraw();
 }
 
@@ -561,6 +615,7 @@ int main(void)
 		avatar = theme_icon("system-users");
 	icon_reboot = theme_icon("view-refresh");
 	icon_power = theme_icon("system-shutdown");
+	icon_keyboard = theme_icon("input-keyboard");
 
 	buf = XCreatePixmap(dpy, root, sw, sh, DefaultDepth(dpy, scr));
 	draw = XftDrawCreate(dpy, buf, vis, cmap);

@@ -19,14 +19,28 @@ for f in "$R/root/Documents/welcome.txt" "$R/etc/skel/Documents/welcome.txt" \
 	       -e '/Install to disk/d' "$f"
 done
 # Every normal user may choose Wi-Fi networks (group netdev, systems before
-# 0.9 didn't add them), play sound (group audio, before 0.9.2) and use the
-# webcam (group video, before 0.9.4).
+# 0.9 didn't add them), play sound (group audio, before 0.9.2), use the
+# webcam (group video, before 0.9.4) and add printers (group lpadmin, before
+# 0.9.5; its number comes from the new version's group file).
 G="$R/etc/group"
 grep -q '^netdev:' "$G" || echo 'netdev:x:82:' >>"$G"
 grep -q '^audio:' "$G" || echo 'audio:x:29:' >>"$G"
 grep -q '^video:' "$G" || echo 'video:x:28:' >>"$G"
+# The system's own users and groups that a new version brings (0.9.5: lp
+# and lpadmin for printing, avahi, ...): the user files are kept by updates,
+# so add the missing ones from the new version's fresh copy.
+F="$R/usr/share/my-distro/factory/etc"
+if [ -f "$F/passwd" ]; then
+	sys=$(awk -F: '$3 < 1000 { printf "%s ", $1 }' "$F/passwd")
+	for f in passwd group shadow; do
+		[ -f "$F/$f" ] && [ -f "$R/etc/$f" ] || continue
+		awk -F: -v f="$f" -v sys=" $sys" 'NR == FNR { have[$1] = 1; next }
+			!($1 in have) && (f == "group" ? $3 < 1000 : index(sys, " " $1 " ")) { print }' \
+			"$R/etc/$f" "$F/$f" >>"$R/etc/$f"
+	done
+fi
 for u in $(awk -F: '$3 >= 1000 && $3 < 60000 { print $1 }' "$R/etc/passwd"); do
-	for grp in netdev audio video; do
+	for grp in netdev audio video lpadmin; do
 		awk -F: -v OFS=: -v u="$u" -v g="$grp" '
 			$1 == g {
 				n = split($4, m, ","); found = 0

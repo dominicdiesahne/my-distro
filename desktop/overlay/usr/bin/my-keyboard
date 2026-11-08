@@ -1,0 +1,20 @@
+#!/bin/sh
+# my-keyboard: shows the on-screen keyboard (xvkbd), or hides it when it is
+# shown. Start menu "On-screen keyboard", Super+K, Settings > Accessibility,
+# and the keyboard button on the login screen.
+#
+# xvkbd types into the window that has the keyboard focus (it uses the X
+# server's XTEST extension, like a real keyboard), and never takes the
+# focus itself: click where you want to type, then on its keys.
+if killall -q xvkbd 2>/dev/null; then
+	exit 0
+fi
+# Bottom of the screen, two thirds of its width, above the taskbar
+geo=$(xrandr 2>/dev/null | sed -n 's/.* current \([0-9]*\) x \([0-9]*\).*/\1 \2/p')
+set -- $geo
+w=${1:-1024}
+h=${2:-768}
+kw=$((w * 2 / 3))
+kh=$((kw / 3))
+exec xvkbd -compact -no-keypad -always-on-top \
+	-geometry "${kw}x${kh}+$(((w - kw) / 2))+$((h - kh - 60))" >/dev/null 2>&1

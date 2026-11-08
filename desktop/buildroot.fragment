@@ -13,7 +13,9 @@ BR2_ROOTFS_OVERLAY="$(BR2_EXTERNAL_MY_DISTRO_PATH)/overlay"
 BR2_ROOTFS_POST_BUILD_SCRIPT="board/qemu/x86_64/post-build.sh $(BR2_EXTERNAL_MY_DISTRO_PATH)/post-build.sh"
 # Inside each image, with the final owners: the factory-reset copy
 BR2_ROOTFS_POST_FAKEROOT_SCRIPT="$(BR2_EXTERNAL_MY_DISTRO_PATH)/post-fakeroot.sh"
-BR2_TARGET_ROOTFS_EXT2_SIZE="1G"
+# (the disk image for make run-desktop; 2G since 0.9.5 brought 3D graphics,
+# printing and Bluetooth)
+BR2_TARGET_ROOTFS_EXT2_SIZE="2G"
 BR2_PACKAGE_MY_INIT=y
 
 # Users and passwords: root (password "root") and dominic (see users.table).
@@ -154,9 +156,11 @@ BR2_PACKAGE_IMLIB2_X=y
 BR2_PACKAGE_IMLIB2_PNG=y
 
 # File manager with desktop icons (PCManFM, a GTK 3 app). GTK on X11 needs
-# an OpenGL library; Mesa's software renderer is enough for a file manager.
+# an OpenGL library: Mesa. Its drivers for real graphics cards (3D) are in
+# the 0.9.5 part below; until 0.9.4 it only had the slow software renderer
+# softpipe.
 BR2_PACKAGE_MESA3D=y
-BR2_PACKAGE_MESA3D_GALLIUM_DRIVER_SOFTPIPE=y
+# BR2_PACKAGE_MESA3D_GALLIUM_DRIVER_SOFTPIPE is not set
 BR2_PACKAGE_MESA3D_OPENGL_GLX=y
 BR2_PACKAGE_PCMANFM=y
 BR2_PACKAGE_ADWAITA_ICON_THEME=y
@@ -246,3 +250,101 @@ BR2_PACKAGE_IPROUTE2=y
 # Screen recording (my-record): FFmpeg reads the screen over XCB. Webcams
 # (my-camera) come in through FFmpeg's video4linux input, which is in already.
 BR2_PACKAGE_FFMPEG_XCBGRAB=y
+
+# --- 0.9.5 -------------------------------------------------------------------
+
+# Bluetooth: BlueZ's daemon bluetoothd (/etc/init.d/S40bluetoothd) and its
+# terminal tool bluetoothctl. Plugins for headphones and speakers (A2DP),
+# keyboards and mice (HID, and the Bluetooth Low Energy ones: HoG). The
+# Bluetooth window (settings/my-bluetooth.c) talks to bluetoothd over D-Bus.
+# Kernel drivers: linux-gui.fragment.
+BR2_PACKAGE_BLUEZ5_UTILS=y
+BR2_PACKAGE_BLUEZ5_UTILS_CLIENT=y
+BR2_PACKAGE_BLUEZ5_UTILS_PLUGINS_AUDIO=y
+BR2_PACKAGE_BLUEZ5_UTILS_PLUGINS_HID=y
+BR2_PACKAGE_BLUEZ5_UTILS_PLUGINS_HOG=y
+# Sound to Bluetooth headphones without a sound server: bluez-alsa is the
+# go-between (bluetoothd <-> ALSA). Its daemon (/etc/init.d/S41bluealsa)
+# makes every connected headphone an ALSA device; the Bluetooth window makes
+# it your default sound output while it is connected (~/.asoundrc).
+BR2_PACKAGE_BLUEZ_ALSA=y
+# Firmware of the Bluetooth chips (most come together with a Wi-Fi chip):
+# Intel, Realtek, MediaTek, Qualcomm. Broadcom's is not in linux-firmware;
+# their chips work without it, with the firmware they start with.
+BR2_PACKAGE_LINUX_FIRMWARE_IBT=y
+BR2_PACKAGE_LINUX_FIRMWARE_RTL_87XX_BT=y
+BR2_PACKAGE_LINUX_FIRMWARE_RTL_88XX_BT=y
+BR2_PACKAGE_LINUX_FIRMWARE_MEDIATEK_MT7921_BT=y
+BR2_PACKAGE_LINUX_FIRMWARE_MEDIATEK_MT7922_BT=y
+BR2_PACKAGE_LINUX_FIRMWARE_MEDIATEK_MT7925_BT=y
+BR2_PACKAGE_LINUX_FIRMWARE_QUALCOMM_6174A_BT=y
+BR2_PACKAGE_LINUX_FIRMWARE_QUALCOMM_9377_BT=y
+
+# Printing: CUPS (/etc/init.d/S81cupsd, only reachable from this computer:
+# /etc/cups/cupsd.conf) with cups-filters, which turn documents into what
+# the printer understands. Printers made in the last ~10 years need no
+# driver ("driverless", IPP Everywhere / AirPrint); for older ones there are
+# Gutenprint (many Canon, Epson, ... inkjets) and HPLIP (HP). Ghostscript
+# renders PDF and PostScript for printers that want pictures (raster).
+BR2_PACKAGE_CUPS=y
+BR2_PACKAGE_CUPS_FILTERS=y
+BR2_PACKAGE_GHOSTSCRIPT=y
+BR2_PACKAGE_GUTENPRINT=y
+BR2_PACKAGE_HPLIP=y
+BR2_PACKAGE_LIBUSB=y
+# Finding printers and scanners in the network: Avahi (mDNS / DNS-SD), and
+# printer.local names in addresses (nss-mdns). It only looks; it doesn't
+# announce this computer (/etc/avahi/avahi-daemon.conf).
+BR2_PACKAGE_AVAHI=y
+BR2_PACKAGE_AVAHI_DAEMON=y
+BR2_PACKAGE_NSS_MDNS=y
+# Scanning: SANE with its drivers, and sane-airscan for network scanners and
+# printers with a scanner (driverless, eSCL/WSD). The Printers window has a
+# "Scan" button (scanimage).
+BR2_PACKAGE_SANE_BACKENDS=y
+BR2_PACKAGE_SANE_AIRSCAN=y
+
+# 3D graphics: Mesa with drivers for real graphics chips instead of only the
+# software renderer. LLVM compiles the shaders (llvmpipe, radeonsi).
+#   radeonsi (AMD since 2012), r600 (older AMD), virgl (QEMU with
+#   virtio-vga-gl), svga (VMware, and VirtualBox with VMSVGA), llvmpipe (any
+#   other computer, on the CPU; fast enough for the desktop and simple games)
+# Vulkan: radv (AMD). EGL and GBM let Xorg's modesetting driver draw with
+# the graphics chip (glamor, needs libepoxy).
+# Not yet: Intel's iris, crocus and anv. Mesa 26 compiles parts of them with
+# its OpenCL compiler, so they need clang and libclc (on the build machine
+# and in the image): hours more building, several GB more disk and a bigger
+# image. Intel graphics use llvmpipe for 3D until then.
+BR2_PACKAGE_MESA3D_LLVM=y
+BR2_PACKAGE_MESA3D_GALLIUM_DRIVER_LLVMPIPE=y
+BR2_PACKAGE_MESA3D_GALLIUM_DRIVER_RADEONSI=y
+BR2_PACKAGE_MESA3D_GALLIUM_DRIVER_R600=y
+BR2_PACKAGE_MESA3D_GALLIUM_DRIVER_VIRGL=y
+BR2_PACKAGE_MESA3D_GALLIUM_DRIVER_SVGA=y
+BR2_PACKAGE_MESA3D_VULKAN_DRIVER_AMD=y
+# libvulkan.so, which Vulkan programs load; it finds the drivers above
+BR2_PACKAGE_VULKAN_LOADER=y
+BR2_PACKAGE_MESA3D_OPENGL_EGL=y
+BR2_PACKAGE_MESA3D_OPENGL_ES=y
+BR2_PACKAGE_LIBEPOXY=y
+# glxinfo and glxgears: which renderer is used, and a quick test
+BR2_PACKAGE_MESA3D_DEMOS=y
+
+# Disks window (settings/my-disks.c): makes and checks filesystems. ext4
+# (e2fsprogs) and FAT (dosfstools) were in already; now also their checkers,
+# exFAT and NTFS (mkntfs, ntfsfix).
+BR2_PACKAGE_DOSFSTOOLS_FSCK_FAT=y
+BR2_PACKAGE_DOSFSTOOLS_FATLABEL=y
+BR2_PACKAGE_EXFATPROGS=y
+BR2_PACKAGE_NTFS_3G=y
+BR2_PACKAGE_NTFS_3G_NTFSPROGS=y
+
+# Backup (my-backup): rsync copies only what changed, and hard-links the
+# rest to the last backup (each backup looks complete, but costs little room)
+BR2_PACKAGE_RSYNC=y
+
+# Accessibility: an on-screen keyboard (xvkbd; Start menu and login screen)
+# and a voice that reads text aloud (eSpeak; my-speak plays it with aplay)
+BR2_PACKAGE_XVKBD=y
+BR2_PACKAGE_ESPEAK=y
+BR2_PACKAGE_ESPEAK_AUDIO_BACKEND_NONE=y

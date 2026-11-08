@@ -1,0 +1,48 @@
+#!/bin/sh
+# my-pdf: the CUPS backend behind the printer "PDF" (Save as PDF). CUPS has
+# already made a PDF of the document (the printer's PPD,
+# /usr/share/cups/model/my-pdf.ppd, asks for PDF); this saves it as
+# ~/PDF/TITLE-JOB.pdf of the user who printed, and tells them.
+#
+# CUPS runs it as root (only root may read it: mode 700, see post-build.sh),
+# because it has to write into the user's home. It writes there as that
+# user (su), so a link in the home folder can't make it write anywhere else.
+#
+# CUPS calls it as: my-pdf JOB USER TITLE COPIES OPTIONS [FILE]
+# (no FILE: the document comes on standard input), or without arguments to
+# ask which devices it offers.
+export PATH=/usr/bin:/bin:/usr/sbin:/sbin
+
+if [ $# = 0 ]; then
+	echo 'direct my-pdf:/ "my-distro Save as PDF" "Save as PDF"'
+	exit 0
+fi
+[ $# -ge 5 ] || { echo "ERROR: usage: my-pdf JOB USER TITLE COPIES OPTIONS [FILE]" >&2; exit 1; }
+job=$1
+user=$2
+title=$3
+in=${6:-/dev/stdin}
+
+case "$user" in
+""|*[!A-Za-z0-9._-]*) echo "ERROR: odd user name" >&2; exit 1 ;;
+esac
+home=$(awk -F: -v u="$user" '$1 == u { print $6; exit }' /etc/passwd)
+[ -d "$home" ] || { echo "ERROR: $user has no home folder" >&2; exit 1; }
+
+# The title as a file name: letters, digits and a few signs, at most 60
+name=$(printf '%s' "$title" | sed 's|.*/||' | tr -c 'A-Za-z0-9._ -' '_' | cut -c 1-60)
+name=${name%.*}
+[ -n "$name" ] || name=document
+out="$name-$job.pdf"
+
+if [ "$user" = root ]; then
+	mkdir -p "$home/PDF" && cat >"$home/PDF/$out" <"$in" || exit 1
+else
+	# "--": BusyBox's su would read the shell's options as its own
+	su -s /bin/sh -c 'mkdir -p "$1" && cat >"$1/$2"' -- "$user" my-pdf "$home/PDF" "$out" \
+		<"$in" || { echo "ERROR: could not write $home/PDF/$out" >&2; exit 1; }
+fi
+echo "INFO: saved as $home/PDF/$out" >&2
+/usr/lib/my-distro/notify-session -i document-print "Saved as PDF" "PDF/$out in your home folder" \
+	>/dev/null 2>&1 &
+exit 0

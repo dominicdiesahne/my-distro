@@ -81,6 +81,8 @@ KEEP = [
     "etc/localtime", "etc/timezone",             # the time zone
     "etc/my-distro/power.conf",                  # what closing the lid does
     "etc/my-distro/vpn",                         # imported VPNs
+    "etc/cups/printers.conf", "etc/cups/classes.conf",   # printers (Bluetooth
+    "etc/cups/ppd", "etc/cups/lpoptions",                # pairings are in /var)
 ]
 
 

@@ -17,10 +17,16 @@
  *   - size of text and icons: Xft.dpi in the X resources (programs started
  *     afterwards; everything at the next login)
  *
+ *   - Accessibility page: high contrast (two themes in settings.c, and GTK's
+ *     HighContrast style), the size of text (the same setting as on the
+ *     Display page) and of the mouse pointer (Xcursor.size, GTK's
+ *     gtk-cursor-theme-size), and buttons for the magnifier (my-zoom), read
+ *     aloud (my-speak) and the on-screen keyboard (my-keyboard)
+ *
  * `my-settings --apply` only does apply_desktop and exits; Openbox's
  * autostart runs it at every login. Run it yourself after editing the
  * settings file by hand. `my-settings --page display` opens the window on
- * that page.
+ * that page (--page access: Accessibility).
  */
 #include <dirent.h>
 #include <gtk/gtk.h>
@@ -110,6 +116,8 @@ static void write_openbox_theme(const struct palette *p)
 	fclose(f);
 }
 
+/* GTK's look: Adwaita light or dark, or its high-contrast style (built into
+ * GTK 3); the font size and the mouse pointer's size */
 static void write_gtk_settings(const struct settings *s)
 {
 	FILE *f = open_in_home(".config/gtk-3.0", "settings.ini");
@@ -117,13 +125,16 @@ static void write_gtk_settings(const struct settings *s)
 	if (!f)
 		return;
 	fprintf(f, "# Written by my-settings.\n[Settings]\n"
-		"gtk-theme-name=Adwaita\ngtk-application-prefer-dark-theme=%d\n"
-		"gtk-icon-theme-name=Adwaita\ngtk-font-name=DejaVu Sans %d\n",
-		s->pal.dark, s->font_size);
+		"gtk-theme-name=%s\ngtk-application-prefer-dark-theme=%d\n"
+		"gtk-icon-theme-name=Adwaita\ngtk-font-name=DejaVu Sans %d\n"
+		"gtk-cursor-theme-name=Adwaita\ngtk-cursor-theme-size=%d\n",
+		!settings_high_contrast(s) ? "Adwaita" : s->pal.dark ? "HighContrastInverse" : "HighContrast",
+		s->pal.dark, s->font_size, s->cursor_size);
 	fclose(f);
 }
 
-/* xterm's colors and font size. New terminals use them. */
+/* xterm's colors and font size, the size of text and of the mouse pointer.
+ * New programs use them. */
 static void write_xresources(const struct settings *s)
 {
 	char path[512], *cmd, *q;
@@ -132,15 +143,19 @@ static void write_xresources(const struct settings *s)
 	if (!f)
 		return;
 	/* Xft.dpi: how big text is drawn (96 = 100 %); GTK apps, xterm, the
-	 * taskbar all follow it */
+	 * taskbar all follow it. Xcursor: the mouse pointer of X programs. */
 	fprintf(f, "! Written by my-settings.\nXTerm*background: %s\nXTerm*foreground: %s\n"
-		"XTerm*cursorColor: %s\nXTerm*faceSize: %d\nXft.dpi: %d\n",
-		s->pal.bg, s->pal.text, s->pal.accent, s->font_size + 1, 96 * s->scale / 100);
+		"XTerm*cursorColor: %s\nXTerm*faceSize: %d\nXft.dpi: %d\n"
+		"Xcursor.theme: Adwaita\nXcursor.size: %d\n",
+		s->pal.bg, s->pal.text, s->pal.accent, s->font_size + 1, 96 * s->scale / 100,
+		s->cursor_size);
 	fclose(f);
 	snprintf(path, sizeof path, "%s/.config/my-distro/xresources", g_get_home_dir());
 	q = g_shell_quote(path);
 	cmd = g_strdup_printf("xrdb -merge %s", q);
 	g_spawn_command_line_sync(cmd, NULL, NULL, NULL, NULL);   /* before xterm starts */
+	/* the pointer over the desktop's background, in the new size */
+	g_spawn_command_line_sync("xsetroot -cursor_name left_ptr", NULL, NULL, NULL, NULL);
 	g_free(cmd);
 	g_free(q);
 }
@@ -961,6 +976,98 @@ static void build_lock(GtkWidget *stack)
 	gtk_grid_attach(GTK_GRID(g), l, 0, 3, 2, 1);
 }
 
+/* --- Accessibility -------------------------------------------------------------- */
+
+static GtkWidget *contrast_switch, *a11y_scale_combo, *cursor_combo;
+
+/* High contrast on: the matching high-contrast theme (dark, or light for
+ * someone who had the light theme). Off: the system's default theme. */
+static void on_contrast(GObject *o, GParamSpec *ps, gpointer d)
+{
+	int on = gtk_switch_get_active(GTK_SWITCH(o));
+
+	(void)ps; (void)d;
+	if (building || on == settings_high_contrast(&cfg))
+		return;
+	if (on) {
+		g_strlcpy(cfg.theme, cfg.pal.dark ? "contrast" : "contrast-light", sizeof cfg.theme);
+	} else {
+		struct settings def;
+
+		settings_load(&def, "/nonexistent");     /* /etc/my-distro/settings only */
+		g_strlcpy(cfg.theme, def.theme, sizeof cfg.theme);
+	}
+	cfg.accent[0] = '\0';
+	changed();
+}
+
+/* The pointer: X programs read its size when they start; Openbox (window
+ * borders) is restarted for it, which keeps all windows open. */
+static void on_cursor(GtkComboBox *c, gpointer d)
+{
+	const char *id = gtk_combo_box_get_active_id(c);
+
+	(void)d;
+	if (building || !id || atoi(id) == cfg.cursor_size)
+		return;
+	cfg.cursor_size = atoi(id);
+	changed();
+	g_spawn_command_line_async("openbox --restart", NULL);
+}
+
+static void on_run(GtkButton *b, gpointer cmd)
+{
+	(void)b;
+	g_spawn_command_line_async(cmd, NULL);
+}
+
+static void build_access(GtkWidget *stack)
+{
+	static const char *const scales[][2] = {
+		{ "100", "Normal" }, { "125", "125 %" }, { "150", "150 %" },
+		{ "175", "175 %" }, { "200", "200 %" }, { NULL, NULL } };
+	static const char *const cursors[][2] = {
+		{ "24", "Normal" }, { "32", "Bigger" }, { "48", "Large" },
+		{ "64", "Very large" }, { "96", "Huge" }, { NULL, NULL } };
+	GtkWidget *g = page(stack, "access", "Accessibility");
+	GtkWidget *b, *l;
+	int y = 0;
+
+	heading(g, y++, "Seeing");
+	contrast_switch = gtk_switch_new();
+	g_signal_connect(contrast_switch, "notify::active", G_CALLBACK(on_contrast), NULL);
+	row(g, y++, "High contrast", contrast_switch);
+	a11y_scale_combo = number_choice(&cfg.scale, scales);
+	row(g, y++, "Size of text and icons", a11y_scale_combo);
+	cursor_combo = gtk_combo_box_text_new();
+	for (int i = 0; cursors[i][0]; i++)
+		gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(cursor_combo), cursors[i][0], cursors[i][1]);
+	g_signal_connect(cursor_combo, "changed", G_CALLBACK(on_cursor), NULL);
+	row(g, y++, "Mouse pointer", cursor_combo);
+	b = gtk_button_new_with_label("Open the magnifier");
+	g_signal_connect(b, "clicked", G_CALLBACK(on_run), "my-zoom");
+	row(g, y++, "Magnifier (Super+Z)", b);
+	b = gtk_button_new_with_label("Read the selected text");
+	g_signal_connect(b, "clicked", G_CALLBACK(on_run), "my-speak");
+	row(g, y++, "Read aloud (Super+R)", b);
+
+	heading(g, y++, "Typing");
+	b = gtk_button_new_with_label("Open the on-screen keyboard");
+	g_signal_connect(b, "clicked", G_CALLBACK(on_run), "my-keyboard");
+	row(g, y++, "On-screen keyboard (Super+K)", b);
+
+	l = gtk_label_new("Text size applies to programs you open from now on, all of the "
+		"desktop after the next login. The on-screen keyboard is also on the login "
+		"screen (the keyboard button). Read aloud: select text with the mouse in any "
+		"program, then press Super+R; again stops it. A screen reader that reads "
+		"everything on the screen (like Orca) is not in my-distro yet.");
+	gtk_label_set_line_wrap(GTK_LABEL(l), TRUE);
+	gtk_label_set_xalign(GTK_LABEL(l), 0);
+	gtk_label_set_max_width_chars(GTK_LABEL(l), 60);
+	gtk_style_context_add_class(gtk_widget_get_style_context(l), "dim-label");
+	gtk_grid_attach(GTK_GRID(g), l, 0, y, 2, 1);
+}
+
 /* Puts the values of cfg into the widgets (without reacting to it). */
 static void update_widgets(void)
 {
@@ -1044,6 +1151,17 @@ static void update_widgets(void)
 		gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(scale_combo), example, example);
 		gtk_combo_box_set_active_id(GTK_COMBO_BOX(scale_combo), example);
 	}
+	/* Accessibility: the same size, high contrast, pointer */
+	if (!gtk_combo_box_set_active_id(GTK_COMBO_BOX(a11y_scale_combo), example)) {
+		gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(a11y_scale_combo), example, example);
+		gtk_combo_box_set_active_id(GTK_COMBO_BOX(a11y_scale_combo), example);
+	}
+	gtk_switch_set_active(GTK_SWITCH(contrast_switch), settings_high_contrast(&cfg));
+	snprintf(example, sizeof example, "%d", cfg.cursor_size);
+	if (!gtk_combo_box_set_active_id(GTK_COMBO_BOX(cursor_combo), example)) {
+		gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(cursor_combo), example, example);
+		gtk_combo_box_set_active_id(GTK_COMBO_BOX(cursor_combo), example);
+	}
 
 	building = 0;
 }
@@ -1078,6 +1196,7 @@ int main(int argc, char **argv)
 	build_taskbar(stack);
 	build_display(stack);
 	build_lock(stack);
+	build_access(stack);
 
 	side = gtk_stack_sidebar_new();
 	gtk_stack_sidebar_set_stack(GTK_STACK_SIDEBAR(side), GTK_STACK(stack));

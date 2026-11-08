@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Disks
+Comment=Format USB sticks and partitions, check and repair them
+Icon=drive-harddisk
+Exec=my-disks
+Terminal=false
+Categories=System;Utility;

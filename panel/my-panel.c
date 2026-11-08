@@ -22,6 +22,8 @@
  *   for a calendar.
  * - Wi-Fi bars (signal strength from /proc/net/wireless) when the computer
  *   has a Wi-Fi adapter; a click opens the Wi-Fi window (my-wifi).
+ * - The Bluetooth sign when it has Bluetooth (in the accent color while a
+ *   device is connected, dim when switched off); a click opens my-bluetooth.
  * - "Update to 0.9" next to the clock when a new version of my-distro is out.
  *   my-update watch writes that into ~/.cache/my-distro/update; a click
  *   opens System update (my-setup --update).
@@ -90,7 +92,7 @@
 #define MENU_FILE  "/etc/my-panel/menu"
 #define ICONS_FILE "/etc/my-panel/icons"
 
-enum { HOVER_BATTERY = -7, HOVER_VOLUME = -6, HOVER_WIFI = -5, HOVER_UPDATE = -4,
+enum { HOVER_BLUETOOTH = -8, HOVER_BATTERY = -7, HOVER_VOLUME = -6, HOVER_WIFI = -5, HOVER_UPDATE = -4,
        HOVER_CLOCK = -3, HOVER_NONE = -2, HOVER_START = -1 };
 
 #define UPDATE_FILE ".cache/my-distro/update"   /* in the home folder */
@@ -154,6 +156,8 @@ static int update_x, update_w;    /* its button (update_w = 0: not shown) */
 static time_t update_mtime;
 static int wifi_level = -2;       /* -2 no Wi-Fi adapter, -1 not connected, 1-4 bars */
 static int wifi_x, wifi_w;        /* its button (wifi_w = 0: not shown) */
+static int bt_state = -1;         /* -1 no Bluetooth, 0 switched off, 1 on, 2 connected */
+static int bt_x, bt_w;
 static time_t clock_now;
 
 /* Sound: the mixer of the default sound card and the control we show */
@@ -936,6 +940,98 @@ static void draw_volume(int right)
 	cairo_destroy(cr);
 }
 
+/* --- Bluetooth ---------------------------------------------------------------- */
+
+/*
+ * /sys/class/bluetooth has an entry per adapter (hci0) and, while a device is
+ * connected, one per connection (hci0:12). A switched-off adapter (rfkill,
+ * the laptop's key or switch) shows as dim. Returns 1 when the sign has to
+ * be drawn again.
+ */
+static int read_bluetooth(void)
+{
+	DIR *d = opendir("/sys/class/bluetooth");
+	struct dirent *e;
+	int state = -1;
+	glob_t g;
+
+	while (d && (e = readdir(d))) {
+		if (e->d_name[0] == '.')
+			continue;
+		if (strchr(e->d_name, ':'))
+			state = 2;                   /* a device is connected */
+		else if (state < 1)
+			state = 1;                   /* an adapter */
+	}
+	if (d)
+		closedir(d);
+	/* switched off with the key or switch: dim */
+	if (state == 1 && glob("/sys/class/rfkill/rfkill*/type", 0, NULL, &g) == 0) {
+		for (size_t i = 0; i < g.gl_pathc; i++) {
+			char type[32] = "", path[300];
+			int soft = 0, hard = 0;
+			FILE *f = fopen(g.gl_pathv[i], "r");
+
+			if (f) {
+				if (!fgets(type, sizeof type, f))
+					type[0] = '\0';
+				fclose(f);
+			}
+			if (strncmp(type, "bluetooth", 9) != 0)
+				continue;
+			snprintf(path, sizeof path, "%.*s/soft", (int)(strlen(g.gl_pathv[i]) - 5),
+			         g.gl_pathv[i]);
+			if ((f = fopen(path, "r"))) {
+				soft = fgetc(f) == '1';
+				fclose(f);
+			}
+			snprintf(path, sizeof path, "%.*s/hard", (int)(strlen(g.gl_pathv[i]) - 5),
+			         g.gl_pathv[i]);
+			if ((f = fopen(path, "r"))) {
+				hard = fgetc(f) == '1';
+				fclose(f);
+			}
+			if (soft || hard)
+				state = 0;
+		}
+		globfree(&g);
+	}
+	if (state == bt_state)
+		return 0;
+	bt_state = state;
+	return 1;
+}
+
+/* The Bluetooth rune: a vertical line with two arrow heads. Accent color
+ * while a device is connected. */
+static void draw_bluetooth(int right)
+{
+	int bh = panel_h - 2 * PAD;
+	double cx, cy = panel_h / 2.0, h = 6;
+	cairo_t *cr;
+
+	bt_w = 0;
+	if (bt_state < 0)
+		return;
+	bt_w = 26;
+	bt_x = right - PAD - bt_w;
+	XftDrawRect(draw, hover == HOVER_BLUETOOTH ? &c_hover : &c_bg, bt_x, PAD, bt_w, bh);
+	cr = panel_cairo();
+	cx = bt_x + bt_w / 2.0;
+	cairo_set_line_width(cr, 1.5);
+	cairo_set_line_cap(cr, CAIRO_LINE_CAP_ROUND);
+	cairo_set_line_join(cr, CAIRO_LINE_JOIN_ROUND);
+	cairo_move_to(cr, cx - 3.5, cy - h / 2);
+	cairo_line_to(cr, cx + 3.5, cy + h / 2);
+	cairo_line_to(cr, cx, cy + h);
+	cairo_line_to(cr, cx, cy - h);
+	cairo_line_to(cr, cx + 3.5, cy - h / 2);
+	cairo_line_to(cr, cx - 3.5, cy + h / 2);
+	dial_color(cr, bt_state == 2 ? cfg.pal.accent : bt_state == 1 ? cfg.pal.text : cfg.pal.sep, 1);
+	cairo_stroke(cr);
+	cairo_destroy(cr);
+}
+
 /* --- Battery ------------------------------------------------------------------ */
 
 /*
@@ -1077,13 +1173,16 @@ static void draw_panel(void)
 	XftDrawRect(draw, &c_accent, 0, cfg.panel_position == PANEL_TOP ? panel_h - 1 : 0,
 	            sw, 1);
 
-	/* From the right: clock, update button, Wi-Fi, volume, battery. Each
-	 * one starts left of the one before (the ones not shown take no room). */
+	/* From the right: clock, update button, Wi-Fi, Bluetooth, volume,
+	 * battery. Each one starts left of the one before (the ones not shown
+	 * take no room). */
 	draw_clock();
 	draw_update();
 	right = update_w ? update_x : clock_x;
 	draw_wifi(right);
 	right = wifi_w ? wifi_x : right;
+	draw_bluetooth(right);
+	right = bt_w ? bt_x : right;
 	draw_volume(right);
 	right = vol_w ? vol_x : right;
 	draw_battery(right);
@@ -1524,6 +1623,8 @@ static int panel_hit(int x)
 		return HOVER_UPDATE;
 	if (wifi_w && x >= wifi_x && x < wifi_x + wifi_w)
 		return HOVER_WIFI;
+	if (bt_w && x >= bt_x && x < bt_x + bt_w)
+		return HOVER_BLUETOOTH;
 	if (vol_w && x >= vol_x && x < vol_x + vol_w)
 		return HOVER_VOLUME;
 	if (bat_w && x >= bat_x && x < bat_x + bat_w)
@@ -1819,6 +1920,8 @@ static void handle(XEvent *e)
 			run("my-setup --update");
 		} else if (i == HOVER_WIFI) {
 			run("my-wifi");
+		} else if (i == HOVER_BLUETOOTH) {
+			run("my-bluetooth");
 		} else if (i == HOVER_START) {
 			open_menu();
 			redraw_menu();
@@ -2030,8 +2133,8 @@ int main(int argc, char **argv)
 			draw_panel();
 		}
 
-		if (update_clock() | read_update_status() | read_wifi() | read_volume() |
-		    read_battery() || cfg.clock_seconds)
+		if (update_clock() | read_update_status() | read_wifi() | read_bluetooth() |
+		    read_volume() | read_battery() || cfg.clock_seconds)
 			draw_panel();
 		if (cal_open)
 			draw_calendar();     /* its big clock */

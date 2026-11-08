@@ -15,13 +15,19 @@ Search files|my-search-gui|system-search
 File history|my-history|document-open-recent
 Screenshot|my-screenshot --delay 1|camera-photo
 Record screen|my-record|media-record
+On-screen keyboard|my-keyboard|input-keyboard
+Magnifier|my-zoom|zoom-in
 -
 Wi-Fi|my-wifi|network-wireless
+Bluetooth|my-bluetooth|my-bluetooth
 VPN|my-vpn|network-vpn
+Printers|my-printers|printer
 Eject USB stick|my-eject|media-eject
 Settings|my-settings|preferences-desktop
 Users and system|my-setup|system-users
 System update|my-setup --update|software-update-available
+Disks|my-disks|drive-harddisk
+Backup|my-backup-gui|document-save
 System monitor|xterm -name monitor -T "System monitor" -e htop|computer
 System logs|my-logs|text-x-generic
 Install to disk|xterm -name my-install -T "Install my-distro" -e /usr/sbin/my-install|drive-harddisk

@@ -256,16 +256,19 @@ static const char *save_user(const char *name, const char *fullname,
 
 	if (set_password(name, password) != 0)
 		return "Could not set the password.";
-	/* netdev: may choose Wi-Fi networks (wpa_supplicant's control socket)
-	 * and connect VPNs; audio: may use the sound card (/dev/snd); video: the
-	 * webcam (/dev/video*) */
+	/* netdev: may choose Wi-Fi networks (wpa_supplicant's control socket),
+	 * connect VPNs and use Bluetooth; audio: may use the sound card
+	 * (/dev/snd); video: the webcam (/dev/video*) and 3D graphics (/dev/dri);
+	 * lpadmin: may add printers (CUPS) */
 	const char *netdev[] = { "/usr/sbin/addgroup", name, "netdev", NULL };
 	const char *audio[] = { "/usr/sbin/addgroup", name, "audio", NULL };
 	const char *video[] = { "/usr/sbin/addgroup", name, "video", NULL };
+	const char *lpadmin[] = { "/usr/sbin/addgroup", name, "lpadmin", NULL };
 
 	run(netdev);
 	run(audio);
 	run(video);
+	run(lpadmin);
 	if (theme)
 		set_theme(home, theme);
 	give_home(home, uid, gid);
@@ -657,7 +660,7 @@ static int fb_username_edited, fb_filling_username;
 static void fb_style(void)
 {
 	struct settings s;
-	char wall[512], *css;
+	char wall[512], image[540], *css;
 
 	memset(&s, 0, sizeof s);
 	settings_load(&s, "/nonexistent");          /* system defaults only */
@@ -667,10 +670,15 @@ static void fb_style(void)
 	g_strlcpy(s.theme, fb_theme, sizeof s.theme);
 	strcpy(s.wallpaper, "theme");
 	settings_wallpaper_file(&s, wall, sizeof wall);
+	/* high-contrast themes have no picture */
+	if (wall[0])
+		snprintf(image, sizeof image, "url('%s')", wall);
+	else
+		strcpy(image, "none");
 	g_object_set(gtk_settings_get_default(), "gtk-application-prefer-dark-theme",
 	             s.pal.dark, NULL);
 	css = g_strdup_printf(
-		"window.setup { background-color: %s; background-image: url('%s');"
+		"window.setup { background-color: %s; background-image: %s;"
 		"  background-size: cover; background-position: center; }"
 		".card { background-color: alpha(%s, 0.93); border-top: 2px solid %s;"
 		"  padding: 30px 34px; }"

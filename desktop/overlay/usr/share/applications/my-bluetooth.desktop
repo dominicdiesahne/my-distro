@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Bluetooth
+Comment=Switch Bluetooth on and off, pair and connect devices
+Icon=my-bluetooth
+Exec=my-bluetooth
+Terminal=false
+Categories=Settings;HardwareSettings;

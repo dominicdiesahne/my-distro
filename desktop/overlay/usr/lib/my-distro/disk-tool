@@ -1,0 +1,172 @@
+#!/bin/sh
+# disk-tool: what the Disks window (my-disks) does to a disk, as root.
+#
+#   disk-tool format DEVICE TYPE LABEL [OWNER]   new, empty filesystem
+#       TYPE: vfat (FAT32), exfat, ext4, ntfs. A whole disk (sdb) first gets
+#       a new partition table with one partition; a partition (sdb1) is
+#       formatted as it is. OWNER (user name): for ext4, the new filesystem
+#       belongs to that user, so they can write on it without root.
+#   disk-tool check DEVICE                       check and repair a filesystem
+#
+# It refuses a device that holds the running system (mounted as /, /boot,
+# swap, ...): those can't be formatted or checked while they are in use.
+# A USB stick that is open in /media is closed (unmounted) first, and opened
+# again afterwards. Messages go to standard output, for the window.
+export PATH=/usr/sbin:/usr/bin:/sbin:/bin
+exec 2>&1
+
+die() {
+	echo "ERROR: $*"
+	exit 1
+}
+
+mode=$1
+dev=$2
+[ -b "$dev" ] || die "$dev is not a disk or partition"
+name=${dev##*/}
+
+# All mount points of the device and, for a whole disk, of its partitions
+mounts() {
+	for d in "$dev" "$dev"?*; do
+		[ -b "$d" ] || continue
+		awk -v d="$d" '$1 == d { print $2 }' /proc/mounts | sed 's/\\040/ /g'
+		grep -q "^$d " /proc/swaps && echo "[swap]"
+	done
+}
+
+# In use by the system? Then refuse. Opened in /media (USB sticks): close.
+was_open=""
+mounts | while read -r m; do
+	case "$m" in
+	/media/*) ;;
+	*) echo "$m" ;;
+	esac
+done >/tmp/disk-tool.$$
+if [ -s /tmp/disk-tool.$$ ]; then
+	where=$(tr '\n' ' ' </tmp/disk-tool.$$)
+	rm -f /tmp/disk-tool.$$
+	die "$name is in use by the running system (mounted at $where). It can't be changed while my-distro runs from it."
+fi
+rm -f /tmp/disk-tool.$$
+for m in $(mounts | sed 's/ /\\040/g'); do
+	m=$(echo "$m" | sed 's/\\040/ /g')
+	echo "Closing $m"
+	sync
+	umount "$m" || die "could not close $m (is a program using files on it?)"
+	rmdir "$m" 2>/dev/null
+	was_open=yes
+done
+
+# Opens it again in /media when it is a USB stick or SD card, like plugging in
+reopen() {
+	case "$(readlink -f "/sys/class/block/${1##*/}")" in
+	*/usb*|*/mmc*) /usr/lib/my-distro/automount add "${1##*/}" ;;
+	esac
+}
+
+case "$mode" in
+format)
+	type=$3
+	label=$4
+	owner=$5
+	case "$type" in vfat|exfat|ext4|ntfs) ;; *) die "unknown filesystem $type" ;; esac
+	part=$dev
+	if [ -f "/sys/class/block/$name/partition" ]; then
+		echo "Formatting the partition $name as $type"
+	else
+		# A whole disk: one partition over all of it (MBR, so every computer
+		# and camera can read it)
+		echo "New partition table on $name"
+		case "$type" in vfat) id=c ;; exfat|ntfs) id=7 ;; *) id=83 ;; esac
+		# sfdisk clears the old partition table and its signatures itself
+		printf 'label: dos\ntype=%s\n' "$id" | sfdisk --wipe always --wipe-partitions always "$dev" ||
+			die "could not make the partition"
+		case "$name" in *[0-9]) part=${dev}p1 ;; *) part=${dev}1 ;; esac
+		for _ in 1 2 3 4 5 6 7 8 9 10; do
+			[ -b "$part" ] && break
+			sleep 1
+		done
+		[ -b "$part" ] || die "the new partition $part did not appear"
+	fi
+	# the start of the old filesystem goes, so nothing mistakes it for the old one
+	dd if=/dev/zero of="$part" bs=1M count=2 conv=fsync 2>/dev/null
+	echo "Making the filesystem (this can take a minute on big disks)"
+	case "$type" in
+	vfat)
+		# FAT names: at most 11 characters, upper case
+		l=$(echo "$label" | tr 'a-z' 'A-Z' | cut -c 1-11)
+		mkfs.fat -F 32 -n "${l:-USB}" "$part" || mkfs.fat -n "${l:-USB}" "$part" || die "mkfs.fat failed"
+		;;
+	exfat)
+		mkfs.exfat -L "$(echo "${label:-USB}" | cut -c 1-15)" "$part" || die "mkfs.exfat failed"
+		;;
+	ext4)
+		ownopt=""
+		if [ -n "$owner" ]; then
+			ids=$(awk -F: -v u="$owner" '$1 == u { print $3 ":" $4 }' /etc/passwd)
+			[ -n "$ids" ] && ownopt="-E root_owner=$ids"
+		fi
+		mkfs.ext4 -F -q -L "$(echo "${label:-disk}" | cut -c 1-16)" $ownopt "$part" || die "mkfs.ext4 failed"
+		;;
+	ntfs)
+		mkntfs -f -q -L "${label:-disk}" "$part" || die "mkntfs failed"
+		;;
+	esac
+	sync
+	udevadm settle 2>/dev/null
+	echo "DONE: $part is now an empty $type filesystem."
+	reopen "$part"
+	;;
+check)
+	type=$(blkid -o value -s TYPE "$dev")
+	echo "Checking $name ($type)"
+	case "$type" in
+	ext2|ext3|ext4)
+		e2fsck -f -y "$dev"
+		rc=$?
+		case $rc in
+		0) echo "DONE: no problems found." ;;
+		1|2|3) echo "DONE: problems were found and repaired." ;;
+		*) echo "ERROR: problems are left that could not be repaired (code $rc)." ;;
+		esac
+		;;
+	vfat)
+		fsck.fat -a -w "$dev"
+		rc=$?
+		case $rc in
+		0) echo "DONE: checked, nothing left to repair." ;;
+		1) echo "DONE: problems were found and repaired." ;;
+		*) echo "ERROR: the check did not finish (code $rc)." ;;
+		esac
+		;;
+	exfat)
+		fsck.exfat -y "$dev"
+		rc=$?
+		case $rc in
+		0) echo "DONE: no problems found." ;;
+		1) echo "DONE: problems were found and repaired." ;;
+		*) echo "ERROR: problems are left (code $rc)." ;;
+		esac
+		;;
+	ntfs)
+		# -d: clear the "dirty" mark afterwards, or it opens read-only
+		ntfsfix -d "$dev"
+		rc=$?
+		[ $rc = 0 ] && echo "DONE: basic repair done. A full check of an NTFS disk needs Windows (chkdsk)." ||
+			echo "ERROR: ntfsfix could not repair it (code $rc). Check it in Windows (chkdsk)."
+		;;
+	"")
+		die "$name has no filesystem my-distro knows (empty, or a partition table)"
+		;;
+	*)
+		die "my-distro can't check $type filesystems"
+		;;
+	esac
+	sync
+	[ -n "$was_open" ] && reopen "$dev"
+	;;
+*)
+	die "usage: disk-tool format DEVICE TYPE LABEL [OWNER] | check DEVICE"
+	;;
+esac
+exit 0

@@ -1,7 +1,8 @@
 ################################################################################
 #
-# my-panel: builds panel/my-panel.c (the taskbar), panel/my-screenshot.c and
-# panel/my-clipd.c (keeps copied text) with Buildroot's compiler
+# my-panel: builds panel/my-panel.c (the taskbar), panel/my-screenshot.c,
+# panel/my-clipd.c (keeps copied text), panel/my-zoom.c (magnifier) and
+# panel/my-speak.c (reads the selected text aloud) with Buildroot's compiler
 #
 ################################################################################
 
@@ -25,12 +26,20 @@ define MY_PANEL_BUILD_CMDS
 	$(TARGET_CC) $(TARGET_CFLAGS) $(TARGET_LDFLAGS) -Wall -Wextra \
 		-o $(@D)/my-clipd $(@D)/my-clipd.c \
 		$$($(PKG_CONFIG_HOST_BINARY) --cflags --libs x11 xfixes)
+	$(TARGET_CC) $(TARGET_CFLAGS) $(TARGET_LDFLAGS) -Wall -Wextra \
+		-o $(@D)/my-zoom $(@D)/my-zoom.c \
+		$$($(PKG_CONFIG_HOST_BINARY) --cflags --libs x11 cairo-xlib)
+	$(TARGET_CC) $(TARGET_CFLAGS) $(TARGET_LDFLAGS) -Wall -Wextra \
+		-o $(@D)/my-speak $(@D)/my-speak.c \
+		$$($(PKG_CONFIG_HOST_BINARY) --cflags --libs x11)
 endef
 
 define MY_PANEL_INSTALL_TARGET_CMDS
 	$(INSTALL) -D -m 0755 $(@D)/my-panel $(TARGET_DIR)/usr/bin/my-panel
 	$(INSTALL) -D -m 0755 $(@D)/my-screenshot $(TARGET_DIR)/usr/bin/my-screenshot
 	$(INSTALL) -D -m 0755 $(@D)/my-clipd $(TARGET_DIR)/usr/bin/my-clipd
+	$(INSTALL) -D -m 0755 $(@D)/my-zoom $(TARGET_DIR)/usr/bin/my-zoom
+	$(INSTALL) -D -m 0755 $(@D)/my-speak $(TARGET_DIR)/usr/bin/my-speak
 endef
 
 $(eval $(generic-package))

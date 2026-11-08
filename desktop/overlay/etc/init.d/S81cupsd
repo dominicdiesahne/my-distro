@@ -1,0 +1,57 @@
+#!/bin/sh
+# Printing: starts the print service CUPS (cupsd), which only listens on this
+# computer (/etc/cups/cupsd.conf). Replaces Buildroot's start script, so it
+# runs under my-keepalive like the other daemons.
+#
+# The first time it adds the printer "PDF" (Save as PDF): what you print
+# there lands in the folder PDF in your home (/usr/lib/cups/backend/my-pdf).
+# Log: /var/log/cups/error_log
+PIDFILE=/run/cupsd.keepalive
+
+case "$1" in
+start)
+	printf "Starting printing: "
+	mkdir -p /var/run/cups /var/log/cups /var/spool/cups /var/cache/cups
+	# The live system's root filesystem in RAM reports no free space, and
+	# CUPS then refuses every job ("Request Entity Too Large"): give it a
+	# RAM disk of its own there. (Installed systems spool on the disk.)
+	if ! df -k /var/spool/cups 2>/dev/null | awk 'NR == 2 && $4 > 0 { ok = 1 } END { exit !ok }'; then
+		mount -t tmpfs -o mode=0710,size=256m tmpfs /var/spool/cups
+		chgrp lp /var/spool/cups 2>/dev/null
+	fi
+	mkdir -p /var/spool/cups/tmp
+	chmod 1770 /var/spool/cups/tmp
+	chgrp lp /var/spool/cups/tmp 2>/dev/null
+	/usr/bin/my-keepalive /usr/sbin/cupsd -f </dev/null >/dev/null 2>&1 &
+	echo $! >$PIDFILE
+	(
+		for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do
+			lpstat -r 2>/dev/null | grep -q 'is running' && break
+			sleep 0.5
+		done
+		if ! lpstat -v PDF >/dev/null 2>&1; then
+			lpadmin -p PDF -E -v my-pdf:/ -m my-pdf.ppd -D "Save as PDF" \
+				-L "the folder PDF in your home" -o printer-is-shared=false
+			# the default printer, unless there is one already
+			lpstat -d 2>/dev/null | grep -q 'destination:' || lpadmin -d PDF
+		fi
+	) >/dev/null 2>&1 &
+	echo "OK"
+	;;
+stop)
+	printf "Stopping printing: "
+	[ -f $PIDFILE ] && kill "$(cat $PIDFILE)" 2>/dev/null
+	killall cupsd 2>/dev/null
+	rm -f $PIDFILE
+	echo "OK"
+	;;
+restart)
+	"$0" stop
+	sleep 1
+	"$0" start
+	;;
+*)
+	echo "Usage: $0 {start|stop|restart}"
+	exit 1
+	;;
+esac

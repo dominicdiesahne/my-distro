@@ -14,3 +14,11 @@ define NETSURF_ICON_AS_PNG
 		$(@D)/netsurf/frontends/gtk/res/netsurf.xpm
 endef
 NETSURF_POST_PATCH_HOOKS += NETSURF_ICON_AS_PNG
+
+# Xorg's drivers use functions of modules that Xorg loads after them
+# (modesetting: libgbm, since it draws with the graphics chip in 0.9.5;
+# fbdev: the fbdevhw module). Buildroot links everything with "bind now"
+# (full RELRO), which wants every function found while loading, so Xorg
+# found no driver and the screen stayed black. Lazy binding for these two.
+XSERVER_XORG_SERVER_CONF_ENV += LDFLAGS="$(TARGET_LDFLAGS) -Wl,-z,lazy"
+XDRIVER_XF86_VIDEO_FBDEV_CONF_ENV += LDFLAGS="$(TARGET_LDFLAGS) -Wl,-z,lazy"

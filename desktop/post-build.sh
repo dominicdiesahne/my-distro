@@ -86,6 +86,14 @@ fi
 # Saved Wi-Fi passwords: only root may read them
 chmod 600 "$T/etc/wpa_supplicant.conf"
 
+# Printing (0.9.5). CUPS runs a backend as root only when nobody else may
+# read it: the "Save as PDF" printer's backend writes into home folders.
+chmod 700 "$T/usr/lib/cups/backend/my-pdf"
+# cups-browsed (cups-filters) would make queues for every printer in the
+# network by itself and listen for printers announcing themselves; CUPS and
+# the Printers window find them without it.
+rm -f "$T/etc/init.d/S82cups-browsed"
+
 # The live system starts without /etc/my-distro/setup-done, so the setup runs.
 rm -f "$T/etc/my-distro/setup-done"
 # (The copy for the factory reset is made later, in post-fakeroot.sh.)

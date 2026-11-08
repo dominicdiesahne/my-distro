@@ -2,8 +2,9 @@
 #
 # my-settings: the Settings app, the Clock app, the setup / "Users and
 # system" window (my-setup), the Wi-Fi window (my-wifi), the VPN window
-# (my-vpn) and the log viewer (my-logs) from settings/. settings.c and
-# dial.c are also compiled into my-panel and my-login.
+# (my-vpn), the log viewer (my-logs), and since 0.9.5 the Bluetooth,
+# Printers, Disks and Backup windows from settings/. settings.c and dial.c
+# are also compiled into my-panel and my-login.
 #
 ################################################################################
 
@@ -29,6 +30,10 @@ define MY_SETTINGS_BUILD_CMDS
 		$(MY_SETTINGS_GTK) $$($(PKG_CONFIG_HOST_BINARY) --cflags --libs x11)
 	$(MY_SETTINGS_CC) -o $(@D)/my-notify $(@D)/my-notify.c \
 		$$($(PKG_CONFIG_HOST_BINARY) --cflags --libs gio-2.0)
+	$(MY_SETTINGS_CC) -o $(@D)/my-bluetooth $(@D)/my-bluetooth.c $(MY_SETTINGS_GTK)
+	$(MY_SETTINGS_CC) -o $(@D)/my-printers $(@D)/my-printers.c $(MY_SETTINGS_GTK)
+	$(MY_SETTINGS_CC) -o $(@D)/my-disks $(@D)/my-disks.c $(MY_SETTINGS_GTK)
+	$(MY_SETTINGS_CC) -o $(@D)/my-backup-gui $(@D)/my-backup-gui.c $(MY_SETTINGS_GTK)
 endef
 
 define MY_SETTINGS_INSTALL_TARGET_CMDS
@@ -41,6 +46,10 @@ define MY_SETTINGS_INSTALL_TARGET_CMDS
 	$(INSTALL) -D -m 0755 $(@D)/my-notifyd $(TARGET_DIR)/usr/bin/my-notifyd
 	$(INSTALL) -D -m 0755 $(@D)/my-notify $(TARGET_DIR)/usr/bin/my-notify
 	ln -sf my-notify $(TARGET_DIR)/usr/bin/notify-send
+	$(INSTALL) -D -m 0755 $(@D)/my-bluetooth $(TARGET_DIR)/usr/bin/my-bluetooth
+	$(INSTALL) -D -m 0755 $(@D)/my-printers $(TARGET_DIR)/usr/bin/my-printers
+	$(INSTALL) -D -m 0755 $(@D)/my-disks $(TARGET_DIR)/usr/bin/my-disks
+	$(INSTALL) -D -m 0755 $(@D)/my-backup-gui $(TARGET_DIR)/usr/bin/my-backup-gui
 endef
 
 $(eval $(generic-package))

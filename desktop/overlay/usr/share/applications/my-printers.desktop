@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Printers
+Comment=Add printers, print a test page, scan
+Icon=printer
+Exec=my-printers
+Terminal=false
+Categories=Settings;HardwareSettings;Printing;

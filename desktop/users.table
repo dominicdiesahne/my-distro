@@ -2,6 +2,6 @@
 # user  uid  group  gid  password  home  shell  groups  comment
 # "=dominic" means the plain password "dominic"; Buildroot stores it hashed
 # (SHA-256) in /etc/shadow. Change it on the running system with: passwd
-# Groups: netdev (choose Wi-Fi networks, VPN), audio (sound), video (webcam),
-# wheel (sudo)
-dominic 1000 dominic 1000 =dominic /home/dominic /bin/sh netdev,audio,video,wheel Dominic
+# Groups: netdev (choose Wi-Fi networks, VPN, Bluetooth), audio (sound),
+# video (webcam, 3D graphics), lpadmin (add printers), wheel (sudo)
+dominic 1000 dominic 1000 =dominic /home/dominic /bin/sh netdev,audio,video,lpadmin,wheel Dominic

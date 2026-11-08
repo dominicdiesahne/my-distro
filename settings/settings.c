@@ -17,8 +17,16 @@ const struct palette themes[] = {
 	{ "ember",  "Ember",  1, "#26110e", "#4a1f1a", "#622a22", "#7d3a2e", "#fbe7e2", "#c49a90", "#ff7a59", "#5a2e28", "#2a0c06" },
 	{ "forest", "Forest", 1, "#0f2417", "#1b3d29", "#255236", "#316a46", "#e1f4e7", "#8fb79c", "#6ee7a0", "#2a4a35", "#06200f" },
 	{ "light",  "Light",  0, "#eef3f3", "#dce7e7", "#cddede", "#b9d2d1", "#12302f", "#5c7a78", "#138a80", "#c3d3d2", "#ffffff" },
+	/* High contrast (Accessibility): pure black and white, yellow / blue */
+	{ "contrast",       "High contrast",       1, "#000000", "#000000", "#333333", "#4d4d00", "#ffffff", "#ffff00", "#ffff00", "#ffffff", "#000000" },
+	{ "contrast-light", "High contrast light", 0, "#ffffff", "#ffffff", "#dddddd", "#c8d8ff", "#000000", "#000000", "#0000c0", "#000000", "#ffffff" },
 	{ NULL }
 };
+
+int settings_high_contrast(const struct settings *s)
+{
+	return strncmp(s->theme, "contrast", 8) == 0;
+}
 
 const char *date_formats[] = {
 	"%a %d.%m.",          /* Wed 04.11. */
@@ -46,6 +54,7 @@ static void defaults(struct settings *s)
 	s->font_size = 10;
 	s->lock_minutes = 10;
 	s->scale = 100;
+	s->cursor_size = 24;
 }
 
 static int yes(const char *v)
@@ -103,6 +112,8 @@ static void apply(struct settings *s, const char *key, const char *v)
 		s->lock_minutes = clamp(atoi(v), 0, 240);
 	else if (strcmp(key, "scale") == 0)
 		s->scale = clamp(atoi(v), 100, 200);
+	else if (strcmp(key, "cursor_size") == 0)
+		s->cursor_size = clamp(atoi(v), 24, 96);
 }
 
 /* Reads one file of "key = value" lines; '#' starts a comment line. */
@@ -214,14 +225,16 @@ int settings_save(const struct settings *s)
 		"# Lock the screen after this many minutes without use (0 = never)\n"
 		"lock_minutes = %d\n"
 		"# Size of text and icons in percent, 100-200 (at the next login)\n"
-		"scale = %d\n",
+		"scale = %d\n"
+		"# Size of the mouse pointer in pixels: 24 (normal), 32, 48, 64, 96\n"
+		"cursor_size = %d\n",
 		s->theme, s->accent, s->wallpaper, s->wallpaper_mode,
 		s->panel_clock == CLOCK_ANALOG ? "analog" : "digital",
 		s->clock_app == CLOCK_ANALOG ? "analog" : "digital",
 		s->clock_24h ? "yes" : "no", s->clock_seconds ? "yes" : "no",
 		s->clock_date ? "yes" : "no", s->date_format,
 		s->panel_position == PANEL_TOP ? "top" : "bottom",
-		s->panel_height, s->font_size, s->lock_minutes, s->scale);
+		s->panel_height, s->font_size, s->lock_minutes, s->scale, s->cursor_size);
 	if (fclose(f) != 0)
 		return -1;
 	return rename(tmp, path);
@@ -229,8 +242,9 @@ int settings_save(const struct settings *s)
 
 void settings_wallpaper_file(const struct settings *s, char *buf, int len)
 {
-	if (strcmp(s->wallpaper, "color") == 0)
-		buf[0] = '\0';
+	if (strcmp(s->wallpaper, "color") == 0 ||
+	    (settings_high_contrast(s) && strcmp(s->wallpaper, "theme") == 0))
+		buf[0] = '\0';                     /* one color (high contrast: plain) */
 	else if (strcmp(s->wallpaper, "theme") == 0 || !s->wallpaper[0])
 		snprintf(buf, len, "/usr/share/backgrounds/my-distro-%s.png", s->theme);
 	else

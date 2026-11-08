@@ -1,0 +1,183 @@
+#!/bin/sh
+# my-backup: backups of your home folder on a USB stick or another disk, and
+# getting them back. The Backup window (my-backup-gui) uses it too.
+#
+#   my-backup backup DISK [--settings]        a new backup on DISK (e.g. /media/STICK)
+#   my-backup list DISK                       the backups on it, newest first
+#   my-backup restore DISK NAME [--settings]  puts backup NAME back
+#
+# Each backup is a folder DISK/my-backup/COMPUTER-USER/2026-11-07_183000 with
+# your home folder in "home" (and with --settings the system's settings in
+# "system": Wi-Fi networks, VPNs, printers, Bluetooth pairings, users and
+# passwords, ...; needs root). It is incremental: rsync copies only what
+# changed since the last backup, and hard-links the unchanged files to the
+# last backup's copies, so every backup looks complete but costs only the
+# room of the changes. FAT and exFAT (most USB sticks) can't do hard links:
+# there every backup is a full copy (formatting the stick as ext4 in Disks
+# fixes that). Caches and the trash are left out.
+#
+# Restoring copies the backup's files over the ones in your home folder;
+# files you made later stay. The file history (my-undo) still has the
+# versions from before, so a restore can be undone too.
+#
+# As root: --user NAME backs up or restores NAME's home (the window does that
+# when the system settings are included). A notification says when it's
+# done. Lines starting with PROGRESS:, DONE: and ERROR: are for the window.
+export PATH=/usr/sbin:/usr/bin:/sbin:/bin
+
+die() {
+	echo "ERROR: $*"
+	notify dialog-warning "Backup failed" "$*"
+	exit 1
+}
+
+notify() {
+	if [ "$(id -u)" = 0 ]; then
+		/usr/lib/my-distro/notify-session -i "$1" "$2" "$3" >/dev/null 2>&1
+	elif [ -n "${DISPLAY:-}" ]; then
+		my-notify -i "$1" "$2" "$3" >/dev/null 2>&1
+	fi
+}
+
+cmd=${1:-}
+[ $# -gt 0 ] && shift
+settings=0
+user=$(id -un)
+disk=""
+name=""
+while [ $# -gt 0 ]; do
+	case "$1" in
+	--settings) settings=1 ;;
+	--user) user=${2:-}; shift ;;
+	-*) die "unknown option $1" ;;
+	*) if [ -z "$disk" ]; then disk=$1; else name=$1; fi ;;
+	esac
+	shift
+done
+case "$cmd" in backup|list|restore) ;; *)
+	echo "usage: my-backup backup DISK [--settings] | list DISK | restore DISK NAME [--settings]" >&2
+	exit 2 ;;
+esac
+[ -n "$disk" ] && [ -d "$disk" ] || die "No disk ${disk:+at $disk }to back up to. Plug in a USB stick (it opens in /media)."
+if [ "$(id -u)" != 0 ]; then
+	[ "$user" = "$(id -un)" ] || die "Only root may back up someone else's files."
+	[ "$settings" = 0 ] || die "The system settings need the administrator (root) password."
+fi
+case "$user" in ""|*[!A-Za-z0-9._-]*) die "odd user name" ;; esac
+home=$(awk -F: -v u="$user" '$1 == u { print $6; exit }' /etc/passwd)
+group=$(id -gn "$user" 2>/dev/null)
+[ -d "$home" ] || die "$user has no home folder"
+base="$disk/my-backup/$(hostname)-$user"
+
+# FAT and exFAT: no hard links, owners or permissions
+fstype=$(findmnt -n -o FSTYPE --target "$disk" 2>/dev/null | head -n 1)
+case "$fstype" in vfat|exfat|msdos|fat) links=0 ;; *) links=1 ;; esac
+
+# The finished backups (they have a "done" file), oldest first
+backups() {
+	for b in "$base"/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]_[0-9][0-9][0-9][0-9][0-9][0-9]; do
+		[ -f "$b/done" ] && basename "$b"
+	done
+}
+
+# rsync with a progress line "PROGRESS: 45" for the window. rsync's own
+# progress ends its lines with \r: make them lines.
+sync_files() {
+	rcfile=/tmp/my-backup.$$
+	{ rsync --info=progress2 --no-inc-recursive "$@" 2>&1; echo $? >"$rcfile"; } |
+		tr '\r' '\n' | while read -r line; do
+			case "$line" in
+			*%*) p=${line%%%*}; p=${p##* }; echo "PROGRESS: $p" ;;
+			"") ;;
+			*) echo "$line" ;;
+			esac
+		done
+	rc=$(cat "$rcfile" 2>/dev/null)
+	rm -f "$rcfile"
+	# 23/24: some files could not be read or vanished meanwhile: the rest is there
+	case "$rc" in
+	0) return 0 ;;
+	23|24) echo "Note: a few files were left out (see above)."; return 0 ;;
+	*) return 1 ;;
+	esac
+}
+
+# The system's settings: what system updates keep in /etc, and the Bluetooth
+# pairings
+settings_paths() {
+	python3 /usr/bin/my-update keep-list 2>/dev/null | grep '^etc/'
+	echo var/lib/bluetooth
+}
+
+case "$cmd" in
+list)
+	for b in $(backups); do
+		[ -d "$base/$b/system" ] && echo "$b settings" || echo "$b"
+	done | sort -r
+	;;
+
+backup)
+	[ -w "$disk" ] || die "Can't write to $disk. (An ext4 disk made elsewhere belongs to root: format it in Disks, or include the system settings.)"
+	mkdir -p "$base" || die "Can't write to $disk."
+	now=$(date +%Y-%m-%d_%H%M%S)
+	prev=$(backups | tail -n 1)
+	work="$base/$now.partial"
+	rm -rf "$base"/*.partial              # an interrupted one from before
+	mkdir -p "$work/home" || die "Can't write to $disk."
+
+	echo "Backing up $home to $disk"
+	set -- --delete --exclude=/.cache/ --exclude=/.local/share/Trash/ --exclude=/.thumbnails/
+	if [ "$links" = 1 ]; then
+		set -- -a "$@"
+		[ -n "$prev" ] && set -- "$@" "--link-dest=$base/$prev/home"
+	else
+		echo "($fstype: each backup is a full copy, without links and permissions)"
+		set -- -rt --modify-window=2 "$@"
+	fi
+	sync_files "$@" "$home/" "$work/home/" || die "Copying the files failed (is the disk full?)."
+
+	if [ "$settings" = 1 ]; then
+		echo "Backing up the system settings"
+		mkdir -p "$work/system"
+		for p in $(settings_paths); do
+			[ -e "/$p" ] || continue
+			if [ "$links" = 1 ]; then
+				rsync -aR "/./$p" "$work/system/" || die "Copying /$p failed."
+			else
+				rsync -rtR --modify-window=2 "/./$p" "$work/system/" || die "Copying /$p failed."
+			fi
+		done
+	fi
+	echo "$user on $(hostname), $(date)" >"$work/done"
+	mv "$work" "$base/$now" || die "Could not finish the backup."
+	sync
+	n=$(backups | wc -l)
+	echo "DONE: Backup $now is on $disk ($n backups there)."
+	notify document-save "Backup done" "Your files are saved on $(basename "$disk") ($now)."
+	;;
+
+restore)
+	src="$base/$name"
+	[ -n "$name" ] && [ -f "$src/done" ] && [ -d "$src/home" ] || die "There is no backup \"$name\" on $disk."
+	echo "Putting backup $name back into $home"
+	if [ "$links" = 1 ]; then
+		set -- -a
+	else
+		set -- -rt --modify-window=2
+	fi
+	# as root: the files belong to the user, whatever the disk says
+	[ "$(id -u)" = 0 ] && set -- "$@" "--chown=$user:$group"
+	sync_files "$@" "$src/home/" "$home/" || die "Restoring the files failed."
+	if [ "$settings" = 1 ]; then
+		[ -d "$src/system" ] || die "Backup $name has no system settings."
+		echo "Putting the system settings back"
+		rsync -a "$src/system/" / || die "Restoring the settings failed."
+		echo "DONE: Backup $name is back. Restart the computer for the settings."
+		notify document-revert "Restore done" "Backup $name is back. Restart the computer to use its settings."
+	else
+		echo "DONE: Backup $name is back in your home folder."
+		notify document-revert "Restore done" "The files of backup $name are back in your home folder."
+	fi
+	;;
+esac
+exit 0

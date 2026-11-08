@@ -283,3 +283,34 @@ CONFIG_VIDEO_DEV=y
 CONFIG_USB_VIDEO_CLASS=m
 CONFIG_V4L_TEST_DRIVERS=y
 CONFIG_VIDEO_VIVID=m
+
+# --- 0.9.5 -------------------------------------------------------------------
+
+# Bluetooth: the core (classic and Low Energy), RFCOMM and the HID profile
+# (keyboards, mice), and the drivers of USB Bluetooth (btusb: nearly every
+# laptop's Bluetooth is a USB device inside, plus USB dongles) with the
+# vendor parts for Intel, Realtek, Broadcom and MediaTek chips. A few laptops
+# connect it over a serial line (hci_uart). Modules, because they need
+# firmware (buildroot.fragment). uhid: Bluetooth Low Energy keyboards and
+# mice. hci_vhci: a virtual controller, for testing without hardware.
+CONFIG_BT=m
+CONFIG_BT_BREDR=y
+CONFIG_BT_LE=y
+CONFIG_BT_RFCOMM=m
+CONFIG_BT_HIDP=m
+CONFIG_BT_HCIBTUSB=m
+CONFIG_BT_HCIBTUSB_BCM=y
+CONFIG_BT_HCIBTUSB_RTL=y
+CONFIG_BT_HCIBTUSB_MTK=y
+CONFIG_BT_HCIUART=m
+CONFIG_BT_HCIUART_SERDEV=y
+CONFIG_BT_HCIUART_H4=y
+CONFIG_BT_HCIUART_BCM=y
+CONFIG_BT_HCIUART_INTEL=y
+CONFIG_BT_HCIUART_RTL=y
+CONFIG_BT_HCIVHCI=m
+CONFIG_UHID=m
+
+# 3D graphics needs nothing new here: the Mesa drivers (buildroot.fragment)
+# talk to the graphics chip through the DRM drivers above (i915, xe, amdgpu,
+# radeon, virtio-gpu, vmwgfx).

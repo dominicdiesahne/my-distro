@@ -1,0 +1,4 @@
+# Some laptops start with Bluetooth switched off in software ("soft
+# blocked"): switch it on when it appears. The Bluetooth window's switch
+# turns it off and on after that. (A hardware switch or key still wins.)
+ACTION=="add", SUBSYSTEM=="rfkill", ATTR{type}=="bluetooth", ATTR{soft}="0"
