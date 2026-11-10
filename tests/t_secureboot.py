@@ -25,9 +25,14 @@ ISO = os.path.abspath(sys.argv[1])
 SHOTS = sys.argv[2] if len(sys.argv) > 2 else '/tmp/vm-sb'
 os.makedirs(SHOTS, exist_ok=True)
 VARS = '/tmp/vm-sb-vars.fd'
-subprocess.run(['cp', '/usr/share/OVMF/OVMF_VARS_4M.ms.fd', VARS], check=True)
+# SB_OFF=1: the same ISO with UEFI and Secure Boot off (shim starts GRUB
+# without checking): no MokManager, the kernel must not be locked down
+SB_OFF = os.environ.get('SB_OFF') == '1'
+subprocess.run(['cp', '/usr/share/OVMF/' + ('OVMF_VARS_4M.fd' if SB_OFF else 'OVMF_VARS_4M.ms.fd'), VARS],
+               check=True)
+CODE = '/usr/share/OVMF/' + ('OVMF_CODE_4M.fd' if SB_OFF else 'OVMF_CODE_4M.secboot.fd')
 args = ['-machine', 'q35,smm=on', '-global', 'driver=cfi.pflash01,property=secure,value=on',
-        '-drive', 'if=pflash,format=raw,unit=0,readonly=on,file=/usr/share/OVMF/OVMF_CODE_4M.secboot.fd',
+        '-drive', 'if=pflash,format=raw,unit=0,readonly=on,file=' + CODE,
         '-drive', 'if=pflash,format=raw,unit=1,file=' + VARS,
         '-m', '3072', '-smp', '2', '-vga', 'std', '-cdrom', ISO, '-boot', 'd',
         '-nic', 'user,model=e1000']
@@ -46,14 +51,27 @@ def keys(seq, pause=2.5):
         vm.keys(k.strip())
         time.sleep(pause)
 
+def grub_last_entry(secs=50):
+    """GRUB waits 5 s: keep pressing Down from before its menu appears (it
+    stops the countdown and stays on the last entry, which sends the
+    kernel's messages to the serial line too), then Enter"""
+    for _ in range(secs // 2):
+        vm.keys('down')
+        time.sleep(2)
+    shot('grub')
+    vm.keys('ret')
+
 # --- 1. first start: MokManager ------------------------------------------------
 vm = VM('sb', args)
-time.sleep(60)                     # firmware, shim, the failed check of GRUB
-shot('first-start')
+if not SB_OFF:
+    time.sleep(60)                 # firmware, shim, the failed check of GRUB
+    shot('first-start')
 # "Press any key to perform MOK management" (10 s), then the menu:
 # Continue boot / Enroll key from disk / Enroll hash from disk
 steps = sys.argv[3] if len(sys.argv) > 3 else None
-if steps:
+if SB_OFF:
+    pass                           # GRUB's menu is up already
+elif steps:
     keys(steps)
 else:
     keys('ret', 4); shot('mok-menu')
@@ -66,10 +84,32 @@ else:
     keys('down,ret', 4); shot('confirm')          # Yes
     keys('ret', 4); shot('reboot')                # Reboot
 # --- 2. the restart: GRUB, the kernel ---------------------------------------------
-time.sleep(40)
-shot('grub')
-# the third entry sends the kernel's messages to the serial line too
-keys('down,down,ret', 1)
+if not SB_OFF:
+    time.sleep(10)
+grub_last_entry()
+if SB_OFF:
+    try:
+        out = vm.expect(r'(Secure boot disabled|secureboot: Secure boot disabled)', 900)
+        results.append(('UEFI, Secure Boot off: shim -> GRUB -> kernel', True))
+    except TimeoutError as e:
+        results.append(('UEFI, Secure Boot off: shim -> GRUB -> kernel', 'Linux version' in vm.buf))
+        print(e, flush=True)
+    time.sleep(300)
+    shot('desktop')
+    keys('ctrl-alt-f1', 5)
+    vm.type('root\n'); time.sleep(3); vm.type('root\n'); time.sleep(5)
+    vm.type('(cat /sys/kernel/security/lockdown; my-secureboot status; echo SB-DONE) >/dev/ttyS0 2>&1\n')
+    try:
+        out = vm.expect('SB-DONE', 120)
+        print(out[-600:], flush=True)
+        results.append(('not locked down', '[none]' in out))
+    except TimeoutError as e:
+        results.append(('console checks', False))
+    print('\n== SUMMARY uefi without Secure Boot')
+    for name, ok in results:
+        print(('PASS ' if ok else 'FAIL ') + name)
+    vm.quit()
+    sys.exit(0)
 try:
     out = vm.expect(r'(Secure boot enabled|secureboot: Secure boot enabled|Kernel is locked down)', 900)
     results.append(('kernel says Secure Boot is on', True))

@@ -110,11 +110,10 @@ except TimeoutError as e:
 check(vm, 'dmesg says restored', 'dmesg | grep -i -E "hibernat|restor|image" | tail -5', 'mage')
 # 0.9.7: what my-install put on the EFI partition for UEFI and Secure Boot
 check(vm, 'EFI partition: shim, GRUB, MokManager, certificate, grub.cfg',
-      '/usr/lib/my-distro/esp-mount && ls /boot/efi/EFI/BOOT/ | tr "\n" " "; cat /boot/efi/EFI/BOOT/grub.cfg',
+      '/usr/lib/my-distro/esp-mount && ls /boot/efi/EFI/BOOT/ | tr "\\n" " "; cat /boot/efi/EFI/BOOT/grub.cfg',
       'grubx64.efi')
 check(vm, 'my-secureboot refresh (after an update)', 'my-secureboot refresh && echo REFRESHED', 'REFRESHED')
-vm.send('poweroff
-'); time.sleep(20)
+vm.send('poweroff\n'); time.sleep(20)
 vm.quit()
 
 # --- 3. the same disk with UEFI (OVMF, Secure Boot off): shim -> GRUB -> kernel --
@@ -125,8 +124,7 @@ uefi = ['-drive', 'if=pflash,format=raw,readonly=on,file=/usr/share/OVMF/OVMF_CO
 vm = VM('disk-%s-uefi' % mode, uefi + common)
 if mode == 'crypt':
     vm.expect('Enter passphrase for', 2400)
-    vm.send(PASS + '
-')
+    vm.send(PASS + '\n')
 login(vm)
 check(vm, 'started with UEFI', 'ls -d /sys/firmware/efi && echo UEFI', 'UEFI')
 check(vm, 'efivarfs mounted', 'grep efivarfs /proc/mounts', 'efivarfs')
