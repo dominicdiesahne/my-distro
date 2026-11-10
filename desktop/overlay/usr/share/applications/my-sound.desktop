@@ -1,0 +1,15 @@
+[Desktop Entry]
+Type=Application
+Name=Sound
+Name[de]=Ton
+Name[fr]=Son
+Name[es]=Sonido
+Name[it]=Audio
+Name[tr]=Ses
+Name[pl]=Dźwięk
+Name[ro]=Sunet
+Comment=Choose where the sound plays, and how loud each program is
+Icon=audio-volume-high
+Exec=my-sound
+Terminal=false
+Categories=Settings;AudioVideo;

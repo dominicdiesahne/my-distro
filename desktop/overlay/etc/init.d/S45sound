@@ -8,9 +8,15 @@ start)
 	printf "Starting sound: "
 	if ls /dev/snd/controlC* >/dev/null 2>&1; then
 		alsactl init >/var/log/sound.log 2>&1
-		# alsactl init leaves some cards silent: open the main controls
-		for c in Master PCM Speaker Headphone Front; do
-			amixer -q sset "$c" 70% unmute >>/var/log/sound.log 2>&1
+		# alsactl init leaves some cards silent: open the main controls of
+		# every card. (-c: the card itself; ALSA's "default" is the sound
+		# server PipeWire since 0.9.7, which only runs in a session.)
+		for card in /proc/asound/card[0-9]*; do
+			[ -d "$card" ] || continue
+			n=${card#/proc/asound/card}
+			for c in Master PCM Speaker Headphone Front; do
+				amixer -q -c "$n" sset "$c" 70% unmute >>/var/log/sound.log 2>&1
+			done
 		done
 		echo "OK"
 	else

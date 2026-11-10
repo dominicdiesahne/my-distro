@@ -1,0 +1,8 @@
+config BR2_PACKAGE_MY_WIREPLUMBER
+	bool "my-wireplumber"
+	depends on BR2_PACKAGE_PIPEWIRE
+	select BR2_PACKAGE_MY_LUA54
+	select BR2_PACKAGE_LIBGLIB2
+	help
+	  WirePlumber, PipeWire's session manager, built with its own
+	  Lua 5.4 (my-lua54) so it can be in the image next to LuaJIT.

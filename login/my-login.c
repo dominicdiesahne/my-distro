@@ -38,6 +38,7 @@
 #include <X11/extensions/Xrender.h>
 #include <Imlib2.h>
 #include <crypt.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <glob.h>
 #include <grp.h>
@@ -675,7 +676,26 @@ static void run_session(struct passwd *pw)
 	hide();
 	pid = fork();
 	if (pid == 0) {
+		char runtime[64];
+
 		setsid();
+		/* The session's private folder for sockets (XDG_RUNTIME_DIR): the
+		 * sound server PipeWire (0.9.7) puts its socket there. Made here,
+		 * as root, so nobody else can have made it first; a second login
+		 * of the same user (Switch user) shares it. */
+		snprintf(runtime, sizeof runtime, "/run/user/%u", (unsigned)uid);
+		mkdir("/run/user", 0755);
+		if (mkdir(runtime, 0700) == 0 || errno == EEXIST) {
+			struct stat st;
+
+			if (lstat(runtime, &st) != 0 || !S_ISDIR(st.st_mode) ||
+			    (st.st_uid != uid && chown(runtime, uid, gid) != 0))
+				runtime[0] = '\0';
+			else if (chmod(runtime, 0700) != 0)
+				runtime[0] = '\0';
+		} else {
+			runtime[0] = '\0';
+		}
 		/* Drop root: groups first, then the group, then the user. */
 		if (initgroups(name, gid) != 0 || setgid(gid) != 0 || setuid(uid) != 0)
 			_exit(1);
@@ -687,6 +707,8 @@ static void run_session(struct passwd *pw)
 		setenv("LOGNAME", name, 1);
 		setenv("SHELL", shell, 1);
 		setenv("DISPLAY", display_name, 1);
+		if (runtime[0])
+			setenv("XDG_RUNTIME_DIR", runtime, 1);
 		/* the language: ~/.xinitrc reads the user's choice
 		 * (/usr/lib/my-distro/session-env) */
 		setenv("LANG", "en_US.UTF-8", 1);

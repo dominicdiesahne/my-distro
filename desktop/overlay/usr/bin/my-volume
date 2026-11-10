@@ -3,9 +3,25 @@
 # The volume keys of a keyboard run this (Openbox shortcuts). The taskbar's
 # speaker shows the result and also changes the volume (scroll, click).
 #
-# It uses the first of these controls the sound card has, the same order as
-# the taskbar (panel/my-panel.c): Master, PCM, Speaker, Headphone.
+# With the sound server PipeWire (0.9.7) it changes the default output
+# (the one chosen in the Sound window, e.g. Bluetooth headphones) with
+# wpctl. Without it, the first of these controls the sound card has, the
+# same order as the taskbar (panel/my-panel.c): Master, PCM, Speaker,
+# Headphone.
 STEP=5%
+
+if command -v wpctl >/dev/null && wpctl get-volume @DEFAULT_AUDIO_SINK@ >/dev/null 2>&1; then
+	S=@DEFAULT_AUDIO_SINK@
+	case "$1" in
+	up)   wpctl set-mute "$S" 0; wpctl set-volume -l 1.0 "$S" "$STEP+" ;;
+	down) wpctl set-volume "$S" "$STEP-" ;;
+	mute) wpctl set-mute "$S" toggle ;;
+	get|"") wpctl get-volume "$S" | awk '{ printf "%d%% %s\n", $2 * 100 + 0.5, /MUTED/ ? "off" : "on" }' ;;
+	*) echo "usage: my-volume up|down|mute|get" >&2; exit 2 ;;
+	esac
+	exit 0
+fi
+
 ctl=""
 for c in Master PCM Speaker Headphone; do
 	if amixer -q sget "$c" >/dev/null 2>&1; then ctl=$c; break; fi

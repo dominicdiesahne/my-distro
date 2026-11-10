@@ -11,11 +11,12 @@
  *                         ("does the device show 123456?", "type this PIN")
  * Members of the group netdev may do this (/etc/dbus-1/system.d/my-bluetooth.conf).
  *
- * Headphones and speakers: bluez-alsa (S41bluealsa) makes a connected one an
- * ALSA sound device. `my-bluetooth --watch` (started at login) notices when
- * one connects and makes it the default sound output of your programs, with
- * a few lines in ~/.asoundrc; when it disconnects they are removed again.
- * Programs that are already playing keep the old output until restarted.
+ * Headphones and speakers: since 0.9.7 the sound server PipeWire makes a
+ * connected one a sound output. `my-bluetooth --watch` (started at login)
+ * notices when one connects and makes it the default output; PipeWire moves
+ * the programs that are playing there too. (Until 0.9.6 bluez-alsa made it
+ * an ALSA device and --watch wrote a few lines into ~/.asoundrc, which only
+ * programs started afterwards read; that is still done without PipeWire.)
  */
 #include <glib/gstdio.h>
 #include <gtk/gtk.h>
@@ -261,20 +262,55 @@ static struct dev *connected_audio(void)
 
 static char last_audio[18];       /* --watch: the headphones we switched to */
 
+/* 0.9.7: with the sound server PipeWire, its Bluetooth part (instead of
+ * bluez-alsa) turns the headphones into an output. Make that the default
+ * output: PipeWire then moves the programs that are playing there too. */
+static gboolean pipewire_default_bluetooth(gpointer d)
+{
+	struct dev *dev = connected_audio();
+	const char *argv[] = { "/usr/lib/my-distro/sound", "bluetooth", NULL };
+	char *out = NULL;
+	int tries = GPOINTER_TO_INT(d);
+
+	if (!dev)
+		return G_SOURCE_REMOVE;
+	/* the output appears a moment after the connection: try for 10 s */
+	if (!g_spawn_sync(NULL, (char **)argv, NULL, G_SPAWN_STDERR_TO_DEV_NULL, NULL, NULL,
+	                  &out, NULL, NULL, NULL) || !out || !out[0]) {
+		g_free(out);
+		if (tries < 10)
+			g_timeout_add_seconds(1, pipewire_default_bluetooth, GINT_TO_POINTER(tries + 1));
+		return G_SOURCE_REMOVE;
+	}
+	g_free(out);
+	{
+		const char *n[] = { "my-notify", "-i", "audio-headphones", dev->name,
+			_("Sound now plays here."), NULL };
+		g_spawn_async(NULL, (char **)n, NULL, G_SPAWN_SEARCH_PATH, NULL, NULL, NULL, NULL);
+	}
+	return G_SOURCE_REMOVE;
+}
+
 static void follow_audio(void)
 {
 	struct dev *d = connected_audio();
+	int pipewire = g_file_test("/usr/bin/pipewire", G_FILE_TEST_EXISTS);
 
 	if (d && strcmp(d->address, last_audio) != 0) {
 		const char *argv[] = { "my-notify", "-i", "audio-headphones", d->name,
 			_("Sound now plays here. Programs that were already playing: start them again."),
 			NULL };
 
-		set_sound_output(d->address, d->name);
-		g_spawn_async(NULL, (char **)argv, NULL, G_SPAWN_SEARCH_PATH, NULL, NULL, NULL, NULL);
+		if (pipewire) {
+			pipewire_default_bluetooth(GINT_TO_POINTER(0));
+		} else {
+			set_sound_output(d->address, d->name);
+			g_spawn_async(NULL, (char **)argv, NULL, G_SPAWN_SEARCH_PATH, NULL, NULL, NULL, NULL);
+		}
 		g_strlcpy(last_audio, d->address, sizeof last_audio);
 	} else if (!d && last_audio[0]) {
-		set_sound_output(NULL, NULL);
+		if (!pipewire)
+			set_sound_output(NULL, NULL);
 		last_audio[0] = '\0';
 	}
 }

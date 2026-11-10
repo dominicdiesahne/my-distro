@@ -1,0 +1,6 @@
+config BR2_PACKAGE_MY_LUA54
+	bool "my-lua54"
+	help
+	  Lua 5.4 as a static library for WirePlumber only
+	  (my-wireplumber). The image's Lua is LuaJIT (mpv), and
+	  Buildroot allows only one Lua package.

@@ -1,0 +1,147 @@
+#!/usr/bin/env python3
+"""sound: what the Sound window (my-sound) and my-bluetooth --watch ask the
+sound server PipeWire, in lines that are easy to read from C.
+
+  sound list                one line per output, input and playing program:
+      out  ID  DEFAULT(0/1)  VOLUME(%)  MUTED(0/1)  NAME
+      in   ID  DEFAULT(0/1)  VOLUME(%)  MUTED(0/1)  NAME
+      app  ID  OUTPUT-ID     VOLUME(%)  MUTED(0/1)  NAME
+    (fields separated by tabs; OUTPUT-ID 0 = not playing anywhere yet)
+  sound default ID          make output/input ID the default (programs that
+                            follow the default move along)
+  sound volume ID PERCENT   volume of an output, input or program (0-150)
+  sound mute ID 0|1
+  sound move APP-ID OUT-ID  play program APP-ID on output OUT-ID
+  sound bluetooth           make the first Bluetooth output the default;
+                            prints its name (nothing if there is none)
+
+pw-dump (PipeWire's objects as JSON) tells what there is; wpctl
+(WirePlumber) and pw-metadata change it. WirePlumber remembers the
+choices for the next login.
+"""
+import json
+import subprocess
+import sys
+
+
+def run(*cmd):
+    try:
+        return subprocess.run(cmd, capture_output=True, text=True, timeout=10).stdout
+    except (OSError, subprocess.TimeoutExpired):
+        return ""
+
+
+def objects():
+    try:
+        return json.loads(run("pw-dump") or "[]")
+    except ValueError:
+        return []
+
+
+def defaults(objs):
+    """node.name of the default output and input (WirePlumber's metadata)"""
+    out = {}
+    for o in objs:
+        if o.get("type") != "PipeWire:Interface:Metadata":
+            continue
+        if (o.get("props") or {}).get("metadata.name") != "default":
+            continue
+        for m in o.get("metadata") or []:
+            if m.get("key") in ("default.audio.sink", "default.audio.source"):
+                v = m.get("value")
+                if isinstance(v, dict):
+                    out[m["key"]] = v.get("name")
+    return out
+
+
+def volume(node_id):
+    """(percent, muted) from wpctl get-volume: "Volume: 0.40 [MUTED]" """
+    t = run("wpctl", "get-volume", str(node_id))
+    try:
+        v = float(t.split()[1])
+    except (IndexError, ValueError):
+        return 0, 0
+    return int(round(v * 100)), int("MUTED" in t)
+
+
+def nodes(objs):
+    for o in objs:
+        if o.get("type") == "PipeWire:Interface:Node":
+            props = (o.get("info") or {}).get("props") or {}
+            yield o["id"], props
+
+
+def clean(s):
+    return " ".join(str(s).split())
+
+
+def cmd_list():
+    objs = objects()
+    d = defaults(objs)
+    # which output each program plays on: the links from it
+    target = {}
+    kinds = {}
+    for nid, p in nodes(objs):
+        kinds[nid] = p.get("media.class", "")
+    for o in objs:
+        if o.get("type") == "PipeWire:Interface:Link":
+            info = o.get("info") or {}
+            src, dst = info.get("output-node-id"), info.get("input-node-id")
+            if kinds.get(src) == "Stream/Output/Audio" and kinds.get(dst) == "Audio/Sink":
+                target[src] = dst
+    lines = []
+    for nid, p in nodes(objs):
+        cls = p.get("media.class", "")
+        if cls == "Audio/Sink":
+            kind, dflt = "out", int(p.get("node.name") == d.get("default.audio.sink"))
+        elif cls == "Audio/Source":
+            kind, dflt = "in", int(p.get("node.name") == d.get("default.audio.source"))
+        elif cls == "Stream/Output/Audio":
+            kind, dflt = "app", target.get(nid, 0)
+        else:
+            continue
+        if kind == "app":
+            name = p.get("application.name") or p.get("media.name") or p.get("node.name")
+        else:
+            name = p.get("node.description") or p.get("node.nick") or p.get("node.name")
+        vol, muted = volume(nid)
+        lines.append("%s\t%d\t%d\t%d\t%d\t%s" % (kind, nid, dflt, vol, muted, clean(name)))
+    print("\n".join(lines))
+
+
+def node_name(objs, nid):
+    for i, p in nodes(objs):
+        if i == nid:
+            return p.get("node.name")
+    return None
+
+
+def main():
+    a = sys.argv[1:]
+    if a == ["list"]:
+        cmd_list()
+    elif len(a) == 2 and a[0] == "default" and a[1].isdigit():
+        run("wpctl", "set-default", a[1])
+    elif len(a) == 3 and a[0] == "volume" and a[1].isdigit() and a[2].isdigit():
+        pct = min(int(a[2]), 150)
+        run("wpctl", "set-volume", a[1], "%.2f" % (pct / 100.0))
+    elif len(a) == 3 and a[0] == "mute" and a[1].isdigit() and a[2] in ("0", "1"):
+        run("wpctl", "set-mute", a[1], a[2])
+    elif len(a) == 3 and a[0] == "move" and a[1].isdigit() and a[2].isdigit():
+        # WirePlumber moves a program when its target.object changes
+        name = node_name(objects(), int(a[2]))
+        if name:
+            run("pw-metadata", a[1], "target.object", name)
+    elif a == ["bluetooth"]:
+        for nid, p in nodes(objects()):
+            if p.get("media.class") == "Audio/Sink" and p.get("device.api") == "bluez5":
+                run("wpctl", "set-default", str(nid))
+                print(clean(p.get("node.description") or p.get("node.name")))
+                break
+    else:
+        sys.stderr.write(__doc__)
+        sys.exit(2)
+
+
+if __name__ == "__main__":
+    main()

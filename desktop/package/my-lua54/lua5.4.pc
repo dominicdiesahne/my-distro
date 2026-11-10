@@ -1,0 +1,9 @@
+prefix=/usr
+libdir=${prefix}/lib/my-lua54
+includedir=${prefix}/include/my-lua54
+
+Name: Lua
+Description: Lua 5.4 (static, only for WirePlumber)
+Version: 5.4.8
+Libs: -L${libdir} -llua -lm -ldl
+Cflags: -I${includedir}

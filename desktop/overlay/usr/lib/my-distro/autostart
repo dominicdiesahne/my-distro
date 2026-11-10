@@ -6,6 +6,17 @@
 # my-keepalive starts a part again if it crashes (see my-keepalive).
 
 my-settings --apply                  # colors, wallpaper, window theme, display
+# Sound server (0.9.7): PipeWire, its session manager WirePlumber (finds
+# the sound cards and Bluetooth headphones, remembers volumes) and its
+# PulseAudio part, for programs that speak PulseAudio. ALSA programs reach
+# it through ALSA's "default". It needs the session folder XDG_RUNTIME_DIR
+# (my-login makes it).
+if command -v pipewire >/dev/null && [ -n "$XDG_RUNTIME_DIR" ]; then
+	my-keepalive pipewire &
+	(sleep 1; exec my-keepalive wireplumber) &
+	(sleep 1; exec my-keepalive pipewire-pulse) &
+fi
+my-reader --autostart &              # the screen reader, if it is switched on
 my-keepalive my-notifyd &            # notifications in the corner of the screen
 my-keepalive my-panel &              # taskbar: Start menu, open windows, clock
 my-keepalive my-clipd &              # keeps copied text when its program closes
