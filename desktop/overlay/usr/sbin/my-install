@@ -8,7 +8,8 @@
 #      system partition (GRUB for UEFI PCs), the rest ext4 for the system
 #   3. copies the root filesystem (everything that runs from RAM now) and the
 #      kernel onto the ext4 partition
-#   4. installs GRUB for BIOS and UEFI and writes its boot menu
+#   4. installs GRUB for BIOS and UEFI and writes its boot menu (UEFI since
+#      0.9.7 through shim, so the PC can start with Secure Boot on)
 #   5. the installed system starts with the setup (your own user and
 #      passwords), unless you already did the setup on the live system
 #

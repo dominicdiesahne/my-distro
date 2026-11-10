@@ -28,6 +28,10 @@
  *   - parental controls: /etc/my-distro/parental, one line per user with
  *     the hours they may use the computer and minutes per day; my-login
  *     enforces them
+ *   - firmware (0.9.7): /usr/lib/my-distro/firmware asks fwupd and the LVFS;
+ *     every update is installed only after asking
+ *   - Secure Boot (0.9.7): my-secureboot status, and "prepare" in a terminal
+ *     (mokutil asks for the one-time password there)
  */
 #define _GNU_SOURCE
 #include <crypt.h>

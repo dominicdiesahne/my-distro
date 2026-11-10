@@ -14,7 +14,7 @@
  * /etc/my-distro/language.
  *
  * Add a language: copy po/de.po to po/XX.po, translate the msgstr lines
- * (desktop/package/my-locale compiles every po/*.po), add the language to
+ * (desktop/package/my-locale compiles every .po file in po/), add the language to
  * LANGUAGES below and its locale to BR2_GENERATE_LOCALE and
  * BR2_ENABLE_LOCALE_WHITELIST in desktop/buildroot.fragment. 0.9.7: German,
  * French, Spanish, Italian, Polish, Romanian and Turkish.

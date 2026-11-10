@@ -97,9 +97,12 @@ KEEP = [
     "etc/cron",                                  # everyone's crontabs (crontab -e)
     "etc/my-distro/language",                    # the system's language
     "etc/my-distro/parental",                    # parental controls
+    "etc/my-distro/sharing",                     # file sharing (0.9.7; Samba's
+                                                 # passwords are in /var)
 ]
 # (Not here, though updates never touch them either, because no update
-# package has them: /swapfile and /etc/my-distro/crypt, made by my-install.
+# package has them: /swapfile, /etc/my-distro/crypt and (0.9.7)
+# /etc/my-distro/esp, made by my-install.
 # The factory reset deletes what is listed here, and these must stay.)
 
 

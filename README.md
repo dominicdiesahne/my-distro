@@ -401,6 +401,7 @@ again. If you forget the passphrase, the files are gone.
 | Super+L | Lock the screen |
 | Super+Z, Super+plus / Super+minus | Magnifier on/off, bigger / smaller |
 | Super+R | Read the selected text aloud (again: stop) |
+| Super+Alt+S | Screen reader on/off |
 | Super+K | On-screen keyboard on/off |
 | Volume keys, brightness keys, Sleep key | Louder, quieter, mute; brighter, darker; lock and suspend |
 | Alt+Tab, Alt+F4 | Switch / close windows |
@@ -853,7 +854,7 @@ http.server`, and in the VM put `url = http://10.0.2.2:8000/` into
 | `desktop/overlay/usr/bin/my-sandbox`, `my-hibernate`, `my-switch-user` | Sandbox, hibernate, switch user |
 | `desktop/overlay/etc/init.d/S03audit`, `S50crond`, `etc/audit/` | Audit log, scheduled tasks |
 | `desktop/overlay/usr/lib/my-distro/session-env`, `second-login` | The session's language and proxy; the second login screen for Switch user |
-| `po/de.po`, `settings/i18n.h`, `desktop/package/my-locale` | German translation and how the programs find it |
+| `po/*.po`, `po/my-distro.pot`, `settings/i18n.h`, `desktop/package/my-locale` | The translations (German, French, Spanish, Italian, Polish, Romanian, Turkish), their template, and how the programs find them |
 | `desktop/overlay/usr/bin/my-update` | System updates (Python), settings in `desktop/overlay/etc/my-distro/update.conf`, public key `update-key.pem` |
 | `desktop/overlay/usr/bin/my-pkg`, `settings/my-software.c` | Package manager and the Software app; `settings/my-pick-file.c` asks for a file for Start menu entries like the PDF viewer |
 | `desktop/overlay/usr/lib/my-distro/mydistro.py` | What `my-update` and `my-pkg` share: downloads, versions, the signature check |
@@ -936,6 +937,23 @@ change the next time they start.
 - **Wallpapers:** edit `desktop/make-wallpaper.py` and run it.
 - **Color themes:** the list in `settings/settings.c`; add a matching entry
   to `THEMES` in `desktop/make-wallpaper.py` for its wallpaper.
+
+## Tests
+
+`tests/` boots the build in QEMU (inside WSL or Linux; without KVM a boot
+takes several minutes) and checks it over the serial line, with
+screenshots of the desktop:
+
+```bash
+python3 tests/t_live.py /tmp/shots          # the live system: 0.9.6 and 0.9.7 features
+python3 tests/t_install.py plain            # install, boot (BIOS and UEFI), hibernate, resume
+python3 tests/t_install.py crypt            # the same, encrypted
+python3 tests/t_pkg.py out/packages         # Software app packages: tcc, Docker, Samba, ClamAV, Node.js
+python3 tests/t_secureboot.py out/my-distro.iso   # OVMF with Secure Boot on: enroll the key, boot
+```
+
+`tests/vm.py` is the small harness they share (serial and monitor sockets,
+key presses, screenshots).
 
 ## Minimal version
 
