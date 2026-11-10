@@ -1,0 +1,39 @@
+#!/bin/sh
+# Docker (0.9.7): starts the engine, if Docker is installed (a Software app
+# package). It runs containers for administrators (group wheel may use its
+# socket). Log: /var/log/docker.log
+#
+# The firewall lets the containers' network (docker0) out to the internet
+# (/etc/nftables.conf); dockerd adds its NAT rules itself (iptables-nft).
+# On the live system the root filesystem is in RAM, where runc can't use
+# pivot_root: DOCKER_RAMDISK tells it to use chroot instead.
+PIDFILE=/run/my-docker.pid
+
+case "$1" in
+start)
+	[ -x /usr/bin/dockerd ] || exit 0
+	printf "Starting Docker: "
+	mkdir -p /sys/fs/cgroup
+	grep -q " /sys/fs/cgroup cgroup2 " /proc/mounts ||
+		mount -t cgroup2 none /sys/fs/cgroup 2>/dev/null
+	grep -q "rdinit=" /proc/cmdline && export DOCKER_RAMDISK=true
+	/usr/bin/my-keepalive /usr/bin/dockerd --group wheel \
+		</dev/null >>/var/log/docker.log 2>&1 &
+	echo $! >$PIDFILE
+	echo "OK"
+	;;
+stop)
+	[ -f $PIDFILE ] && kill "$(cat $PIDFILE)" 2>/dev/null
+	killall dockerd 2>/dev/null
+	rm -f $PIDFILE
+	;;
+restart)
+	"$0" stop
+	sleep 1
+	"$0" start
+	;;
+*)
+	echo "Usage: $0 {start|stop|restart}"
+	exit 1
+	;;
+esac

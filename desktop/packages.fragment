@@ -29,14 +29,17 @@ BR2_PACKAGE_OPENSSH_KEY_UTILS=y
 
 # --- Programming ---------------------------------------------------------------
 BR2_PACKAGE_VIM=y
-# Node.js is not in yet: it builds V8, which alone takes hours on the build
-# machine. To add it, uncomment these lines and give it a [nodejs] entry in
-# packages.catalog (it runs parts of its build in QEMU and with the build
-# machine's Python; make packages rebuilds those build tools by itself):
-# BR2_PACKAGE_NODEJS=y
-# BR2_PACKAGE_HOST_PYTHON3_BZIP2=y
-# BR2_PACKAGE_HOST_PYTHON3_SSL=y
-# BR2_PACKAGE_HOST_QEMU_LINUX_USER_MODE=y
+# Node.js (0.9.7): it builds V8, which alone takes hours on the build
+# machine. It runs parts of its build in QEMU and with the build machine's
+# Python; make packages rebuilds those build tools by itself.
+BR2_PACKAGE_NODEJS=y
+BR2_PACKAGE_HOST_PYTHON3_BZIP2=y
+BR2_PACKAGE_HOST_PYTHON3_SSL=y
+BR2_PACKAGE_HOST_QEMU_LINUX_USER_MODE=y
+# A C compiler on my-distro itself (0.9.7): the Tiny C Compiler with the C
+# library's headers (desktop/package/tinycc). Buildroot has no GCC for the
+# target.
+BR2_PACKAGE_TINYCC=y
 BR2_PACKAGE_RUBY=y
 # PHP: the php command, with HTTPS, SQLite, JSON and UTF-8 strings
 BR2_PACKAGE_PHP=y
@@ -50,6 +53,30 @@ BR2_PACKAGE_PHP_EXT_PDO_SQLITE=y
 BR2_PACKAGE_PHP_EXT_MBSTRING=y
 BR2_PACKAGE_PERL=y
 BR2_PACKAGE_JQ=y
+
+# --- Containers (0.9.7) -----------------------------------------------------------
+# Docker: the engine (dockerd), containerd and runc, and the docker command.
+# The kernel options are in the image's kernel (linux-gui.fragment), the
+# start script in the image (/etc/init.d/S60docker, starts dockerd only
+# when it is installed), cgroups v2 are mounted by S30cgroupfs2 from
+# cgroupfs-v2-mount. docker-init (tini) for docker run --init.
+BR2_PACKAGE_DOCKER_ENGINE=y
+BR2_PACKAGE_DOCKER_CLI=y
+BR2_PACKAGE_DOCKER_ENGINE_DOCKER_INIT_TINI=y
+# iptables in its nftables variant (iptables-nft): the image's firewall is
+# nftables too
+BR2_PACKAGE_IPTABLES_NFTABLES=y
+BR2_PACKAGE_IPTABLES_NFTABLES_DEFAULT=y
+
+# --- Security (0.9.7) ---------------------------------------------------------------
+# ClamAV, the virus scanner: clamscan and freshclam (signature updates);
+# my-scan (in the image) is its window in a terminal
+BR2_PACKAGE_CLAMAV=y
+
+# --- Sharing (0.9.7) ----------------------------------------------------------------
+# Samba: shares a folder and the printers with Windows, Macs and Linux. The
+# Sharing window (my-sharing) sets it up and offers to install it.
+BR2_PACKAGE_SAMBA4=y
 
 # --- Terminal tools ------------------------------------------------------------
 BR2_PACKAGE_TMUX=y

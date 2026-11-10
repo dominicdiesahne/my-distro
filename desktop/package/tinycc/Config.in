@@ -1,0 +1,9 @@
+config BR2_PACKAGE_TINYCC
+	bool "tinycc"
+	depends on BR2_x86_64
+	help
+	  Tiny C Compiler (tcc): a small C compiler that runs on
+	  my-distro itself, with the C library's headers and start
+	  files. A package of the Software app.
+
+	  https://repo.or.cz/tinycc.git

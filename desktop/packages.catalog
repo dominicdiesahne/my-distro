@@ -106,6 +106,19 @@ description = The classic text editor of Unix, with syntax highlighting. i
   starts typing, Esc stops, :w saves, :q quits. vimtutor teaches the rest in
   half an hour.
 
+[nodejs]
+title = Node.js
+category = Programming
+description = JavaScript outside the web browser: node file.js runs a script,
+  node alone is an interactive prompt, npm installs packages (needs internet).
+
+[tinycc]
+title = C compiler (Tiny C Compiler)
+category = Programming
+description = Compiles C programs on this computer: tcc hello.c -o hello, then
+  ./hello. Or run a C file at once: tcc -run hello.c. Small and very fast; it
+  knows C99 and much of C11, but not C++.
+
 [ruby]
 title = Ruby
 category = Programming
@@ -131,6 +144,33 @@ description = Reads, filters and changes JSON on the command line. Example:
   curl -s https://api.github.com/repos/dominicdiesahne/my-distro | jq .stargazers_count
 
 # --- Tools --------------------------------------------------------------------------
+
+[docker-engine]
+title = Docker (containers)
+category = Tools
+needs = docker-cli
+description = Runs programs in containers: docker run hello-world downloads a
+  small image from Docker Hub and starts it. Administrators only (sudo docker
+  ...). The engine starts with the computer (right after installing: sudo
+  /etc/init.d/S60docker start); on the live system its images are in RAM.
+
+[clamav]
+title = Virus scanner (ClamAV)
+category = Tools
+run = my-scan
+terminal = yes
+hold = yes
+icon = security-high
+description = Looks for viruses and other malware in your files, e.g. in
+  downloads or on a USB stick from a Windows PC. Start menu "Virus scanner"
+  (my-scan FOLDER): updates the virus list from the internet first, then scans.
+
+[samba4]
+title = Samba (file and printer sharing)
+category = Internet
+description = Shares a folder and the printers of this computer with Windows,
+  Macs and Linux in your network. Set it up in the Sharing window (Start menu);
+  it stays off until you switch it on there.
 
 [tmux]
 title = tmux (terminal multiplexer)

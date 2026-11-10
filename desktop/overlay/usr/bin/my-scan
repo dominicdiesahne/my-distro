@@ -1,0 +1,51 @@
+#!/bin/sh
+# my-scan [FOLDER]: looks for viruses and other malware in FOLDER (your home
+# folder if you just press Enter) with ClamAV, a Software app package
+# (0.9.7). Start menu "Virus scanner", in a terminal.
+#
+# First it updates ClamAV's list of known viruses from the internet
+# (freshclam, ~250 MB the first time, then only what is new; kept in
+# ~/.cache/my-scan). It only reports; it deletes nothing. Infected files are
+# listed at the end: delete or move them yourself.
+D="$HOME/.cache/my-scan"
+
+if ! command -v clamscan >/dev/null; then
+	echo "The virus scanner ClamAV is not installed."
+	echo "Install it in the Software app (Start menu, Software: Virus scanner)."
+	exit 1
+fi
+
+folder=$1
+if [ -z "$folder" ]; then
+	printf "Scan which folder? (Enter = your home folder %s): " "$HOME"
+	read -r folder
+	[ -n "$folder" ] || folder=$HOME
+fi
+[ -e "$folder" ] || { echo "No such folder: $folder"; exit 1; }
+
+mkdir -p "$D/db"
+cat >"$D/freshclam.conf" <<EOF
+# Written by my-scan
+DatabaseDirectory $D/db
+DatabaseMirror database.clamav.net
+DatabaseOwner $(id -un)
+UpdateLogFile $D/freshclam.log
+EOF
+echo "Updating the list of known viruses (freshclam)..."
+if ! freshclam --config-file="$D/freshclam.conf" --stdout; then
+	if ls "$D"/db/*.c[lv]d >/dev/null 2>&1; then
+		echo "The update did not work (no internet?): scanning with the list from before."
+	else
+		echo "The update did not work, and there is no virus list yet (no internet?)."
+		exit 1
+	fi
+fi
+
+echo
+echo "Scanning $folder (this can take a while)..."
+clamscan --recursive --infected --database="$D/db" "$folder"
+case $? in
+0) echo; echo "No viruses found." ;;
+1) echo; echo "Viruses found: the files are listed above (FOUND). Nothing was deleted." ;;
+*) echo; echo "The scan did not finish (see the messages above)." ;;
+esac
