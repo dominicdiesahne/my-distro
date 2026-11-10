@@ -1,0 +1,1895 @@
+# Romanian translation of my-distro's own programs.
+# The texts are C strings: keep %s, %d and \n exactly as in msgid.
+# Compiled by desktop/package/my-locale into /usr/share/locale/ro/LC_MESSAGES.
+msgid ""
+msgstr ""
+"Project-Id-Version: my-distro\n"
+"PO-Revision-Date: 2026-11-10 12:00+0100\n"
+"Last-Translator: my-distro\n"
+"Language-Team: Romanian\n"
+"Language: ro\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=(n==1 ? 0 : (n==0 || (n%100 > 0 && n%100 < 20)) ? 1 : 2);\n"
+
+msgid "\nNeeds: "
+msgstr "\nNecesită:"
+
+msgid "   (current)"
+msgstr "   (curent)"
+
+msgid "   (default)"
+msgstr "   (implicit)"
+
+msgid "   (with system settings)"
+msgstr "   (cu setările sistemului)"
+
+msgid "  — USB / card"
+msgstr "  — USB / card"
+
+msgid "  — internal"
+msgstr "  — intern"
+
+msgid "  — my-distro runs from it"
+msgstr "  — my-distro rulează de pe el"
+
+msgid " (getting an address…)"
+msgstr " (se obține o adresă…)"
+
+msgid " It brings: "
+msgstr " Aduce:"
+
+msgid "%A, %d %B %Y"
+msgstr "%A, %d %B %Y"
+
+msgid "%d files found"
+msgstr "%d fișiere găsite"
+
+msgid "%d line"
+msgid_plural "%d lines"
+msgstr[0] "%d linie"
+msgstr[1] "%d linii"
+msgstr[2] "%d de linii"
+
+msgid "%d minute left on the computer today"
+msgid_plural "%d minutes left on the computer today"
+msgstr[0] "Mai ai %d minut la calculator azi"
+msgstr[1] "Mai ai %d minute la calculator azi"
+msgstr[2] "Mai ai %d de minute la calculator azi"
+
+msgid "%d of %d lines"
+msgstr "%d din %d linii"
+
+msgid "%s doesn't exist (yet)."
+msgstr "%s nu există (încă)."
+
+msgid "%s free (%s).%s"
+msgstr "%s liber (%s).%s"
+
+msgid "%s is logged in on another screen (Ctrl+Alt+F%d)."
+msgstr "%s este autentificat pe alt ecran (Ctrl+Alt+F%d)."
+
+msgid "%s may use the computer from %02d:%02d to %02d:%02d."
+msgstr "%s poate folosi calculatorul de la %02d:%02d la %02d:%02d."
+
+msgid "%s needs it, so it is removed too."
+msgstr "%s are nevoie de el, așa că este eliminat și el."
+
+msgid "%s on disk"
+msgstr "%s pe disc"
+
+msgid "%s on disk\n%s download"
+msgstr "%s pe disc\n%s de descărcat"
+
+msgid "(no text, matched by its name)"
+msgstr "(fără text, găsit după nume)"
+
+msgid "(only the last 2 MB)"
+msgstr "(doar ultimii 2 MB)"
+
+msgid "(unchanged)"
+msgstr "(neschimbată)"
+
+msgid "(used by the system)"
+msgstr "(folosit de sistem)"
+
+msgid ", address "
+msgstr ", adresa"
+
+msgid "1 hour"
+msgstr "1 oră"
+
+msgid "1 minute"
+msgstr "1 minut"
+
+msgid "10 minutes"
+msgstr "10 minute"
+
+msgid "15 minutes"
+msgstr "15 minute"
+
+msgid "150 dpi (screen, e-mail)"
+msgstr "150 dpi (ecran, e-mail)"
+
+msgid "2 minutes"
+msgstr "2 minute"
+
+msgid "200 % (for very sharp screens)"
+msgstr "200 % (pentru ecrane foarte clare)"
+
+msgid "24-hour time"
+msgstr "Format de 24 de ore"
+
+msgid "30 minutes"
+msgstr "30 de minute"
+
+msgid "300 dpi (documents)"
+msgstr "300 dpi (documente)"
+
+msgid "5 minutes"
+msgstr "5 minute"
+
+msgid "600 dpi (photos)"
+msgstr "600 dpi (fotografii)"
+
+msgid "<span size='x-large' weight='bold' foreground='#e5484d'>%s</span>\n\nEverything on <b>%s</b> will be deleted: documents, photos, other systems (Windows) that may be on it. This can't be undone.\n\nTo go on, type its name: <b>%s</b>"
+msgstr "<span size='x-large' weight='bold' foreground='#e5484d'>%s</span>\n\nTot ce este pe <b>%s</b> va fi șters: documente, fotografii, alte sisteme (Windows) care ar putea fi acolo. Nu se poate anula.\n\nPentru a continua, scrie-i numele: <b>%s</b>"
+
+msgid "A network that doesn't show its name (hidden). Type it exactly, with upper and lower case:"
+msgstr "O rețea care nu își arată numele (ascunsă). Scrie-l exact, cu majuscule și minuscule:"
+
+msgid "Above the main screen"
+msgstr "Deasupra ecranului principal"
+
+msgid "Accent color"
+msgstr "Culoare de accent"
+
+msgid "Accessibility"
+msgstr "Accesibilitate"
+
+msgid "Add"
+msgstr "Adaugă"
+
+msgid "Add a user"
+msgstr "Adaugă un utilizator"
+
+msgid "Add printer"
+msgstr "Adaugă imprimantă"
+
+msgid "Add printer…"
+msgstr "Adaugă imprimantă…"
+
+msgid "Add user…"
+msgstr "Adaugă utilizator…"
+
+msgid "Added. Print a test page to try it."
+msgstr "Adăugată. Tipărește o pagină de test ca s-o încerci."
+
+msgid "Adding the printer…"
+msgstr "Se adaugă imprimanta…"
+
+msgid "Address"
+msgstr "Adresă"
+
+msgid "Address %s\nLast answer from the server %d s ago · received %s · sent %s"
+msgstr "Adresa %s\nUltimul răspuns de la server acum %d s · primit %s · trimis %s"
+
+msgid "Address %s\nNo answer from the VPN server yet. Is the config right, and does this network allow VPNs?"
+msgstr "Adresa %s\nÎncă niciun răspuns de la serverul VPN. Este configurația corectă și permite această rețea VPN-uri?"
+
+msgid "Address %s\nWaiting for the VPN server…"
+msgstr "Adresa %s\nSe așteaptă serverul VPN…"
+
+msgid "Administrator"
+msgstr "Administrator"
+
+msgid "Administrator now: may use sudo with their own password."
+msgstr "Acum administrator: poate folosi sudo cu propria parolă."
+
+msgid "Administrator password"
+msgstr "Parola de administrator"
+
+msgid "Administrator password again"
+msgstr "Parola de administrator din nou"
+
+msgid "Administrator password changed."
+msgstr "Parola de administrator a fost schimbată."
+
+msgid "Administrator password: type the same password twice."
+msgstr "Parola de administrator: scrie aceeași parolă de două ori."
+
+msgid "Again"
+msgstr "Din nou"
+
+msgid "All of it"
+msgstr "Tot"
+
+msgid "All programs"
+msgstr "Toate programele"
+
+msgid "All set"
+msgstr "Gata"
+
+msgid "Also share this computer's printers"
+msgstr "Partajează și imprimantele acestui calculator"
+
+msgid "Also the system settings (asks for the root password)"
+msgstr "Și setările sistemului (cere parola root)"
+
+msgid "Also the system settings: Wi-Fi, VPNs, printers, Bluetooth, users (asks for the root password)"
+msgstr "Și setările sistemului: Wi-Fi, VPN-uri, imprimante, Bluetooth, utilizatori (cere parola root)"
+
+msgid "Analog"
+msgstr "Analogic"
+
+msgid "Anonymous identity"
+msgstr "Identitate anonimă"
+
+msgid "Apply"
+msgstr "Aplică"
+
+msgid "Asking the LVFS (fwupd.org) for firmware updates…"
+msgstr "Se cer LVFS (fwupd.org) actualizări de firmware…"
+
+msgid "At most, minutes per day"
+msgstr "Cel mult, minute pe zi"
+
+msgid "Audit"
+msgstr "Audit"
+
+msgid "Automatic"
+msgstr "Automat"
+
+msgid "Back"
+msgstr "Înapoi"
+
+msgid "Back to the other desktop"
+msgstr "Înapoi la celălalt desktop"
+
+msgid "Back to what the screens prefer."
+msgstr "Înapoi la ce preferă ecranele."
+
+msgid "Back up now"
+msgstr "Fă copia acum"
+
+msgid "Back up to"
+msgstr "Copie de rezervă pe"
+
+msgid "Backup"
+msgstr "Copie de rezervă"
+
+msgid "Backups on this disk"
+msgstr "Copii de rezervă pe acest disc"
+
+msgid "Battery low: %d %%"
+msgstr "Baterie descărcată: %d %%"
+
+msgid "Below the main screen"
+msgstr "Sub ecranul principal"
+
+msgid "Bigger"
+msgstr "Mai mare"
+
+msgid "Bluetooth"
+msgstr "Bluetooth"
+
+msgid "Bluetooth could not be switched on."
+msgstr "Bluetooth-ul nu a putut fi pornit."
+
+msgid "Bluetooth is off."
+msgstr "Bluetooth-ul este oprit."
+
+msgid "Bottom"
+msgstr "Jos"
+
+msgid "CA certificate"
+msgstr "Certificat CA"
+
+msgid "Camera"
+msgstr "Cameră"
+
+msgid "Can't load the search model."
+msgstr "Modelul de căutare nu poate fi încărcat."
+
+msgid "Cancel"
+msgstr "Anulează"
+
+msgid "Careful"
+msgstr "Atenție"
+
+msgid "Centre"
+msgstr "Centrat"
+
+msgid "Change password"
+msgstr "Schimbă parola"
+
+msgid "Change password…"
+msgstr "Schimbă parola…"
+
+msgid "Changes to your files, newest first"
+msgstr "Modificările fișierelor tale, cele mai noi primele"
+
+msgid "Changing users and system settings needs the administrator (root) password."
+msgstr "Schimbarea utilizatorilor și a setărilor sistemului necesită parola de administrator (root)."
+
+msgid "Check and repair"
+msgstr "Verifică și repară"
+
+msgid "Checking…"
+msgstr "Se verifică…"
+
+msgid "Choose a device and click Connect."
+msgstr "Alege un dispozitiv și apasă Conectează."
+
+msgid "Choose a disk or partition."
+msgstr "Alege un disc sau o partiție."
+
+msgid "Choose a folder first."
+msgstr "Alege mai întâi un dosar."
+
+msgid "Choose a password."
+msgstr "Alege o parolă."
+
+msgid "Choose a picture"
+msgstr "Alege o imagine"
+
+msgid "Choose a printer, or type its address."
+msgstr "Alege o imprimantă sau scrie-i adresa."
+
+msgid "Choose a user in the list first."
+msgstr "Alege mai întâi un utilizator din listă."
+
+msgid "Choose your printer, or type its address below."
+msgstr "Alege imprimanta ta sau scrie-i adresa mai jos."
+
+msgid "Click Search to find devices nearby."
+msgstr "Apasă Caută ca să găsești dispozitive din apropiere."
+
+msgid "Clock"
+msgstr "Ceas"
+
+msgid "Clock app"
+msgstr "Aplicația Ceas"
+
+msgid "Close"
+msgstr "Închide"
+
+msgid "Color"
+msgstr "Culoare"
+
+msgid "Colors"
+msgstr "Culori"
+
+msgid "Colors (more choices later in Settings)"
+msgstr "Culori (mai multe opțiuni mai târziu în Setări)"
+
+msgid "Computer"
+msgstr "Calculator"
+
+msgid "Computer name"
+msgstr "Numele calculatorului"
+
+msgid "Computer name (shown on the network and the login screen)"
+msgstr "Numele calculatorului (afișat în rețea și pe ecranul de autentificare)"
+
+msgid "Computer name saved."
+msgstr "Numele calculatorului a fost salvat."
+
+msgid "Computer name: letters, digits and -, no spaces."
+msgstr "Numele calculatorului: litere, cifre și -, fără spații."
+
+msgid "Connect"
+msgstr "Conectează"
+
+msgid "Connect to Wi-Fi"
+msgstr "Conectează-te la Wi-Fi"
+
+msgid "Connected to %s"
+msgstr "Conectat la %s"
+
+msgid "Connected."
+msgstr "Conectat."
+
+msgid "Connecting…"
+msgstr "Se conectează…"
+
+msgid "Could not add the network."
+msgstr "Rețeaua nu a putut fi adăugată."
+
+msgid "Could not add the printer."
+msgstr "Imprimanta nu a putut fi adăugată."
+
+msgid "Could not change the administrator rights."
+msgstr "Drepturile de administrator nu au putut fi schimbate."
+
+msgid "Could not connect to %s."
+msgstr "Nu s-a putut conecta la %s."
+
+msgid "Could not connect. Wrong password, or the network is too far away?"
+msgstr "Nu s-a putut conecta. Parolă greșită sau rețeaua este prea departe?"
+
+msgid "Could not create the user."
+msgstr "Utilizatorul nu a putut fi creat."
+
+msgid "Could not forget the device."
+msgstr "Dispozitivul nu a putut fi uitat."
+
+msgid "Could not look for firmware updates (no internet?): %s"
+msgstr "Nu s-au putut căuta actualizări de firmware (fără internet?): %s"
+
+msgid "Could not look for updates (no internet?): %s"
+msgstr "Nu s-au putut căuta actualizări (fără internet?): %s"
+
+msgid "Could not make it the default printer."
+msgstr "Nu a putut fi făcută imprimanta implicită."
+
+msgid "Could not pair with %s."
+msgstr "Nu s-a putut asocia cu %s."
+
+msgid "Could not print."
+msgstr "Nu s-a putut tipări."
+
+msgid "Could not read the kernel's messages."
+msgstr "Mesajele nucleului nu au putut fi citite."
+
+msgid "Could not remove the printer."
+msgstr "Imprimanta nu a putut fi eliminată."
+
+msgid "Could not remove the user."
+msgstr "Utilizatorul nu a putut fi eliminat."
+
+msgid "Could not save the keyboard layout."
+msgstr "Aranjamentul tastaturii nu a putut fi salvat."
+
+msgid "Could not save the language."
+msgstr "Limba nu a putut fi salvată."
+
+msgid "Could not save the parental controls."
+msgstr "Controlul parental nu a putut fi salvat."
+
+msgid "Could not search for devices."
+msgstr "Nu s-au putut căuta dispozitive."
+
+msgid "Could not set the administrator password."
+msgstr "Parola de administrator nu a putut fi setată."
+
+msgid "Could not set the password."
+msgstr "Parola nu a putut fi setată."
+
+msgid "Could not set the time zone."
+msgstr "Fusul orar nu a putut fi setat."
+
+msgid "Could not start /usr/lib/my-distro/disk-tool."
+msgstr "Nu s-a putut porni /usr/lib/my-distro/disk-tool."
+
+msgid "Could not start my-admin."
+msgstr "Nu s-a putut porni my-admin."
+
+msgid "Could not start my-backup."
+msgstr "Nu s-a putut porni my-backup."
+
+msgid "Could not start my-update."
+msgstr "Nu s-a putut porni my-update."
+
+msgid "Could not start the factory reset."
+msgstr "Nu s-a putut porni resetarea la starea din fabrică."
+
+msgid "Could not write /etc/hostname."
+msgstr "Nu s-a putut scrie /etc/hostname."
+
+msgid "Couldn't process that query."
+msgstr "Interogarea nu a putut fi procesată."
+
+msgid "Crashes"
+msgstr "Blocări"
+
+msgid "Czech"
+msgstr "Cehă"
+
+msgid "Date format"
+msgstr "Formatul datei"
+
+msgid "Delete all users, files and settings?"
+msgstr "Ștergi toți utilizatorii, fișierele și setările?"
+
+msgid "Delete everything"
+msgstr "Șterge tot"
+
+msgid "Digital"
+msgstr "Digital"
+
+msgid "Disconnect"
+msgstr "Deconectează"
+
+msgid "Disk"
+msgstr "Disc"
+
+msgid "Disk / partition"
+msgstr "Disc / partiție"
+
+msgid "Disks"
+msgstr "Discuri"
+
+msgid "Display"
+msgstr "Afișaj"
+
+msgid "Does %s show the number %06u?"
+msgstr "Arată %s numărul %06u?"
+
+msgid "Done. Installed programs are in the Start menu, or start them in a terminal."
+msgstr "Gata. Programele instalate sunt în meniul Start sau pornește-le într-un terminal."
+
+msgid "Done: the picture is in your Pictures folder."
+msgstr "Gata: imaginea este în dosarul tău Imagini."
+
+msgid "Downloading the package list…"
+msgstr "Se descarcă lista de pachete…"
+
+msgid "Dutch"
+msgstr "Olandeză"
+
+msgid "Ember"
+msgstr "Jar"
+
+msgid "English (UK)"
+msgstr "Engleză (Regatul Unit)"
+
+msgid "English (US)"
+msgstr "Engleză (SUA)"
+
+msgid "Every saved change on the system, newest first"
+msgstr "Fiecare modificare salvată în sistem, cele mai noi primele"
+
+msgid "Every user and everything in their home folders (documents, pictures, browser data) is deleted, and all settings: passwords, computer name, Wi-Fi networks, VPNs, time zone. Only the system stays. This can't be undone.\n\nThe computer restarts now; the reset takes a few seconds, then the setup starts as after installing."
+msgstr "Toți utilizatorii și tot ce este în dosarele lor personale (documente, imagini, date ale navigatorului) sunt șterse, precum și toate setările: parole, numele calculatorului, rețele Wi-Fi, VPN-uri, fus orar. Rămâne doar sistemul. Nu se poate anula.\n\nCalculatorul repornește acum; resetarea durează câteva secunde, apoi pornește configurarea ca după instalare."
+
+msgid "Everything on this partition is deleted."
+msgstr "Tot ce este pe această partiție este șters."
+
+msgid "FAT32 (works everywhere; files up to 4 GB)"
+msgstr "FAT32 (merge peste tot; fișiere de până la 4 GB)"
+
+msgid "FILE"
+msgstr "FIȘIER"
+
+msgid "Factory reset"
+msgstr "Resetare la starea din fabrică"
+
+msgid "File history"
+msgstr "Istoricul fișierelor"
+
+msgid "Filesystem"
+msgstr "Sistem de fișiere"
+
+msgid "Fill the screen"
+msgstr "Umple ecranul"
+
+msgid "Finish"
+msgstr "Termină"
+
+msgid "Firmware"
+msgstr "Firmware"
+
+msgid "Firmware is the software inside the computer's parts (UEFI, disks, docks, mice, ...). fwupd asks the LVFS (fwupd.org) for updates from their makers. Nothing is installed without asking."
+msgstr "Firmware-ul este software-ul din interiorul componentelor calculatorului (UEFI, discuri, docuri, mouse-uri…). fwupd cere LVFS (fwupd.org) actualizări de la producătorii lor. Nu se instalează nimic fără să întrebe."
+
+msgid "Firmware updates for this computer:"
+msgstr "Actualizări de firmware pentru acest calculator:"
+
+msgid "Fit, keep all of it"
+msgstr "Potrivește, arată-o toată"
+
+msgid "Folder"
+msgstr "Dosar"
+
+msgid "Folder to share"
+msgstr "Dosar de partajat"
+
+msgid "Forest"
+msgstr "Pădure"
+
+msgid "Forget"
+msgstr "Uită"
+
+msgid "Format"
+msgstr "Formatează"
+
+msgid "Formatting and repairing disks needs the administrator (root) password."
+msgstr "Formatarea și repararea discurilor necesită parola de administrator (root)."
+
+msgid "Format…"
+msgstr "Formatează…"
+
+msgid "French"
+msgstr "Franceză"
+
+msgid "Full name"
+msgstr "Nume complet"
+
+msgid "German"
+msgstr "Germană"
+
+msgid "German (Austria)"
+msgstr "Germană (Austria)"
+
+msgid "German (Switzerland)"
+msgstr "Germană (Elveția)"
+
+msgid "Go back"
+msgstr "Mergi înapoi"
+
+msgid "Go back to my-distro %s?"
+msgstr "Te întorci la my-distro %s?"
+
+msgid "Go to the login screen"
+msgstr "Mergi la ecranul de autentificare"
+
+msgid "Going back did not work: see the messages below."
+msgstr "Întoarcerea nu a reușit: vezi mesajele de mai jos."
+
+msgid "Going back to the old settings in %d seconds."
+msgstr "Revenire la setările vechi în %d secunde."
+
+msgid "Going back… don't switch the computer off."
+msgstr "Se revine… nu opri calculatorul."
+
+msgid "Gray"
+msgstr "Gri"
+
+msgid "HTTP and HTTPS proxy"
+msgstr "Proxy HTTP și HTTPS"
+
+msgid "Height (pixels)"
+msgstr "Înălțime (pixeli)"
+
+msgid "High contrast"
+msgstr "Contrast ridicat"
+
+msgid "High contrast light"
+msgstr "Contrast ridicat deschis"
+
+msgid "History"
+msgstr "Istoric"
+
+msgid "Home folder"
+msgstr "Dosar personal"
+
+msgid "Huge"
+msgstr "Uriaș"
+
+msgid "Hungarian"
+msgstr "Maghiară"
+
+msgid "If the desktop doesn't start any more: choose \"recovery mode\" in the boot menu and run my-reset there."
+msgstr "Dacă desktopul nu mai pornește: alege \"recovery mode\" în meniul de pornire și rulează acolo my-reset."
+
+msgid "Import"
+msgstr "Importă"
+
+msgid "Import a WireGuard config"
+msgstr "Importă o configurație WireGuard"
+
+msgid "Import…"
+msgstr "Importă…"
+
+msgid "Install"
+msgstr "Instalează"
+
+msgid "Install %s?"
+msgstr "Instalezi %s?"
+
+msgid "Install Samba…"
+msgstr "Instalează Samba…"
+
+msgid "Install my-distro %s?"
+msgstr "Instalezi my-distro %s?"
+
+msgid "Install the firmware update %s?"
+msgstr "Instalezi actualizarea de firmware %s?"
+
+msgid "Install update"
+msgstr "Instalează actualizarea"
+
+msgid "Installed"
+msgstr "Instalate"
+
+msgid "Installed: my-distro %s"
+msgstr "Instalat: my-distro %s"
+
+msgid "Installing and removing programs needs the administrator (root) password."
+msgstr "Instalarea și eliminarea programelor necesită parola de administrator (root)."
+
+msgid "Installing the firmware update… don't switch the computer off."
+msgstr "Se instalează actualizarea de firmware… nu opri calculatorul."
+
+msgid "Installing… don't switch the computer off."
+msgstr "Se instalează… nu opri calculatorul."
+
+msgid "Install…"
+msgstr "Instalează…"
+
+msgid "It asks to be paired with this computer."
+msgstr "Cere să fie asociat cu acest calculator."
+
+msgid "It comes from the part's maker through the LVFS. Laptops: plug in the power. Don't switch the computer off until it is done; some updates finish while the computer restarts."
+msgstr "Vine de la producătorul componentei prin LVFS. Laptopuri: conectează încărcătorul. Nu opri calculatorul până nu termină; unele actualizări se termină în timp ce calculatorul repornește."
+
+msgid "It didn't answer. Is it switched on, nearby and in pairing mode?"
+msgstr "Nu a răspuns. Este pornit, aproape și în modul de asociere?"
+
+msgid "It doesn't answer as a driverless printer (IPP Everywhere). Check the address; some older printers only work over their USB cable."
+msgstr "Nu răspunde ca o imprimantă fără driver (IPP Everywhere). Verifică adresa; unele imprimante mai vechi merg doar prin cablul USB."
+
+msgid "It is switched off with a key or a switch on the laptop (often Fn with an aeroplane or Bluetooth sign). Switch it on there."
+msgstr "Este oprit cu o tastă sau un comutator al laptopului (adesea Fn cu un avion sau semnul Bluetooth). Pornește-l de acolo."
+
+msgid "It needs %s of space.%s%s%s"
+msgstr "Are nevoie de %s de spațiu.%s%s%s"
+
+msgid "Italian"
+msgstr "Italiană"
+
+msgid "Its files replace the ones with the same name in your home folder. Files you made after the backup stay. (File history keeps the versions from before: my-undo can bring them back.)"
+msgstr "Fișierele ei le înlocuiesc pe cele cu același nume din dosarul tău personal. Fișierele create după copie rămân. (Istoricul fișierelor păstrează versiunile de dinainte: my-undo le poate aduce înapoi.)"
+
+msgid "Keep"
+msgstr "Păstrează"
+
+msgid "Keep these display settings?"
+msgstr "Păstrezi aceste setări de afișaj?"
+
+msgid "Kernel"
+msgstr "Nucleu"
+
+msgid "Keyboard"
+msgstr "Tastatură"
+
+msgid "Keyboard layout"
+msgstr "Aranjamentul tastaturii"
+
+msgid "Keyboard layout (for everyone, at once)"
+msgstr "Aranjamentul tastaturii (pentru toți, imediat)"
+
+msgid "Keyboard layout changed."
+msgstr "Aranjamentul tastaturii a fost schimbat."
+
+msgid "Language"
+msgstr "Limbă"
+
+msgid "Language (for everyone who didn't choose their own in Settings; at the next login)"
+msgstr "Limba (pentru toți cei care nu și-au ales-o pe a lor în Setări; de la următoarea autentificare)"
+
+msgid "Language saved: it is used from the next login."
+msgstr "Limba a fost salvată: se folosește de la următoarea autentificare."
+
+msgid "Large"
+msgstr "Mare"
+
+msgid "Left of the main screen"
+msgstr "În stânga ecranului principal"
+
+msgid "Let's set up your computer: your keyboard, your own account and a name for the computer. It takes a minute, and you can change all of it later in \"Users and system\"."
+msgstr "Hai să configurăm calculatorul: tastatura, contul tău și un nume pentru calculator. Durează un minut și poți schimba totul mai târziu în \"Utilizatori și sistem\"."
+
+msgid "Light"
+msgstr "Deschis"
+
+msgid "Lock after no use for"
+msgstr "Blochează după o pauză de"
+
+msgid "Lock now"
+msgstr "Blochează acum"
+
+msgid "Locked"
+msgstr "Blocat"
+
+msgid "Log in"
+msgstr "Autentificare"
+
+msgid "Log in to \"%s\":"
+msgstr "Autentificare la \"%s\":"
+
+msgid "Look for a new version of my-distro. Updates are checked automatically too: the taskbar shows a button when one is out."
+msgstr "Caută o versiune nouă de my-distro. Actualizările sunt verificate și automat: bara de activități arată un buton când apare una."
+
+msgid "Look for firmware updates"
+msgstr "Caută actualizări de firmware"
+
+msgid "Look for updates"
+msgstr "Caută actualizări"
+
+msgid "Looking for devices… Put your device into pairing mode (see its manual; often: hold its power button)."
+msgstr "Se caută dispozitive… Pune dispozitivul în modul de asociere (vezi manualul; adesea: ține apăsat butonul de pornire)."
+
+msgid "Looking for networks…"
+msgstr "Se caută rețele…"
+
+msgid "Looking for printers (10 seconds)…"
+msgstr "Se caută imprimante (10 secunde)…"
+
+msgid "Looking for scanners…"
+msgstr "Se caută scanere…"
+
+msgid "Looking for updates…"
+msgstr "Se caută actualizări…"
+
+msgid "Magnifier (Super+Z)"
+msgstr "Lupă (Super+Z)"
+
+msgid "Main screen"
+msgstr "Ecran principal"
+
+msgid "Make administrator"
+msgstr "Fă-l administrator"
+
+msgid "Make default"
+msgstr "Fă-o implicită"
+
+msgid "Matching the theme"
+msgstr "Potrivit cu tema"
+
+msgid "May use the computer only from"
+msgstr "Poate folosi calculatorul doar de la"
+
+msgid "Method"
+msgstr "Metodă"
+
+msgid "Microphone"
+msgstr "Microfon"
+
+msgid "More settings"
+msgstr "Mai multe setări"
+
+msgid "Mouse pointer"
+msgstr "Indicatorul mouse-ului"
+
+msgid "NTFS (Windows disks)"
+msgstr "NTFS (discuri Windows)"
+
+msgid "Name"
+msgstr "Nume"
+
+msgid "Network"
+msgstr "Rețea"
+
+msgid "Network name"
+msgstr "Numele rețelei"
+
+msgid "Network share"
+msgstr "Partajare în rețea"
+
+msgid "Never"
+msgstr "Niciodată"
+
+msgid "New administrator password"
+msgstr "Parolă nouă de administrator"
+
+msgid "New password"
+msgstr "Parolă nouă"
+
+msgid "New password for %s"
+msgstr "Parolă nouă pentru %s"
+
+msgid "Next"
+msgstr "Înainte"
+
+msgid "No Bluetooth adapter found. This computer has none, it is switched off (some laptops have a key or switch for it), or my-distro has no driver for it. A USB Bluetooth stick works too."
+msgstr "Nu s-a găsit niciun adaptor Bluetooth. Acest calculator nu are, este oprit (unele laptopuri au o tastă sau un comutator pentru asta) sau my-distro nu are driver pentru el. Merge și un adaptor Bluetooth USB."
+
+msgid "No Wi-Fi adapter found.\n\nThis computer has none, or my-distro has no driver for it (in a terminal, lspci -k shows the devices and their drivers). A network cable works without setting anything up."
+msgstr "Nu s-a găsit niciun adaptor Wi-Fi.\n\nAcest calculator nu are sau my-distro nu are driver pentru el (într-un terminal, lspci -k arată dispozitivele și driverele lor). Un cablu de rețea merge fără nicio configurare."
+
+msgid "No administrator rights any more."
+msgstr "Nu mai are drepturi de administrator."
+
+msgid "No changes yet. Edit a file and it shows up here."
+msgstr "Încă nicio modificare. Modifică un fișier și apare aici."
+
+msgid "No firmware updates for this computer."
+msgstr "Nicio actualizare de firmware pentru acest calculator."
+
+msgid "No limits for this user."
+msgstr "Fără limite pentru acest utilizator."
+
+msgid "No microphone."
+msgstr "Niciun microfon."
+
+msgid "No package list (are you online?)."
+msgstr "Nicio listă de pachete (ești online?)."
+
+msgid "No printer found. Is it switched on, and in the same network (or plugged in)? You can also type its address (IP or name) below."
+msgstr "Nu s-a găsit nicio imprimantă. Este pornită și în aceeași rețea (sau conectată)? Poți scrie și adresa ei (IP sau nume) mai jos."
+
+msgid "No printers yet. Click Add printer. (Is the print service running? It starts at boot: /etc/init.d/S81cupsd)"
+msgstr "Încă nicio imprimantă. Apasă Adaugă imprimantă. (Rulează serviciul de tipărire? Pornește la boot: /etc/init.d/S81cupsd)"
+
+msgid "No program is playing sound right now."
+msgstr "Acum niciun program nu redă sunet."
+
+msgid "No programs installed yet."
+msgstr "Încă niciun program instalat."
+
+msgid "No proxy. Log out and in again so that all programs know."
+msgstr "Fără proxy. Deconectează-te și autentifică-te din nou ca toate programele să știe."
+
+msgid "No saved versions of this file."
+msgstr "Nicio versiune salvată a acestui fișier."
+
+msgid "No scanner found. Is it switched on, and plugged in or in the same network?"
+msgstr "Nu s-a găsit niciun scaner. Este pornit și conectat sau în aceeași rețea?"
+
+msgid "No sound output: is the sound server running?"
+msgstr "Nicio ieșire de sunet: rulează serverul de sunet?"
+
+msgid "No spaces or quotes, please."
+msgstr "Fără spații sau ghilimele, te rog."
+
+msgid "No such user."
+msgstr "Nu există acest utilizator."
+
+msgid "None"
+msgstr "Nimic"
+
+msgid "Normal"
+msgstr "Normal"
+
+msgid "Not needed on the live system: it starts fresh every time."
+msgstr "Nu e nevoie pe sistemul live: pornește de la zero de fiecare dată."
+
+msgid "Not your login password: one only for sharing (at least 6 characters)."
+msgstr "Nu parola ta de autentificare: una doar pentru partajare (cel puțin 6 caractere)."
+
+msgid "Nothing found."
+msgstr "Nu s-a găsit nimic."
+
+msgid "Nothing to undo."
+msgstr "Nimic de anulat."
+
+msgid "Nothing was changed."
+msgstr "Nu s-a schimbat nimic."
+
+msgid "OK"
+msgstr "OK"
+
+msgid "Ocean"
+msgstr "Ocean"
+
+msgid "On"
+msgstr "Pornit"
+
+msgid "On-screen keyboard (Super+K)"
+msgstr "Tastatură pe ecran (Super+K)"
+
+msgid "Only Downloads"
+msgstr "Doar Descărcări"
+
+msgid "Only the administrator (root) may read %s."
+msgstr "Doar administratorul (root) poate citi %s."
+
+msgid "Only the main screen"
+msgstr "Doar ecranul principal"
+
+msgid "Only the second screen"
+msgstr "Doar al doilea ecran"
+
+msgid "Open"
+msgstr "Deschide"
+
+msgid "Open a shared folder of a Windows PC or a network drive (NAS). Leave the user name empty to connect as a guest."
+msgstr "Deschide un dosar partajat al unui PC cu Windows sau al unei unități de rețea (NAS). Lasă numele de utilizator gol ca să te conectezi ca oaspete."
+
+msgid "Open folder"
+msgstr "Deschide dosarul"
+
+msgid "Open in"
+msgstr "Deschide în"
+
+msgid "Open the magnifier"
+msgstr "Deschide lupa"
+
+msgid "Open the on-screen keyboard"
+msgstr "Deschide tastatura pe ecran"
+
+msgid "Or its address:"
+msgstr "Sau adresa ei:"
+
+msgid "Other network"
+msgstr "Altă rețea"
+
+msgid "Other network…"
+msgstr "Altă rețea…"
+
+msgid "Others may also change and add files"
+msgstr "Ceilalți pot și să schimbe și să adauge fișiere"
+
+msgid "Others may only read the files"
+msgstr "Ceilalți pot doar să citească fișierele"
+
+msgid "Output"
+msgstr "Ieșire"
+
+msgid "Own accent color"
+msgstr "Culoare de accent proprie"
+
+msgid "PIN for %s (often 0000 or 1234, see its manual):"
+msgstr "PIN pentru %s (adesea 0000 sau 1234, vezi manualul):"
+
+msgid "Pair with %s?"
+msgstr "Te asociezi cu %s?"
+
+msgid "Pairing was refused. Put the device into pairing mode and try again."
+msgstr "Asocierea a fost refuzată. Pune dispozitivul în modul de asociere și încearcă din nou."
+
+msgid "Pairing… If the device shows a number or asks for one, follow it."
+msgstr "Se asociază… Dacă dispozitivul arată sau cere un număr, urmează-l."
+
+msgid "Parental controls for %s"
+msgstr "Control parental pentru %s"
+
+msgid "Parental controls saved."
+msgstr "Controlul parental a fost salvat."
+
+msgid "Parental controls…"
+msgstr "Control parental…"
+
+msgid "Partitions the running system uses can't be changed. Formatting deletes everything on the disk or partition."
+msgstr "Partițiile folosite de sistemul care rulează nu pot fi schimbate. Formatarea șterge tot ce este pe disc sau pe partiție."
+
+msgid "Password"
+msgstr "Parolă"
+
+msgid "Password again"
+msgstr "Parola din nou"
+
+msgid "Password changed."
+msgstr "Parola a fost schimbată."
+
+msgid "Password for \"%s\":"
+msgstr "Parola pentru \"%s\":"
+
+msgid "Permissions"
+msgstr "Permisiuni"
+
+msgid "Picture:"
+msgstr "Imagine:"
+
+msgid "Pictures"
+msgstr "Imagini"
+
+msgid "Plain color"
+msgstr "Culoare simplă"
+
+msgid "Please wait until this is finished."
+msgstr "Te rog să aștepți până se termină."
+
+msgid "Plug in a USB stick or disk: it opens by itself and appears here."
+msgstr "Conectează un stick USB sau un disc: se deschide singur și apare aici."
+
+msgid "Plug in the charger, or save your work."
+msgstr "Conectează încărcătorul sau salvează-ți lucrul."
+
+msgid "Polish"
+msgstr "Poloneză"
+
+msgid "Position"
+msgstr "Poziție"
+
+msgid "Power off"
+msgstr "Oprește"
+
+msgid "Prepare for Secure Boot…"
+msgstr "Pregătește Secure Boot…"
+
+msgid "Printers"
+msgstr "Imprimante"
+
+msgid "Printers made since about 2015 work without a driver over the network (Wi-Fi or cable): connect it to your network and try again."
+msgstr "Imprimantele fabricate cam din 2015 încoace merg fără driver prin rețea (Wi-Fi sau cablu): conecteaz-o la rețeaua ta și încearcă din nou."
+
+msgid "Programs"
+msgstr "Programe"
+
+msgid "Programs you open from now on use the new size; all of the desktop after the next login."
+msgstr "Programele pe care le deschizi de acum folosesc noua mărime; tot desktopul de la următoarea autentificare."
+
+msgid "Proxy"
+msgstr "Proxy"
+
+msgid "Put this backup back?"
+msgstr "Pui înapoi această copie?"
+
+msgid "Puts this computer back to how it was right after installing my-distro: all users, their files and all settings are deleted. The system itself stays, in the version it has now. Then the setup starts."
+msgstr "Readuce acest calculator la starea de imediat după instalarea my-distro: toți utilizatorii, fișierele lor și toate setările sunt șterse. Sistemul în sine rămâne, în versiunea pe care o are acum. Apoi pornește configurarea."
+
+msgid "Quality"
+msgstr "Calitate"
+
+msgid "Read aloud (Super+R)"
+msgstr "Citire cu voce tare (Super+R)"
+
+msgid "Read only"
+msgstr "Doar citire"
+
+msgid "Read the selected text"
+msgstr "Citește textul selectat"
+
+msgid "Reboot"
+msgstr "Repornește"
+
+msgid "Recent file changes"
+msgstr "Modificări recente ale fișierelor"
+
+msgid "Refresh"
+msgstr "Reîmprospătează"
+
+msgid "Remove"
+msgstr "Elimină"
+
+msgid "Remove %s?"
+msgstr "Elimini %s?"
+
+msgid "Remove administrator rights"
+msgstr "Retrage drepturile de administrator"
+
+msgid "Remove both"
+msgstr "Elimină-le pe amândouă"
+
+msgid "Remove the VPN \"%s\"?"
+msgstr "Elimini VPN-ul \"%s\"?"
+
+msgid "Remove the printer \"%s\"?"
+msgstr "Elimini imprimanta \"%s\"?"
+
+msgid "Remove the user \"%s\"?"
+msgstr "Elimini utilizatorul \"%s\"?"
+
+msgid "Remove user…"
+msgstr "Elimină utilizatorul…"
+
+msgid "Remove…"
+msgstr "Elimină…"
+
+msgid "Replace"
+msgstr "Înlocuiește"
+
+msgid "Replace the VPN \"%s\"?"
+msgstr "Înlocuiești VPN-ul \"%s\"?"
+
+msgid "Reset and restart"
+msgstr "Resetează și repornește"
+
+msgid "Reset this computer…"
+msgstr "Resetează acest calculator…"
+
+msgid "Reset to defaults"
+msgstr "Revino la setările implicite"
+
+msgid "Resolution"
+msgstr "Rezoluție"
+
+msgid "Restart now"
+msgstr "Repornește acum"
+
+msgid "Restore this version"
+msgstr "Restaurează această versiune"
+
+msgid "Restored %s to version %d."
+msgstr "%s a fost restaurat la versiunea %d."
+
+msgid "Restore…"
+msgstr "Restaurează…"
+
+msgid "Right of the main screen"
+msgstr "În dreapta ecranului principal"
+
+msgid "Romanian"
+msgstr "Română"
+
+msgid "SIZE"
+msgstr "MĂRIME"
+
+msgid "Same picture on both"
+msgstr "Aceeași imagine pe ambele"
+
+msgid "Save"
+msgstr "Salvează"
+
+msgid "Saved. Log out and in again so that all programs use it."
+msgstr "Salvat. Deconectează-te și autentifică-te din nou ca toate programele să-l folosească."
+
+msgid "Saved: also at the next login."
+msgstr "Salvat: și la următoarea autentificare."
+
+msgid "Scan"
+msgstr "Scanează"
+
+msgid "Scanned"
+msgstr "Scanat"
+
+msgid "Scanner"
+msgstr "Scaner"
+
+msgid "Scanning…"
+msgstr "Se scanează…"
+
+msgid "Scan…"
+msgstr "Scanează…"
+
+msgid "Screen lock"
+msgstr "Blocarea ecranului"
+
+msgid "Screen reader (Super+Alt+S)"
+msgstr "Cititor de ecran (Super+Alt+S)"
+
+msgid "Screen reader off"
+msgstr "Cititorul de ecran este oprit"
+
+msgid "Screen reader on"
+msgstr "Cititorul de ecran este pornit"
+
+msgid "Screens"
+msgstr "Ecrane"
+
+msgid "Search"
+msgstr "Caută"
+
+msgid "Search (only lines with this text)"
+msgstr "Caută (doar liniile cu acest text)"
+
+msgid "Search again"
+msgstr "Caută din nou"
+
+msgid "Search files"
+msgstr "Caută fișiere"
+
+msgid "Search programs"
+msgstr "Caută programe"
+
+msgid "Search your files by meaning…"
+msgstr "Caută-ți fișierele după sens…"
+
+msgid "Second screen"
+msgstr "Al doilea ecran"
+
+msgid "Second screen is"
+msgstr "Al doilea ecran este"
+
+msgid "Secure Boot"
+msgstr "Secure Boot"
+
+msgid "Secure Boot is off."
+msgstr "Secure Boot este oprit."
+
+msgid "Secure Boot is on."
+msgstr "Secure Boot este pornit."
+
+msgid "Security"
+msgstr "Securitate"
+
+msgid "Seeing"
+msgstr "Vedere"
+
+msgid "Select a line first."
+msgstr "Selectează mai întâi o linie."
+
+msgid "Server domain"
+msgstr "Domeniul serverului"
+
+msgid "Settings"
+msgstr "Setări"
+
+msgid "Settings from your school or university"
+msgstr "Setări de la școala sau universitatea ta"
+
+msgid "Setup"
+msgstr "Configurare"
+
+msgid "Share"
+msgstr "Partajează"
+
+msgid "Share a folder (and the printers) with the other computers in your network. They log in with your user name and a sharing password. Off until you switch it on."
+msgstr "Partajează un dosar (și imprimantele) cu celelalte calculatoare din rețeaua ta. Ele se autentifică cu numele tău de utilizator și o parolă de partajare. Oprit până îl pornești."
+
+msgid "Shared. On other computers open \\\\%s\\%s (Windows) or smb://%s/%s (Mac, Linux) and log in as %s with the sharing password."
+msgstr "Partajat. Pe alte calculatoare deschide \\\\%s\\%s (Windows) sau smb://%s/%s (Mac, Linux) și autentifică-te ca %s cu parola de partajare."
+
+msgid "Sharing"
+msgstr "Partajare"
+
+msgid "Sharing changes the system: type the root password."
+msgstr "Partajarea schimbă sistemul: scrie parola root."
+
+msgid "Sharing is off."
+msgstr "Partajarea este oprită."
+
+msgid "Sharing needs Samba, a package of the Software app (about 60 MB)."
+msgstr "Partajarea are nevoie de Samba, un pachet din aplicația Software (cam 60 MB)."
+
+msgid "Sharing password"
+msgstr "Parola de partajare"
+
+msgid "Sharing…"
+msgstr "Partajare…"
+
+msgid "Show password"
+msgstr "Arată parola"
+
+msgid "Show seconds"
+msgstr "Arată secundele"
+
+msgid "Show the date"
+msgstr "Arată data"
+
+msgid "Size"
+msgstr "Mărime"
+
+msgid "Size of text and icons"
+msgstr "Mărimea textului și a pictogramelor"
+
+msgid "Skip: try it with the demo account"
+msgstr "Sari peste: încearcă cu contul demonstrativ"
+
+msgid "Software"
+msgstr "Software"
+
+msgid "Some networks (schools, companies) only reach the internet through a proxy. It is used by the web browser, system updates and other programs that download. Leave it empty for none."
+msgstr "Unele rețele (școli, firme) ajung la internet doar printr-un proxy. Îl folosesc navigatorul, actualizările sistemului și alte programe care descarcă. Lasă gol dacă nu există."
+
+msgid "Sound"
+msgstr "Sunet"
+
+msgid "Sound now plays here."
+msgstr "Sunetul se aude acum aici."
+
+msgid "Sound now plays here. Programs that were already playing: start them again."
+msgstr "Sunetul se aude acum aici. Programele care redau deja: pornește-le din nou."
+
+msgid "Spanish"
+msgstr "Spaniolă"
+
+msgid "Start"
+msgstr "Start"
+
+msgid "Starting the indexer…"
+msgstr "Se pornește indexatorul…"
+
+msgid "Starting…"
+msgstr "Se pornește…"
+
+msgid "Stop sharing"
+msgstr "Oprește partajarea"
+
+msgid "Stretch"
+msgstr "Întinde"
+
+msgid "Style"
+msgstr "Stil"
+
+msgid "Switch user"
+msgstr "Schimbă utilizatorul"
+
+msgid "System logs"
+msgstr "Jurnalele sistemului"
+
+msgid "System messages"
+msgstr "Mesajele sistemului"
+
+msgid "System update"
+msgstr "Actualizarea sistemului"
+
+msgid "TIME"
+msgstr "ORĂ"
+
+msgid "Taskbar"
+msgstr "Bara de activități"
+
+msgid "Taskbar clock"
+msgstr "Ceasul din bara de activități"
+
+msgid "Teal"
+msgstr "Turcoaz"
+
+msgid "Test page"
+msgstr "Pagină de test"
+
+msgid "Text and icons"
+msgstr "Text și pictograme"
+
+msgid "Text size"
+msgstr "Mărimea textului"
+
+msgid "Text size applies to programs you open from now on, all of the desktop after the next login. The on-screen keyboard is also on the login screen (the keyboard button). Read aloud: select text with the mouse in any program, then press Super+R; again stops it. The screen reader speaks window titles, the Start menu and what has the focus in GTK programs (buttons, fields, lists, menus); not terminals, web pages or the login screen."
+msgstr "Mărimea textului se aplică programelor pe care le deschizi de acum, întregului desktop de la următoarea autentificare. Tastatura pe ecran este și pe ecranul de autentificare (butonul tastaturii). Citire cu voce tare: selectează text cu mouse-ul în orice program, apoi apasă Super+R; încă o dată o oprește. Cititorul de ecran citește titlurile ferestrelor, meniul Start și ce are focusul în programele GTK (butoane, câmpuri, liste, meniuri); nu terminalele, paginile web sau ecranul de autentificare."
+
+msgid "That did not work."
+msgstr "Nu a mers."
+
+msgid "That did not work: nothing was changed, or only part of it (see the message)."
+msgstr "Nu a mers: nu s-a schimbat nimic sau doar o parte (vezi mesajul)."
+
+msgid "That user already exists."
+msgstr "Acest utilizator există deja."
+
+msgid "That user name belongs to the system. Choose another one."
+msgstr "Acest nume de utilizator aparține sistemului. Alege altul."
+
+msgid "That's the oldest saved version, there is nothing before it."
+msgstr "Aceasta este cea mai veche versiune salvată, înainte nu mai e nimic."
+
+msgid "The administrator (root) password is asked for when you install the system or change things here."
+msgstr "Parola de administrator (root) este cerută când instalezi sistemul sau schimbi lucruri aici."
+
+msgid "The firewall lets nobody in, unless you share a folder or the printers with the other computers of your network (Sharing). To open a shared folder of another PC: Start menu, Network share."
+msgstr "Firewall-ul nu lasă pe nimeni să intre, doar dacă partajezi un dosar sau imprimantele cu celelalte calculatoare din rețeaua ta (Partajare). Ca să deschizi un dosar partajat al altui PC: meniul Start, Partajare în rețea."
+
+msgid "The firmware update did not work: see the messages below."
+msgstr "Actualizarea de firmware nu a mers: vezi mesajele de mai jos."
+
+msgid "The firmware update is installed."
+msgstr "Actualizarea de firmware este instalată."
+
+msgid "The firmware update is ready: it is installed while the computer restarts. Keep it plugged in."
+msgstr "Actualizarea de firmware este gata: se instalează în timp ce calculatorul repornește. Lasă-l conectat la priză."
+
+msgid "The full name can't contain \":\"."
+msgstr "Numele complet nu poate conține \":\"."
+
+msgid "The index is still empty, the indexer is working on it."
+msgstr "Indexul este încă gol, indexatorul lucrează la el."
+
+msgid "The kernel is locked down: hibernation is off."
+msgstr "Nucleul este blocat: hibernarea este oprită."
+
+msgid "The language of the menus and windows, and the format of dates and numbers. It applies from the next login. Programs that aren't translated stay in English."
+msgstr "Limba meniurilor și a ferestrelor și formatul datelor și numerelor. Se aplică de la următoarea autentificare. Programele netraduse rămân în engleză."
+
+msgid "The live system keeps nothing after a reboot. Install it to keep your account."
+msgstr "Sistemul live nu păstrează nimic după repornire. Instalează-l ca să-ți păstrezi contul."
+
+msgid "The lock screen asks for your password. Lock it yourself with Super+L or Start menu, Lock screen. It also locks before the computer goes to sleep."
+msgstr "Ecranul de blocare îți cere parola. Blochează-l singur cu Super+L sau meniul Start, Blochează ecranul. Se blochează și înainte ca calculatorul să intre în repaus."
+
+msgid "The login screen checks this. 5 minutes before the time is over a notice appears, then the session ends (unsaved work is lost)."
+msgstr "Ecranul de autentificare verifică asta. Cu 5 minute înainte de sfârșitul timpului apare o notificare, apoi sesiunea se încheie (lucrul nesalvat se pierde)."
+
+msgid "The name can't contain \":\"."
+msgstr "Numele nu poate conține \":\"."
+
+msgid "The old settings are back."
+msgstr "Setările vechi au revenit."
+
+msgid "The previous version is back. Restart the computer to finish."
+msgstr "Versiunea anterioară a revenit. Repornește calculatorul ca să termini."
+
+msgid "The scan did not work."
+msgstr "Scanarea nu a mers."
+
+msgid "The screen can't show that."
+msgstr "Ecranul nu poate afișa asta."
+
+msgid "The share could not be opened (wrong name or password, or the server can't be reached)."
+msgstr "Partajarea nu a putut fi deschisă (nume sau parolă greșite sau serverul nu poate fi accesat)."
+
+msgid "The system files of the version before the last update come back. Your files, users and settings stay. Restart afterwards."
+msgstr "Revin fișierele de sistem ale versiunii de dinaintea ultimei actualizări. Fișierele, utilizatorii și setările tale rămân. Repornește după aceea."
+
+msgid "The system settings belong to the administrator: type the root password."
+msgstr "Setările sistemului aparțin administratorului: scrie parola root."
+
+msgid "The system's language (Users and system)"
+msgstr "Limba sistemului (Utilizatori și sistem)"
+
+msgid "The system's message bus (D-Bus) is not running."
+msgstr "Magistrala de mesaje a sistemului (D-Bus) nu rulează."
+
+msgid "The test page is on its way."
+msgstr "Pagina de test este pe drum."
+
+msgid "The two passwords are not the same."
+msgstr "Cele două parole nu sunt la fel."
+
+msgid "The update did not work: see the messages below."
+msgstr "Actualizarea nu a mers: vezi mesajele de mai jos."
+
+msgid "The update is installed. Restart the computer to finish. If something doesn't work afterwards, \"Undo last update\" goes back."
+msgstr "Actualizarea este instalată. Repornește calculatorul ca să termini. Dacă ceva nu merge după aceea, \"Anulează ultima actualizare\" te duce înapoi."
+
+msgid "The whole disk gets one new partition. Everything on it is deleted."
+msgstr "Întregul disc primește o singură partiție nouă. Tot ce este pe el se șterge."
+
+msgid "Their home folder /home/%s and all files in it are deleted."
+msgstr "Dosarul personal /home/%s și toate fișierele din el sunt șterse."
+
+msgid "Theme"
+msgstr "Temă"
+
+msgid "Then click Yes (and confirm on the device, if it asks too)."
+msgstr "Apoi apasă Da (și confirmă pe dispozitiv, dacă și el întreabă)."
+
+msgid "These packages are made for my-distro %s, but this is my-distro %s: they can't be installed. Update the system (System update), or wait until the packages for %s are out."
+msgstr "Aceste pachete sunt făcute pentru my-distro %s, dar acesta este my-distro %s: nu pot fi instalate. Actualizează sistemul (Actualizarea sistemului) sau așteaptă să apară pachetele pentru %s."
+
+msgid "This computer was started without UEFI: Secure Boot doesn't apply."
+msgstr "Acest calculator a pornit fără UEFI: Secure Boot nu se aplică."
+
+msgid "This installation doesn't start through shim yet."
+msgstr "Această instalare încă nu pornește prin shim."
+
+msgid "This is a disk inside the computer!"
+msgstr "Acesta este un disc din interiorul calculatorului!"
+
+msgid "This is the disk my-distro runs from!"
+msgstr "Acesta este discul de pe care rulează my-distro!"
+
+msgid "This is the live system: programs you install here go into RAM and are gone when you shut down, like everything else. Install my-distro to a disk to keep them."
+msgstr "Acesta este sistemul live: programele instalate aici merg în RAM și dispar la oprire, ca orice altceva. Instalează my-distro pe un disc ca să le păstrezi."
+
+msgid "Tile"
+msgstr "Mozaic"
+
+msgid "Time zone"
+msgstr "Fus orar"
+
+msgid "Time zone (for everyone, at once)"
+msgstr "Fus orar (pentru toți, imediat)"
+
+msgid "Time zone set."
+msgstr "Fusul orar a fost setat."
+
+msgid "To use it again you need its config file."
+msgstr "Ca să-l folosești din nou ai nevoie de fișierul lui de configurare."
+
+msgid "Today's time on the computer (%d minutes) is used up."
+msgstr "Timpul de azi la calculator (%d minute) s-a terminat."
+
+msgid "Top"
+msgstr "Sus"
+
+msgid "Try something like \"notes about my training plan\" or \"recipe\"."
+msgstr "Încearcă ceva precum \"notițe despre planul meu de antrenament\" sau \"rețetă\"."
+
+msgid "Try your keyboard here"
+msgstr "Încearcă-ți tastatura aici"
+
+msgid "Turkish"
+msgstr "Turcă"
+
+msgid "Type %06u on %s, then press Enter on it."
+msgstr "Scrie %06u pe %s, apoi apasă Enter pe el."
+
+msgid "Type %s on %s, then press Enter on it."
+msgstr "Scrie %s pe %s, apoi apasă Enter pe el."
+
+msgid "Type only the address, like 192.168.1.20."
+msgstr "Scrie doar adresa, ca 192.168.1.20."
+
+msgid "Type the network's name."
+msgstr "Scrie numele rețelei."
+
+msgid "Type your password and press Enter"
+msgstr "Scrie-ți parola și apasă Enter"
+
+msgid "Type your user name and password."
+msgstr "Scrie numele de utilizator și parola."
+
+msgid "Typing"
+msgstr "Tastare"
+
+msgid "USB"
+msgstr "USB"
+
+msgid "Undo last change"
+msgstr "Anulează ultima modificare"
+
+msgid "Undo last update (back to %s)…"
+msgstr "Anulează ultima actualizare (înapoi la %s)…"
+
+msgid "Undo last update…"
+msgstr "Anulează ultima actualizare…"
+
+msgid "Undo this change"
+msgstr "Anulează această modificare"
+
+msgid "Unknown time zone."
+msgstr "Fus orar necunoscut."
+
+msgid "Update all"
+msgstr "Actualizează tot"
+
+msgid "Use this password for the administrator (root) too"
+msgstr "Folosește această parolă și pentru administrator (root)"
+
+msgid "User"
+msgstr "Utilizator"
+
+msgid "User added."
+msgstr "Utilizatorul a fost adăugat."
+
+msgid "User name"
+msgstr "Nume de utilizator"
+
+msgid "User name (to log in)"
+msgstr "Nume de utilizator (pentru autentificare)"
+
+msgid "User name: small letters a-z, digits, - and _, starting with a letter."
+msgstr "Nume de utilizator: litere mici a-z, cifre, - și _, începând cu o literă."
+
+msgid "User removed."
+msgstr "Utilizatorul a fost eliminat."
+
+msgid "Users"
+msgstr "Utilizatori"
+
+msgid "Users and system"
+msgstr "Utilizatori și sistem"
+
+msgid "Users and system…"
+msgstr "Utilizatori și sistem…"
+
+msgid "VERSION"
+msgstr "VERSIUNE"
+
+msgid "VPN"
+msgstr "VPN"
+
+msgid "VPN not available"
+msgstr "VPN indisponibil"
+
+msgid "Versions of"
+msgstr "Versiuni ale"
+
+msgid "Very large"
+msgstr "Foarte mare"
+
+msgid "View"
+msgstr "Vizualizare"
+
+msgid "Violet"
+msgstr "Violet"
+
+msgid "Wallpaper"
+msgstr "Imagine de fundal"
+
+msgid "Welcome"
+msgstr "Bun venit"
+
+msgid "Welcome to my-distro"
+msgstr "Bun venit în my-distro"
+
+msgid "What each program may use, the next time you start it from the Start menu. A program without the microphone gets no sound at all (the sound server can't give it one without the other). Without the whole home folder it sees only Downloads (or nothing) and keeps its own settings separately."
+msgstr "Ce poate folosi fiecare program, data viitoare când îl pornești din meniul Start. Un program fără microfon nu are deloc sunet (serverul de sunet nu îi poate da unul fără celălalt). Fără tot dosarul personal vede doar Descărcări (sau nimic) și își ține setările separat."
+
+msgid "Wi-Fi"
+msgstr "Wi-Fi"
+
+msgid "Wi-Fi is starting…"
+msgstr "Wi-Fi-ul pornește…"
+
+msgid "Wi-Fi password"
+msgstr "Parola Wi-Fi"
+
+msgid "Wi-Fi passwords have 8 to 63 characters."
+msgstr "Parolele Wi-Fi au între 8 și 63 de caractere."
+
+msgid "With Secure Boot on, the computer can't hibernate (the kernel locks itself down and can't check a saved memory image). Suspend works."
+msgstr "Cu Secure Boot pornit, calculatorul nu poate hiberna (nucleul se blochează și nu poate verifica o imagine salvată a memoriei). Repausul merge."
+
+msgid "Without proxy for"
+msgstr "Fără proxy pentru"
+
+msgid "Working…"
+msgstr "Se lucrează…"
+
+msgid "Working… (don't pull out the disk)"
+msgstr "Se lucrează… (nu scoate discul)"
+
+msgid "Write the address as \\\\SERVER\\SHARE or smb://SERVER/SHARE."
+msgstr "Scrie adresa ca \\\\SERVER\\PARTAJARE sau smb://SERVER/PARTAJARE."
+
+msgid "Write the proxy as NAME:PORT, e.g. proxy.example.com:3128."
+msgstr "Scrie proxy-ul ca NUME:PORT, de ex. proxy.example.com:3128."
+
+msgid "Write the times like 08:00 and 20:00."
+msgstr "Scrie orele ca 08:00 și 20:00."
+
+msgid "Wrong password"
+msgstr "Parolă greșită"
+
+msgid "Wrong password."
+msgstr "Parolă greșită."
+
+msgid "Wrong password: nothing was done."
+msgstr "Parolă greșită: nu s-a făcut nimic."
+
+msgid "Wrong user name or password"
+msgstr "Nume de utilizator sau parolă greșite"
+
+msgid "Your account"
+msgstr "Contul tău"
+
+msgid "Your account \"%s\" is ready. Log in with your new password."
+msgstr "Contul tău \"%s\" este gata. Autentifică-te cu noua parolă."
+
+msgid "Your computer"
+msgstr "Calculatorul tău"
+
+msgid "Your files, users and settings stay. Don't switch the computer off while it installs; restart it afterwards."
+msgstr "Fișierele, utilizatorii și setările tale rămân. Nu opri calculatorul cât se instalează; repornește-l după aceea."
+
+msgid "Your home folder is always backed up (without caches and the trash). The settings include saved passwords: keep the disk safe."
+msgstr "Dosarul tău personal este întotdeauna copiat (fără cache și coș de gunoi). Setările includ parole salvate: păstrează discul în siguranță."
+
+msgid "Your name"
+msgstr "Numele tău"
+
+msgid "Your own files made with it stay."
+msgstr "Fișierele tale create cu el rămân."
+
+msgid "Your school's Wi-Fi page lists these. With a server domain (and the CA certificate if they give you one), my-distro checks that it really is their server before it sends your password."
+msgstr "Pagina Wi-Fi a școlii tale le arată. Cu un domeniu de server (și certificatul CA, dacă ți-l dau), my-distro verifică dacă este chiar serverul lor înainte să-ți trimită parola."
+
+msgid "Your user may not change Wi-Fi yet (it is not in the group netdev). Log out and in again; if that doesn't help, as root: addgroup YOUR-NAME netdev, then log in again."
+msgstr "Utilizatorul tău nu poate schimba încă Wi-Fi-ul (nu este în grupul netdev). Deconectează-te și autentifică-te din nou; dacă nu ajută, ca root: addgroup NUMELE-TĂU netdev, apoi autentifică-te din nou."
+
+msgid "Your user may not change printers yet (it is not in the group lpadmin). As root: addgroup YOUR-NAME lpadmin, then log in again."
+msgstr "Utilizatorul tău nu poate schimba încă imprimantele (nu este în grupul lpadmin). Ca root: addgroup NUMELE-TĂU lpadmin, apoi autentifică-te din nou."
+
+msgid "connected   "
+msgstr "conectat"
+
+msgid "e.g. 192.168.1.20 or printer.local"
+msgstr "de ex. 192.168.1.20 sau printer.local"
+
+msgid "e.g. name@school.ac.at"
+msgstr "de ex. nume@scoala.ro"
+
+msgid "e.g. school.ac.at"
+msgstr "de ex. scoala.ro"
+
+msgid "exFAT (Windows, Mac, cameras; big files)"
+msgstr "exFAT (Windows, Mac, camere foto; fișiere mari)"
+
+msgid "ext4 (Linux only; best for backups)"
+msgstr "ext4 (doar Linux; cel mai bun pentru copii de rezervă)"
+
+msgid "fwupd is missing."
+msgstr "fwupd lipsește."
+
+msgid "in the network"
+msgstr "în rețea"
+
+msgid "my-distro %s is out, but without an update package: download its ISO from GitHub."
+msgstr "A apărut my-distro %s, dar fără pachet de actualizare: descarcă-i ISO-ul de pe GitHub."
+
+msgid "my-distro %s is out. This is the live system, which forgets updates: download the new ISO from GitHub."
+msgstr "A apărut my-distro %s. Acesta este sistemul live, care uită actualizările: descarcă noul ISO de pe GitHub."
+
+msgid "my-distro %s is ready to install (you have %s). What's new:"
+msgstr "my-distro %s este gata de instalare (ai %s). Ce e nou:"
+
+msgid "my-distro %s is up to date."
+msgstr "my-distro %s este la zi."
+
+msgid "my-distro has no driver for this printer."
+msgstr "my-distro nu are driver pentru această imprimantă."
+
+msgid "my-distro starts with Secure Boot on once its key is enrolled in the PC (once; you need the computer's screen and keyboard for it). \"Prepare\" asks for a one-time password; at the next start a blue screen (MokManager) appears: choose \"Enroll MOK\", \"Continue\", \"Yes\", type the password, \"Reboot\". Then switch on Secure Boot in the firmware settings."
+msgstr "my-distro pornește cu Secure Boot activ de îndată ce cheia lui este înregistrată în PC (o singură dată; ai nevoie de ecranul și tastatura calculatorului). \"Pregătește\" cere o parolă de unică folosință; la următoarea pornire apare un ecran albastru (MokManager): alege \"Enroll MOK\", \"Continue\", \"Yes\", scrie parola, \"Reboot\". Apoi pornește Secure Boot în setările firmware-ului."
+
+msgid "my-distro's key is enrolled at the next start (MokManager)."
+msgstr "Cheia my-distro va fi înregistrată la următoarea pornire (MokManager)."
+
+msgid "my-distro's key is enrolled."
+msgstr "Cheia my-distro este înregistrată."
+
+msgid "my-distro's key is not enrolled yet."
+msgstr "Cheia my-distro nu este încă înregistrată."
+
+msgid "my-update is missing."
+msgstr "my-update lipsește."
+
+msgid "my-vpnctl is missing."
+msgstr "my-vpnctl lipsește."
+
+msgid "not found"
+msgstr "negăsit"
+
+msgid "not ticked"
+msgstr "nebifat"
+
+msgid "open   "
+msgstr "deschisă"
+
+msgid "optional, e.g. anonymous@school.ac.at"
+msgstr "opțional, de ex. anonim@scoala.ro"
+
+msgid "saved   "
+msgstr "salvată"
+
+msgid "secured   "
+msgstr "securizată"
+
+msgid "space"
+msgstr "spațiu"
+
+msgid "switched off"
+msgstr "oprit"
+
+msgid "the device"
+msgstr "dispozitivul"
+
+msgid "ticked"
+msgstr "bifat"
+
+msgid "to"
+msgstr "la"
+
+msgid "unavailable"
+msgstr "indisponibil"
+
+msgid "user name   "
+msgstr "utilizator"
+
+msgid "v0 (first)"
+msgstr "v0 (prima)"
+
+msgid "↑  Update to %s"
+msgstr "↑  Actualizează la %s"
+
+msgid "Calculator"
+msgstr "Calculator de buzunar"
+
+msgid "Code editor (LazyVim)"
+msgstr "Editor de cod (LazyVim)"
+
+msgid "Eject USB stick"
+msgstr "Scoate stick-ul USB"
+
+msgid "Files"
+msgstr "Fișiere"
+
+msgid "Hibernate"
+msgstr "Hibernează"
+
+msgid "Install to disk"
+msgstr "Instalează pe disc"
+
+msgid "Lock screen"
+msgstr "Blochează ecranul"
+
+msgid "Log out"
+msgstr "Deconectare"
+
+msgid "Magnifier"
+msgstr "Lupă"
+
+msgid "Media player"
+msgstr "Player media"
+
+msgid "On-screen keyboard"
+msgstr "Tastatură pe ecran"
+
+msgid "Record screen"
+msgstr "Înregistrează ecranul"
+
+msgid "Screenshot"
+msgstr "Captură de ecran"
+
+msgid "Suspend"
+msgstr "Repaus"
+
+msgid "System monitor"
+msgstr "Monitor de sistem"
+
+msgid "Terminal"
+msgstr "Terminal"
+
+msgid "Text editor"
+msgstr "Editor de text"
+
+msgid "Web browser"
+msgstr "Navigator web"
+
+msgid "Web browser (sandbox)"
+msgstr "Navigator web (izolat)"

@@ -13,8 +13,11 @@
  * login screen, the setup) use the system's language, chosen in the setup:
  * /etc/my-distro/language.
  *
- * Add a language: copy po/de.po to po/XX.po, translate the msgstr lines,
- * add "XX" to LINGUAS in po/Makefile and the language to LANGUAGES below.
+ * Add a language: copy po/de.po to po/XX.po, translate the msgstr lines
+ * (desktop/package/my-locale compiles every po/*.po), add the language to
+ * LANGUAGES below and its locale to BR2_GENERATE_LOCALE and
+ * BR2_ENABLE_LOCALE_WHITELIST in desktop/buildroot.fragment. 0.9.7: German,
+ * French, Spanish, Italian, Polish, Romanian and Turkish.
  */
 #ifndef MY_I18N_H
 #define MY_I18N_H
@@ -34,7 +37,10 @@
 
 /* The languages my-distro is translated into: LANG value and name */
 #define LANGUAGES { "en_US.UTF-8", "English" }, { "de_DE.UTF-8", "Deutsch" }, \
-                  { "de_AT.UTF-8", "Deutsch (Österreich)" }
+                  { "de_AT.UTF-8", "Deutsch (Österreich)" }, \
+                  { "fr_FR.UTF-8", "Français" }, { "es_ES.UTF-8", "Español" }, \
+                  { "it_IT.UTF-8", "Italiano" }, { "pl_PL.UTF-8", "Polski" }, \
+                  { "ro_RO.UTF-8", "Română" }, { "tr_TR.UTF-8", "Türkçe" }
 
 /* Turns on translations for the language in LANG (call before gtk_init) */
 static inline void i18n_init(void)

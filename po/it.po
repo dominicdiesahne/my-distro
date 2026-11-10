@@ -1,0 +1,1893 @@
+# Italian translation of my-distro's own programs.
+# The texts are C strings: keep %s, %d and \n exactly as in msgid.
+# Compiled by desktop/package/my-locale into /usr/share/locale/it/LC_MESSAGES.
+msgid ""
+msgstr ""
+"Project-Id-Version: my-distro\n"
+"PO-Revision-Date: 2026-11-10 12:00+0100\n"
+"Last-Translator: my-distro\n"
+"Language-Team: Italian\n"
+"Language: it\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "\nNeeds: "
+msgstr "\nRichiede:"
+
+msgid "   (current)"
+msgstr "   (attuale)"
+
+msgid "   (default)"
+msgstr "   (predefinito)"
+
+msgid "   (with system settings)"
+msgstr "   (con le impostazioni di sistema)"
+
+msgid "  — USB / card"
+msgstr "  — USB / scheda"
+
+msgid "  — internal"
+msgstr "  — interno"
+
+msgid "  — my-distro runs from it"
+msgstr "  — my-distro gira da qui"
+
+msgid " (getting an address…)"
+msgstr " (sto ottenendo un indirizzo…)"
+
+msgid " It brings: "
+msgstr " Porta con sé:"
+
+msgid "%A, %d %B %Y"
+msgstr "%A %d %B %Y"
+
+msgid "%d files found"
+msgstr "%d file trovati"
+
+msgid "%d line"
+msgid_plural "%d lines"
+msgstr[0] "%d riga"
+msgstr[1] "%d righe"
+
+msgid "%d minute left on the computer today"
+msgid_plural "%d minutes left on the computer today"
+msgstr[0] "Ti resta %d minuto al computer oggi"
+msgstr[1] "Ti restano %d minuti al computer oggi"
+
+msgid "%d of %d lines"
+msgstr "%d di %d righe"
+
+msgid "%s doesn't exist (yet)."
+msgstr "%s non esiste (ancora)."
+
+msgid "%s free (%s).%s"
+msgstr "%s liberi (%s).%s"
+
+msgid "%s is logged in on another screen (Ctrl+Alt+F%d)."
+msgstr "%s ha effettuato l'accesso su un altro schermo (Ctrl+Alt+F%d)."
+
+msgid "%s may use the computer from %02d:%02d to %02d:%02d."
+msgstr "%s può usare il computer dalle %02d:%02d alle %02d:%02d."
+
+msgid "%s needs it, so it is removed too."
+msgstr "%s ne ha bisogno, quindi viene rimosso anche questo."
+
+msgid "%s on disk"
+msgstr "%s su disco"
+
+msgid "%s on disk\n%s download"
+msgstr "%s su disco\n%s da scaricare"
+
+msgid "(no text, matched by its name)"
+msgstr "(nessun testo, trovato per nome)"
+
+msgid "(only the last 2 MB)"
+msgstr "(solo gli ultimi 2 MB)"
+
+msgid "(unchanged)"
+msgstr "(invariata)"
+
+msgid "(used by the system)"
+msgstr "(usato dal sistema)"
+
+msgid ", address "
+msgstr ", indirizzo"
+
+msgid "1 hour"
+msgstr "1 ora"
+
+msgid "1 minute"
+msgstr "1 minuto"
+
+msgid "10 minutes"
+msgstr "10 minuti"
+
+msgid "15 minutes"
+msgstr "15 minuti"
+
+msgid "150 dpi (screen, e-mail)"
+msgstr "150 dpi (schermo, e-mail)"
+
+msgid "2 minutes"
+msgstr "2 minuti"
+
+msgid "200 % (for very sharp screens)"
+msgstr "200 % (per schermi molto nitidi)"
+
+msgid "24-hour time"
+msgstr "Formato 24 ore"
+
+msgid "30 minutes"
+msgstr "30 minuti"
+
+msgid "300 dpi (documents)"
+msgstr "300 dpi (documenti)"
+
+msgid "5 minutes"
+msgstr "5 minuti"
+
+msgid "600 dpi (photos)"
+msgstr "600 dpi (foto)"
+
+msgid "<span size='x-large' weight='bold' foreground='#e5484d'>%s</span>\n\nEverything on <b>%s</b> will be deleted: documents, photos, other systems (Windows) that may be on it. This can't be undone.\n\nTo go on, type its name: <b>%s</b>"
+msgstr "<span size='x-large' weight='bold' foreground='#e5484d'>%s</span>\n\nTutto ciò che c'è su <b>%s</b> verrà cancellato: documenti, foto, altri sistemi (Windows) eventualmente presenti. Non si può annullare.\n\nPer continuare, scrivi il suo nome: <b>%s</b>"
+
+msgid "A network that doesn't show its name (hidden). Type it exactly, with upper and lower case:"
+msgstr "Una rete che non mostra il suo nome (nascosta). Scrivilo esattamente, con maiuscole e minuscole:"
+
+msgid "Above the main screen"
+msgstr "Sopra lo schermo principale"
+
+msgid "Accent color"
+msgstr "Colore d'accento"
+
+msgid "Accessibility"
+msgstr "Accessibilità"
+
+msgid "Add"
+msgstr "Aggiungi"
+
+msgid "Add a user"
+msgstr "Aggiungi un utente"
+
+msgid "Add printer"
+msgstr "Aggiungi stampante"
+
+msgid "Add printer…"
+msgstr "Aggiungi stampante…"
+
+msgid "Add user…"
+msgstr "Aggiungi utente…"
+
+msgid "Added. Print a test page to try it."
+msgstr "Aggiunta. Stampa una pagina di prova per provarla."
+
+msgid "Adding the printer…"
+msgstr "Aggiunta della stampante…"
+
+msgid "Address"
+msgstr "Indirizzo"
+
+msgid "Address %s\nLast answer from the server %d s ago · received %s · sent %s"
+msgstr "Indirizzo %s\nUltima risposta dal server %d s fa · ricevuti %s · inviati %s"
+
+msgid "Address %s\nNo answer from the VPN server yet. Is the config right, and does this network allow VPNs?"
+msgstr "Indirizzo %s\nAncora nessuna risposta dal server VPN. La configurazione è giusta, e questa rete permette le VPN?"
+
+msgid "Address %s\nWaiting for the VPN server…"
+msgstr "Indirizzo %s\nIn attesa del server VPN…"
+
+msgid "Administrator"
+msgstr "Amministratore"
+
+msgid "Administrator now: may use sudo with their own password."
+msgstr "Ora è amministratore: può usare sudo con la propria password."
+
+msgid "Administrator password"
+msgstr "Password dell'amministratore"
+
+msgid "Administrator password again"
+msgstr "Password dell'amministratore di nuovo"
+
+msgid "Administrator password changed."
+msgstr "Password dell'amministratore cambiata."
+
+msgid "Administrator password: type the same password twice."
+msgstr "Password dell'amministratore: scrivi due volte la stessa password."
+
+msgid "Again"
+msgstr "Di nuovo"
+
+msgid "All of it"
+msgstr "Tutta"
+
+msgid "All programs"
+msgstr "Tutti i programmi"
+
+msgid "All set"
+msgstr "Tutto pronto"
+
+msgid "Also share this computer's printers"
+msgstr "Condividi anche le stampanti di questo computer"
+
+msgid "Also the system settings (asks for the root password)"
+msgstr "Anche le impostazioni di sistema (chiede la password di root)"
+
+msgid "Also the system settings: Wi-Fi, VPNs, printers, Bluetooth, users (asks for the root password)"
+msgstr "Anche le impostazioni di sistema: Wi-Fi, VPN, stampanti, Bluetooth, utenti (chiede la password di root)"
+
+msgid "Analog"
+msgstr "Analogico"
+
+msgid "Anonymous identity"
+msgstr "Identità anonima"
+
+msgid "Apply"
+msgstr "Applica"
+
+msgid "Asking the LVFS (fwupd.org) for firmware updates…"
+msgstr "Chiedo al LVFS (fwupd.org) gli aggiornamenti del firmware…"
+
+msgid "At most, minutes per day"
+msgstr "Al massimo, minuti al giorno"
+
+msgid "Audit"
+msgstr "Audit"
+
+msgid "Automatic"
+msgstr "Automatico"
+
+msgid "Back"
+msgstr "Indietro"
+
+msgid "Back to the other desktop"
+msgstr "Torna all'altro desktop"
+
+msgid "Back to what the screens prefer."
+msgstr "Torna a ciò che preferiscono gli schermi."
+
+msgid "Back up now"
+msgstr "Esegui il backup ora"
+
+msgid "Back up to"
+msgstr "Backup su"
+
+msgid "Backup"
+msgstr "Backup"
+
+msgid "Backups on this disk"
+msgstr "Backup su questo disco"
+
+msgid "Battery low: %d %%"
+msgstr "Batteria scarica: %d %%"
+
+msgid "Below the main screen"
+msgstr "Sotto lo schermo principale"
+
+msgid "Bigger"
+msgstr "Più grande"
+
+msgid "Bluetooth"
+msgstr "Bluetooth"
+
+msgid "Bluetooth could not be switched on."
+msgstr "Impossibile accendere il Bluetooth."
+
+msgid "Bluetooth is off."
+msgstr "Il Bluetooth è spento."
+
+msgid "Bottom"
+msgstr "In basso"
+
+msgid "CA certificate"
+msgstr "Certificato CA"
+
+msgid "Camera"
+msgstr "Fotocamera"
+
+msgid "Can't load the search model."
+msgstr "Impossibile caricare il modello di ricerca."
+
+msgid "Cancel"
+msgstr "Annulla"
+
+msgid "Careful"
+msgstr "Attenzione"
+
+msgid "Centre"
+msgstr "Centra"
+
+msgid "Change password"
+msgstr "Cambia password"
+
+msgid "Change password…"
+msgstr "Cambia password…"
+
+msgid "Changes to your files, newest first"
+msgstr "Modifiche ai tuoi file, dalle più recenti"
+
+msgid "Changing users and system settings needs the administrator (root) password."
+msgstr "Per cambiare utenti e impostazioni di sistema serve la password dell'amministratore (root)."
+
+msgid "Check and repair"
+msgstr "Controlla e ripara"
+
+msgid "Checking…"
+msgstr "Controllo…"
+
+msgid "Choose a device and click Connect."
+msgstr "Scegli un dispositivo e fai clic su Connetti."
+
+msgid "Choose a disk or partition."
+msgstr "Scegli un disco o una partizione."
+
+msgid "Choose a folder first."
+msgstr "Scegli prima una cartella."
+
+msgid "Choose a password."
+msgstr "Scegli una password."
+
+msgid "Choose a picture"
+msgstr "Scegli un'immagine"
+
+msgid "Choose a printer, or type its address."
+msgstr "Scegli una stampante o scrivi il suo indirizzo."
+
+msgid "Choose a user in the list first."
+msgstr "Scegli prima un utente nell'elenco."
+
+msgid "Choose your printer, or type its address below."
+msgstr "Scegli la tua stampante o scrivi il suo indirizzo qui sotto."
+
+msgid "Click Search to find devices nearby."
+msgstr "Fai clic su Cerca per trovare i dispositivi vicini."
+
+msgid "Clock"
+msgstr "Orologio"
+
+msgid "Clock app"
+msgstr "App Orologio"
+
+msgid "Close"
+msgstr "Chiudi"
+
+msgid "Color"
+msgstr "Colore"
+
+msgid "Colors"
+msgstr "Colori"
+
+msgid "Colors (more choices later in Settings)"
+msgstr "Colori (altre scelte più avanti in Impostazioni)"
+
+msgid "Computer"
+msgstr "Computer"
+
+msgid "Computer name"
+msgstr "Nome del computer"
+
+msgid "Computer name (shown on the network and the login screen)"
+msgstr "Nome del computer (mostrato in rete e nella schermata di accesso)"
+
+msgid "Computer name saved."
+msgstr "Nome del computer salvato."
+
+msgid "Computer name: letters, digits and -, no spaces."
+msgstr "Nome del computer: lettere, cifre e -, senza spazi."
+
+msgid "Connect"
+msgstr "Connetti"
+
+msgid "Connect to Wi-Fi"
+msgstr "Connettiti al Wi-Fi"
+
+msgid "Connected to %s"
+msgstr "Connesso a %s"
+
+msgid "Connected."
+msgstr "Connesso."
+
+msgid "Connecting…"
+msgstr "Connessione…"
+
+msgid "Could not add the network."
+msgstr "Impossibile aggiungere la rete."
+
+msgid "Could not add the printer."
+msgstr "Impossibile aggiungere la stampante."
+
+msgid "Could not change the administrator rights."
+msgstr "Impossibile cambiare i diritti di amministratore."
+
+msgid "Could not connect to %s."
+msgstr "Impossibile connettersi a %s."
+
+msgid "Could not connect. Wrong password, or the network is too far away?"
+msgstr "Connessione non riuscita. Password sbagliata, o la rete è troppo lontana?"
+
+msgid "Could not create the user."
+msgstr "Impossibile creare l'utente."
+
+msgid "Could not forget the device."
+msgstr "Impossibile dimenticare il dispositivo."
+
+msgid "Could not look for firmware updates (no internet?): %s"
+msgstr "Impossibile cercare aggiornamenti del firmware (niente internet?): %s"
+
+msgid "Could not look for updates (no internet?): %s"
+msgstr "Impossibile cercare aggiornamenti (niente internet?): %s"
+
+msgid "Could not make it the default printer."
+msgstr "Impossibile renderla la stampante predefinita."
+
+msgid "Could not pair with %s."
+msgstr "Impossibile associarsi con %s."
+
+msgid "Could not print."
+msgstr "Impossibile stampare."
+
+msgid "Could not read the kernel's messages."
+msgstr "Impossibile leggere i messaggi del kernel."
+
+msgid "Could not remove the printer."
+msgstr "Impossibile rimuovere la stampante."
+
+msgid "Could not remove the user."
+msgstr "Impossibile rimuovere l'utente."
+
+msgid "Could not save the keyboard layout."
+msgstr "Impossibile salvare il layout della tastiera."
+
+msgid "Could not save the language."
+msgstr "Impossibile salvare la lingua."
+
+msgid "Could not save the parental controls."
+msgstr "Impossibile salvare il controllo parentale."
+
+msgid "Could not search for devices."
+msgstr "Impossibile cercare dispositivi."
+
+msgid "Could not set the administrator password."
+msgstr "Impossibile impostare la password dell'amministratore."
+
+msgid "Could not set the password."
+msgstr "Impossibile impostare la password."
+
+msgid "Could not set the time zone."
+msgstr "Impossibile impostare il fuso orario."
+
+msgid "Could not start /usr/lib/my-distro/disk-tool."
+msgstr "Impossibile avviare /usr/lib/my-distro/disk-tool."
+
+msgid "Could not start my-admin."
+msgstr "Impossibile avviare my-admin."
+
+msgid "Could not start my-backup."
+msgstr "Impossibile avviare my-backup."
+
+msgid "Could not start my-update."
+msgstr "Impossibile avviare my-update."
+
+msgid "Could not start the factory reset."
+msgstr "Impossibile avviare il ripristino."
+
+msgid "Could not write /etc/hostname."
+msgstr "Impossibile scrivere /etc/hostname."
+
+msgid "Couldn't process that query."
+msgstr "Impossibile elaborare questa ricerca."
+
+msgid "Crashes"
+msgstr "Arresti anomali"
+
+msgid "Czech"
+msgstr "Ceco"
+
+msgid "Date format"
+msgstr "Formato della data"
+
+msgid "Delete all users, files and settings?"
+msgstr "Cancellare tutti gli utenti, i file e le impostazioni?"
+
+msgid "Delete everything"
+msgstr "Cancella tutto"
+
+msgid "Digital"
+msgstr "Digitale"
+
+msgid "Disconnect"
+msgstr "Disconnetti"
+
+msgid "Disk"
+msgstr "Disco"
+
+msgid "Disk / partition"
+msgstr "Disco / partizione"
+
+msgid "Disks"
+msgstr "Dischi"
+
+msgid "Display"
+msgstr "Schermo"
+
+msgid "Does %s show the number %06u?"
+msgstr "%s mostra il numero %06u?"
+
+msgid "Done. Installed programs are in the Start menu, or start them in a terminal."
+msgstr "Fatto. I programmi installati sono nel menu Start, oppure avviali in un terminale."
+
+msgid "Done: the picture is in your Pictures folder."
+msgstr "Fatto: l'immagine è nella tua cartella Immagini."
+
+msgid "Downloading the package list…"
+msgstr "Scaricamento dell'elenco dei pacchetti…"
+
+msgid "Dutch"
+msgstr "Olandese"
+
+msgid "Ember"
+msgstr "Brace"
+
+msgid "English (UK)"
+msgstr "Inglese (Regno Unito)"
+
+msgid "English (US)"
+msgstr "Inglese (USA)"
+
+msgid "Every saved change on the system, newest first"
+msgstr "Ogni modifica salvata nel sistema, dalle più recenti"
+
+msgid "Every user and everything in their home folders (documents, pictures, browser data) is deleted, and all settings: passwords, computer name, Wi-Fi networks, VPNs, time zone. Only the system stays. This can't be undone.\n\nThe computer restarts now; the reset takes a few seconds, then the setup starts as after installing."
+msgstr "Vengono cancellati tutti gli utenti e tutto ciò che c'è nelle loro cartelle personali (documenti, immagini, dati del browser), e tutte le impostazioni: password, nome del computer, reti Wi-Fi, VPN, fuso orario. Resta solo il sistema. Non si può annullare.\n\nIl computer si riavvia ora; il ripristino dura pochi secondi, poi parte la configurazione come dopo l'installazione."
+
+msgid "Everything on this partition is deleted."
+msgstr "Tutto ciò che c'è su questa partizione viene cancellato."
+
+msgid "FAT32 (works everywhere; files up to 4 GB)"
+msgstr "FAT32 (funziona ovunque; file fino a 4 GB)"
+
+msgid "FILE"
+msgstr "FILE"
+
+msgid "Factory reset"
+msgstr "Ripristino di fabbrica"
+
+msgid "File history"
+msgstr "Cronologia dei file"
+
+msgid "Filesystem"
+msgstr "File system"
+
+msgid "Fill the screen"
+msgstr "Riempi lo schermo"
+
+msgid "Finish"
+msgstr "Fine"
+
+msgid "Firmware"
+msgstr "Firmware"
+
+msgid "Firmware is the software inside the computer's parts (UEFI, disks, docks, mice, ...). fwupd asks the LVFS (fwupd.org) for updates from their makers. Nothing is installed without asking."
+msgstr "Il firmware è il software dentro i componenti del computer (UEFI, dischi, dock, mouse…). fwupd chiede al LVFS (fwupd.org) gli aggiornamenti dei loro produttori. Non viene installato nulla senza chiedere."
+
+msgid "Firmware updates for this computer:"
+msgstr "Aggiornamenti del firmware per questo computer:"
+
+msgid "Fit, keep all of it"
+msgstr "Adatta, mostrala tutta"
+
+msgid "Folder"
+msgstr "Cartella"
+
+msgid "Folder to share"
+msgstr "Cartella da condividere"
+
+msgid "Forest"
+msgstr "Foresta"
+
+msgid "Forget"
+msgstr "Dimentica"
+
+msgid "Format"
+msgstr "Formatta"
+
+msgid "Formatting and repairing disks needs the administrator (root) password."
+msgstr "Per formattare e riparare dischi serve la password dell'amministratore (root)."
+
+msgid "Format…"
+msgstr "Formatta…"
+
+msgid "French"
+msgstr "Francese"
+
+msgid "Full name"
+msgstr "Nome completo"
+
+msgid "German"
+msgstr "Tedesco"
+
+msgid "German (Austria)"
+msgstr "Tedesco (Austria)"
+
+msgid "German (Switzerland)"
+msgstr "Tedesco (Svizzera)"
+
+msgid "Go back"
+msgstr "Torna indietro"
+
+msgid "Go back to my-distro %s?"
+msgstr "Tornare a my-distro %s?"
+
+msgid "Go to the login screen"
+msgstr "Vai alla schermata di accesso"
+
+msgid "Going back did not work: see the messages below."
+msgstr "Tornare indietro non ha funzionato: vedi i messaggi qui sotto."
+
+msgid "Going back to the old settings in %d seconds."
+msgstr "Ritorno alle vecchie impostazioni tra %d secondi."
+
+msgid "Going back… don't switch the computer off."
+msgstr "Ritorno indietro… non spegnere il computer."
+
+msgid "Gray"
+msgstr "Grigio"
+
+msgid "HTTP and HTTPS proxy"
+msgstr "Proxy HTTP e HTTPS"
+
+msgid "Height (pixels)"
+msgstr "Altezza (pixel)"
+
+msgid "High contrast"
+msgstr "Contrasto elevato"
+
+msgid "High contrast light"
+msgstr "Contrasto elevato chiaro"
+
+msgid "History"
+msgstr "Cronologia"
+
+msgid "Home folder"
+msgstr "Cartella personale"
+
+msgid "Huge"
+msgstr "Enorme"
+
+msgid "Hungarian"
+msgstr "Ungherese"
+
+msgid "If the desktop doesn't start any more: choose \"recovery mode\" in the boot menu and run my-reset there."
+msgstr "Se il desktop non si avvia più: scegli \"recovery mode\" nel menu di avvio ed esegui lì my-reset."
+
+msgid "Import"
+msgstr "Importa"
+
+msgid "Import a WireGuard config"
+msgstr "Importa una configurazione WireGuard"
+
+msgid "Import…"
+msgstr "Importa…"
+
+msgid "Install"
+msgstr "Installa"
+
+msgid "Install %s?"
+msgstr "Installare %s?"
+
+msgid "Install Samba…"
+msgstr "Installa Samba…"
+
+msgid "Install my-distro %s?"
+msgstr "Installare my-distro %s?"
+
+msgid "Install the firmware update %s?"
+msgstr "Installare l'aggiornamento del firmware %s?"
+
+msgid "Install update"
+msgstr "Installa aggiornamento"
+
+msgid "Installed"
+msgstr "Installati"
+
+msgid "Installed: my-distro %s"
+msgstr "Installato: my-distro %s"
+
+msgid "Installing and removing programs needs the administrator (root) password."
+msgstr "Per installare e rimuovere programmi serve la password dell'amministratore (root)."
+
+msgid "Installing the firmware update… don't switch the computer off."
+msgstr "Installazione dell'aggiornamento del firmware… non spegnere il computer."
+
+msgid "Installing… don't switch the computer off."
+msgstr "Installazione… non spegnere il computer."
+
+msgid "Install…"
+msgstr "Installa…"
+
+msgid "It asks to be paired with this computer."
+msgstr "Chiede di essere associato a questo computer."
+
+msgid "It comes from the part's maker through the LVFS. Laptops: plug in the power. Don't switch the computer off until it is done; some updates finish while the computer restarts."
+msgstr "Viene dal produttore del componente tramite il LVFS. Portatili: collega l'alimentatore. Non spegnere il computer finché non ha finito; alcuni aggiornamenti terminano durante il riavvio."
+
+msgid "It didn't answer. Is it switched on, nearby and in pairing mode?"
+msgstr "Non ha risposto. È acceso, vicino e in modalità di associazione?"
+
+msgid "It doesn't answer as a driverless printer (IPP Everywhere). Check the address; some older printers only work over their USB cable."
+msgstr "Non risponde come stampante senza driver (IPP Everywhere). Controlla l'indirizzo; alcune stampanti più vecchie funzionano solo con il cavo USB."
+
+msgid "It is switched off with a key or a switch on the laptop (often Fn with an aeroplane or Bluetooth sign). Switch it on there."
+msgstr "È spento con un tasto o un interruttore del portatile (spesso Fn con un aereo o il simbolo Bluetooth). Accendilo lì."
+
+msgid "It needs %s of space.%s%s%s"
+msgstr "Servono %s di spazio.%s%s%s"
+
+msgid "Italian"
+msgstr "Italiano"
+
+msgid "Its files replace the ones with the same name in your home folder. Files you made after the backup stay. (File history keeps the versions from before: my-undo can bring them back.)"
+msgstr "I suoi file sostituiscono quelli con lo stesso nome nella tua cartella personale. I file creati dopo il backup restano. (La cronologia dei file conserva le versioni precedenti: my-undo può recuperarle.)"
+
+msgid "Keep"
+msgstr "Mantieni"
+
+msgid "Keep these display settings?"
+msgstr "Mantenere queste impostazioni dello schermo?"
+
+msgid "Kernel"
+msgstr "Kernel"
+
+msgid "Keyboard"
+msgstr "Tastiera"
+
+msgid "Keyboard layout"
+msgstr "Layout della tastiera"
+
+msgid "Keyboard layout (for everyone, at once)"
+msgstr "Layout della tastiera (per tutti, subito)"
+
+msgid "Keyboard layout changed."
+msgstr "Layout della tastiera cambiato."
+
+msgid "Language"
+msgstr "Lingua"
+
+msgid "Language (for everyone who didn't choose their own in Settings; at the next login)"
+msgstr "Lingua (per chi non ha scelto la propria in Impostazioni; dal prossimo accesso)"
+
+msgid "Language saved: it is used from the next login."
+msgstr "Lingua salvata: viene usata dal prossimo accesso."
+
+msgid "Large"
+msgstr "Grande"
+
+msgid "Left of the main screen"
+msgstr "A sinistra dello schermo principale"
+
+msgid "Let's set up your computer: your keyboard, your own account and a name for the computer. It takes a minute, and you can change all of it later in \"Users and system\"."
+msgstr "Configuriamo il tuo computer: la tastiera, il tuo account e un nome per il computer. Ci vuole un minuto, e puoi cambiare tutto più tardi in \"Utenti e sistema\"."
+
+msgid "Light"
+msgstr "Chiaro"
+
+msgid "Lock after no use for"
+msgstr "Blocca dopo un'inattività di"
+
+msgid "Lock now"
+msgstr "Blocca ora"
+
+msgid "Locked"
+msgstr "Bloccato"
+
+msgid "Log in"
+msgstr "Accedi"
+
+msgid "Log in to \"%s\":"
+msgstr "Accedi a \"%s\":"
+
+msgid "Look for a new version of my-distro. Updates are checked automatically too: the taskbar shows a button when one is out."
+msgstr "Cerca una nuova versione di my-distro. Gli aggiornamenti vengono controllati anche da soli: la barra delle applicazioni mostra un pulsante quando ne esce uno."
+
+msgid "Look for firmware updates"
+msgstr "Cerca aggiornamenti del firmware"
+
+msgid "Look for updates"
+msgstr "Cerca aggiornamenti"
+
+msgid "Looking for devices… Put your device into pairing mode (see its manual; often: hold its power button)."
+msgstr "Ricerca di dispositivi… Metti il dispositivo in modalità di associazione (vedi il manuale; spesso: tenere premuto il pulsante di accensione)."
+
+msgid "Looking for networks…"
+msgstr "Ricerca di reti…"
+
+msgid "Looking for printers (10 seconds)…"
+msgstr "Ricerca di stampanti (10 secondi)…"
+
+msgid "Looking for scanners…"
+msgstr "Ricerca di scanner…"
+
+msgid "Looking for updates…"
+msgstr "Ricerca di aggiornamenti…"
+
+msgid "Magnifier (Super+Z)"
+msgstr "Lente d'ingrandimento (Super+Z)"
+
+msgid "Main screen"
+msgstr "Schermo principale"
+
+msgid "Make administrator"
+msgstr "Rendi amministratore"
+
+msgid "Make default"
+msgstr "Rendi predefinita"
+
+msgid "Matching the theme"
+msgstr "Abbinato al tema"
+
+msgid "May use the computer only from"
+msgstr "Può usare il computer solo dalle"
+
+msgid "Method"
+msgstr "Metodo"
+
+msgid "Microphone"
+msgstr "Microfono"
+
+msgid "More settings"
+msgstr "Altre impostazioni"
+
+msgid "Mouse pointer"
+msgstr "Puntatore del mouse"
+
+msgid "NTFS (Windows disks)"
+msgstr "NTFS (dischi Windows)"
+
+msgid "Name"
+msgstr "Nome"
+
+msgid "Network"
+msgstr "Rete"
+
+msgid "Network name"
+msgstr "Nome della rete"
+
+msgid "Network share"
+msgstr "Condivisione di rete"
+
+msgid "Never"
+msgstr "Mai"
+
+msgid "New administrator password"
+msgstr "Nuova password dell'amministratore"
+
+msgid "New password"
+msgstr "Nuova password"
+
+msgid "New password for %s"
+msgstr "Nuova password per %s"
+
+msgid "Next"
+msgstr "Avanti"
+
+msgid "No Bluetooth adapter found. This computer has none, it is switched off (some laptops have a key or switch for it), or my-distro has no driver for it. A USB Bluetooth stick works too."
+msgstr "Nessun adattatore Bluetooth trovato. Questo computer non ne ha, è spento (alcuni portatili hanno un tasto o un interruttore apposito), o my-distro non ha un driver. Funziona anche una chiavetta USB Bluetooth."
+
+msgid "No Wi-Fi adapter found.\n\nThis computer has none, or my-distro has no driver for it (in a terminal, lspci -k shows the devices and their drivers). A network cable works without setting anything up."
+msgstr "Nessun adattatore Wi-Fi trovato.\n\nQuesto computer non ne ha, o my-distro non ha un driver (in un terminale, lspci -k mostra i dispositivi e i loro driver). Un cavo di rete funziona senza configurare nulla."
+
+msgid "No administrator rights any more."
+msgstr "Non più amministratore."
+
+msgid "No changes yet. Edit a file and it shows up here."
+msgstr "Ancora nessuna modifica. Modifica un file e comparirà qui."
+
+msgid "No firmware updates for this computer."
+msgstr "Nessun aggiornamento del firmware per questo computer."
+
+msgid "No limits for this user."
+msgstr "Nessun limite per questo utente."
+
+msgid "No microphone."
+msgstr "Nessun microfono."
+
+msgid "No package list (are you online?)."
+msgstr "Nessun elenco dei pacchetti (sei online?)."
+
+msgid "No printer found. Is it switched on, and in the same network (or plugged in)? You can also type its address (IP or name) below."
+msgstr "Nessuna stampante trovata. È accesa e nella stessa rete (o collegata)? Puoi anche scrivere il suo indirizzo (IP o nome) qui sotto."
+
+msgid "No printers yet. Click Add printer. (Is the print service running? It starts at boot: /etc/init.d/S81cupsd)"
+msgstr "Ancora nessuna stampante. Fai clic su Aggiungi stampante. (Il servizio di stampa è attivo? Parte all'avvio: /etc/init.d/S81cupsd)"
+
+msgid "No program is playing sound right now."
+msgstr "Al momento nessun programma riproduce audio."
+
+msgid "No programs installed yet."
+msgstr "Ancora nessun programma installato."
+
+msgid "No proxy. Log out and in again so that all programs know."
+msgstr "Nessun proxy. Esci e rientra perché tutti i programmi lo sappiano."
+
+msgid "No saved versions of this file."
+msgstr "Nessuna versione salvata di questo file."
+
+msgid "No scanner found. Is it switched on, and plugged in or in the same network?"
+msgstr "Nessuno scanner trovato. È acceso, e collegato o nella stessa rete?"
+
+msgid "No sound output: is the sound server running?"
+msgstr "Nessuna uscita audio: il server audio è attivo?"
+
+msgid "No spaces or quotes, please."
+msgstr "Niente spazi né virgolette, per favore."
+
+msgid "No such user."
+msgstr "Utente inesistente."
+
+msgid "None"
+msgstr "Nessuna"
+
+msgid "Normal"
+msgstr "Normale"
+
+msgid "Not needed on the live system: it starts fresh every time."
+msgstr "Non serve sul sistema live: riparte da zero ogni volta."
+
+msgid "Not your login password: one only for sharing (at least 6 characters)."
+msgstr "Non la tua password di accesso: una solo per la condivisione (almeno 6 caratteri)."
+
+msgid "Nothing found."
+msgstr "Non trovato nulla."
+
+msgid "Nothing to undo."
+msgstr "Niente da annullare."
+
+msgid "Nothing was changed."
+msgstr "Non è stato cambiato nulla."
+
+msgid "OK"
+msgstr "OK"
+
+msgid "Ocean"
+msgstr "Oceano"
+
+msgid "On"
+msgstr "Attivo"
+
+msgid "On-screen keyboard (Super+K)"
+msgstr "Tastiera su schermo (Super+K)"
+
+msgid "Only Downloads"
+msgstr "Solo Scaricati"
+
+msgid "Only the administrator (root) may read %s."
+msgstr "Solo l'amministratore (root) può leggere %s."
+
+msgid "Only the main screen"
+msgstr "Solo lo schermo principale"
+
+msgid "Only the second screen"
+msgstr "Solo il secondo schermo"
+
+msgid "Open"
+msgstr "Apri"
+
+msgid "Open a shared folder of a Windows PC or a network drive (NAS). Leave the user name empty to connect as a guest."
+msgstr "Apri una cartella condivisa di un PC Windows o di un'unità di rete (NAS). Lascia vuoto il nome utente per connetterti come ospite."
+
+msgid "Open folder"
+msgstr "Apri cartella"
+
+msgid "Open in"
+msgstr "Apri in"
+
+msgid "Open the magnifier"
+msgstr "Apri la lente d'ingrandimento"
+
+msgid "Open the on-screen keyboard"
+msgstr "Apri la tastiera su schermo"
+
+msgid "Or its address:"
+msgstr "Oppure il suo indirizzo:"
+
+msgid "Other network"
+msgstr "Altra rete"
+
+msgid "Other network…"
+msgstr "Altra rete…"
+
+msgid "Others may also change and add files"
+msgstr "Gli altri possono anche modificare e aggiungere file"
+
+msgid "Others may only read the files"
+msgstr "Gli altri possono solo leggere i file"
+
+msgid "Output"
+msgstr "Uscita"
+
+msgid "Own accent color"
+msgstr "Colore d'accento personale"
+
+msgid "PIN for %s (often 0000 or 1234, see its manual):"
+msgstr "PIN per %s (spesso 0000 o 1234, vedi il manuale):"
+
+msgid "Pair with %s?"
+msgstr "Associare con %s?"
+
+msgid "Pairing was refused. Put the device into pairing mode and try again."
+msgstr "L'associazione è stata rifiutata. Metti il dispositivo in modalità di associazione e riprova."
+
+msgid "Pairing… If the device shows a number or asks for one, follow it."
+msgstr "Associazione… Se il dispositivo mostra o chiede un numero, seguilo."
+
+msgid "Parental controls for %s"
+msgstr "Controllo parentale per %s"
+
+msgid "Parental controls saved."
+msgstr "Controllo parentale salvato."
+
+msgid "Parental controls…"
+msgstr "Controllo parentale…"
+
+msgid "Partitions the running system uses can't be changed. Formatting deletes everything on the disk or partition."
+msgstr "Le partizioni usate dal sistema in esecuzione non si possono modificare. La formattazione cancella tutto ciò che c'è sul disco o sulla partizione."
+
+msgid "Password"
+msgstr "Password"
+
+msgid "Password again"
+msgstr "Password di nuovo"
+
+msgid "Password changed."
+msgstr "Password cambiata."
+
+msgid "Password for \"%s\":"
+msgstr "Password per \"%s\":"
+
+msgid "Permissions"
+msgstr "Permessi"
+
+msgid "Picture:"
+msgstr "Immagine:"
+
+msgid "Pictures"
+msgstr "Immagini"
+
+msgid "Plain color"
+msgstr "Colore uniforme"
+
+msgid "Please wait until this is finished."
+msgstr "Attendi finché non ha finito."
+
+msgid "Plug in a USB stick or disk: it opens by itself and appears here."
+msgstr "Collega una chiavetta USB o un disco: si apre da solo e compare qui."
+
+msgid "Plug in the charger, or save your work."
+msgstr "Collega il caricatore o salva il tuo lavoro."
+
+msgid "Polish"
+msgstr "Polacco"
+
+msgid "Position"
+msgstr "Posizione"
+
+msgid "Power off"
+msgstr "Spegni"
+
+msgid "Prepare for Secure Boot…"
+msgstr "Prepara il Secure Boot…"
+
+msgid "Printers"
+msgstr "Stampanti"
+
+msgid "Printers made since about 2015 work without a driver over the network (Wi-Fi or cable): connect it to your network and try again."
+msgstr "Le stampanti prodotte dal 2015 circa funzionano senza driver in rete (Wi-Fi o cavo): collegala alla tua rete e riprova."
+
+msgid "Programs"
+msgstr "Programmi"
+
+msgid "Programs you open from now on use the new size; all of the desktop after the next login."
+msgstr "I programmi che apri da ora usano la nuova dimensione; tutto il desktop dal prossimo accesso."
+
+msgid "Proxy"
+msgstr "Proxy"
+
+msgid "Put this backup back?"
+msgstr "Ripristinare questo backup?"
+
+msgid "Puts this computer back to how it was right after installing my-distro: all users, their files and all settings are deleted. The system itself stays, in the version it has now. Then the setup starts."
+msgstr "Riporta questo computer allo stato subito dopo l'installazione di my-distro: tutti gli utenti, i loro file e tutte le impostazioni vengono cancellati. Il sistema resta, nella versione attuale. Poi parte la configurazione."
+
+msgid "Quality"
+msgstr "Qualità"
+
+msgid "Read aloud (Super+R)"
+msgstr "Leggi ad alta voce (Super+R)"
+
+msgid "Read only"
+msgstr "Sola lettura"
+
+msgid "Read the selected text"
+msgstr "Leggi il testo selezionato"
+
+msgid "Reboot"
+msgstr "Riavvia"
+
+msgid "Recent file changes"
+msgstr "Modifiche recenti ai file"
+
+msgid "Refresh"
+msgstr "Aggiorna"
+
+msgid "Remove"
+msgstr "Rimuovi"
+
+msgid "Remove %s?"
+msgstr "Rimuovere %s?"
+
+msgid "Remove administrator rights"
+msgstr "Togli i diritti di amministratore"
+
+msgid "Remove both"
+msgstr "Rimuovi entrambi"
+
+msgid "Remove the VPN \"%s\"?"
+msgstr "Rimuovere la VPN \"%s\"?"
+
+msgid "Remove the printer \"%s\"?"
+msgstr "Rimuovere la stampante \"%s\"?"
+
+msgid "Remove the user \"%s\"?"
+msgstr "Rimuovere l'utente \"%s\"?"
+
+msgid "Remove user…"
+msgstr "Rimuovi utente…"
+
+msgid "Remove…"
+msgstr "Rimuovi…"
+
+msgid "Replace"
+msgstr "Sostituisci"
+
+msgid "Replace the VPN \"%s\"?"
+msgstr "Sostituire la VPN \"%s\"?"
+
+msgid "Reset and restart"
+msgstr "Ripristina e riavvia"
+
+msgid "Reset this computer…"
+msgstr "Ripristina questo computer…"
+
+msgid "Reset to defaults"
+msgstr "Ripristina i valori predefiniti"
+
+msgid "Resolution"
+msgstr "Risoluzione"
+
+msgid "Restart now"
+msgstr "Riavvia ora"
+
+msgid "Restore this version"
+msgstr "Ripristina questa versione"
+
+msgid "Restored %s to version %d."
+msgstr "%s ripristinato alla versione %d."
+
+msgid "Restore…"
+msgstr "Ripristina…"
+
+msgid "Right of the main screen"
+msgstr "A destra dello schermo principale"
+
+msgid "Romanian"
+msgstr "Rumeno"
+
+msgid "SIZE"
+msgstr "DIMENSIONE"
+
+msgid "Same picture on both"
+msgstr "Stessa immagine su entrambi"
+
+msgid "Save"
+msgstr "Salva"
+
+msgid "Saved. Log out and in again so that all programs use it."
+msgstr "Salvato. Esci e rientra perché tutti i programmi lo usino."
+
+msgid "Saved: also at the next login."
+msgstr "Salvato: anche al prossimo accesso."
+
+msgid "Scan"
+msgstr "Scansiona"
+
+msgid "Scanned"
+msgstr "Scansionato"
+
+msgid "Scanner"
+msgstr "Scanner"
+
+msgid "Scanning…"
+msgstr "Scansione…"
+
+msgid "Scan…"
+msgstr "Scansiona…"
+
+msgid "Screen lock"
+msgstr "Blocco dello schermo"
+
+msgid "Screen reader (Super+Alt+S)"
+msgstr "Lettore di schermo (Super+Alt+S)"
+
+msgid "Screen reader off"
+msgstr "Lettore di schermo disattivato"
+
+msgid "Screen reader on"
+msgstr "Lettore di schermo attivato"
+
+msgid "Screens"
+msgstr "Schermi"
+
+msgid "Search"
+msgstr "Cerca"
+
+msgid "Search (only lines with this text)"
+msgstr "Cerca (solo righe con questo testo)"
+
+msgid "Search again"
+msgstr "Cerca di nuovo"
+
+msgid "Search files"
+msgstr "Cerca file"
+
+msgid "Search programs"
+msgstr "Cerca programmi"
+
+msgid "Search your files by meaning…"
+msgstr "Cerca i tuoi file per significato…"
+
+msgid "Second screen"
+msgstr "Secondo schermo"
+
+msgid "Second screen is"
+msgstr "Il secondo schermo è"
+
+msgid "Secure Boot"
+msgstr "Secure Boot"
+
+msgid "Secure Boot is off."
+msgstr "Il Secure Boot è disattivato."
+
+msgid "Secure Boot is on."
+msgstr "Il Secure Boot è attivato."
+
+msgid "Security"
+msgstr "Sicurezza"
+
+msgid "Seeing"
+msgstr "Vista"
+
+msgid "Select a line first."
+msgstr "Seleziona prima una riga."
+
+msgid "Server domain"
+msgstr "Dominio del server"
+
+msgid "Settings"
+msgstr "Impostazioni"
+
+msgid "Settings from your school or university"
+msgstr "Impostazioni della tua scuola o università"
+
+msgid "Setup"
+msgstr "Configurazione"
+
+msgid "Share"
+msgstr "Condividi"
+
+msgid "Share a folder (and the printers) with the other computers in your network. They log in with your user name and a sharing password. Off until you switch it on."
+msgstr "Condividi una cartella (e le stampanti) con gli altri computer della tua rete. Accedono con il tuo nome utente e una password di condivisione. Disattivata finché non la attivi."
+
+msgid "Shared. On other computers open \\\\%s\\%s (Windows) or smb://%s/%s (Mac, Linux) and log in as %s with the sharing password."
+msgstr "Condivisa. Sugli altri computer apri \\\\%s\\%s (Windows) o smb://%s/%s (Mac, Linux) e accedi come %s con la password di condivisione."
+
+msgid "Sharing"
+msgstr "Condivisione"
+
+msgid "Sharing changes the system: type the root password."
+msgstr "La condivisione modifica il sistema: scrivi la password di root."
+
+msgid "Sharing is off."
+msgstr "La condivisione è disattivata."
+
+msgid "Sharing needs Samba, a package of the Software app (about 60 MB)."
+msgstr "La condivisione richiede Samba, un pacchetto dell'app Software (circa 60 MB)."
+
+msgid "Sharing password"
+msgstr "Password di condivisione"
+
+msgid "Sharing…"
+msgstr "Condivisione…"
+
+msgid "Show password"
+msgstr "Mostra password"
+
+msgid "Show seconds"
+msgstr "Mostra i secondi"
+
+msgid "Show the date"
+msgstr "Mostra la data"
+
+msgid "Size"
+msgstr "Dimensione"
+
+msgid "Size of text and icons"
+msgstr "Dimensione di testo e icone"
+
+msgid "Skip: try it with the demo account"
+msgstr "Salta: prova con l'account dimostrativo"
+
+msgid "Software"
+msgstr "Software"
+
+msgid "Some networks (schools, companies) only reach the internet through a proxy. It is used by the web browser, system updates and other programs that download. Leave it empty for none."
+msgstr "Alcune reti (scuole, aziende) raggiungono internet solo tramite un proxy. Lo usano il browser, gli aggiornamenti di sistema e gli altri programmi che scaricano. Lascia vuoto per nessuno."
+
+msgid "Sound"
+msgstr "Audio"
+
+msgid "Sound now plays here."
+msgstr "Ora l'audio esce qui."
+
+msgid "Sound now plays here. Programs that were already playing: start them again."
+msgstr "Ora l'audio esce qui. Programmi che stavano già suonando: riavviali."
+
+msgid "Spanish"
+msgstr "Spagnolo"
+
+msgid "Start"
+msgstr "Start"
+
+msgid "Starting the indexer…"
+msgstr "Avvio dell'indicizzatore…"
+
+msgid "Starting…"
+msgstr "Avvio…"
+
+msgid "Stop sharing"
+msgstr "Interrompi la condivisione"
+
+msgid "Stretch"
+msgstr "Allunga"
+
+msgid "Style"
+msgstr "Stile"
+
+msgid "Switch user"
+msgstr "Cambia utente"
+
+msgid "System logs"
+msgstr "Log di sistema"
+
+msgid "System messages"
+msgstr "Messaggi di sistema"
+
+msgid "System update"
+msgstr "Aggiornamento di sistema"
+
+msgid "TIME"
+msgstr "ORA"
+
+msgid "Taskbar"
+msgstr "Barra delle applicazioni"
+
+msgid "Taskbar clock"
+msgstr "Orologio della barra delle applicazioni"
+
+msgid "Teal"
+msgstr "Verde acqua"
+
+msgid "Test page"
+msgstr "Pagina di prova"
+
+msgid "Text and icons"
+msgstr "Testo e icone"
+
+msgid "Text size"
+msgstr "Dimensione del testo"
+
+msgid "Text size applies to programs you open from now on, all of the desktop after the next login. The on-screen keyboard is also on the login screen (the keyboard button). Read aloud: select text with the mouse in any program, then press Super+R; again stops it. The screen reader speaks window titles, the Start menu and what has the focus in GTK programs (buttons, fields, lists, menus); not terminals, web pages or the login screen."
+msgstr "La dimensione del testo vale per i programmi che apri da ora, per tutto il desktop dal prossimo accesso. La tastiera su schermo c'è anche nella schermata di accesso (il pulsante della tastiera). Leggi ad alta voce: seleziona del testo con il mouse in qualsiasi programma, poi premi Super+R; di nuovo lo ferma. Il lettore di schermo legge i titoli delle finestre, il menu Start e ciò che ha il focus nei programmi GTK (pulsanti, campi, elenchi, menu); non i terminali, le pagine web né la schermata di accesso."
+
+msgid "That did not work."
+msgstr "Non ha funzionato."
+
+msgid "That did not work: nothing was changed, or only part of it (see the message)."
+msgstr "Non ha funzionato: non è stato cambiato nulla, o solo una parte (vedi il messaggio)."
+
+msgid "That user already exists."
+msgstr "Questo utente esiste già."
+
+msgid "That user name belongs to the system. Choose another one."
+msgstr "Questo nome utente appartiene al sistema. Scegline un altro."
+
+msgid "That's the oldest saved version, there is nothing before it."
+msgstr "È la versione salvata più vecchia, prima non c'è nulla."
+
+msgid "The administrator (root) password is asked for when you install the system or change things here."
+msgstr "La password dell'amministratore (root) viene chiesta quando installi il sistema o cambi qualcosa qui."
+
+msgid "The firewall lets nobody in, unless you share a folder or the printers with the other computers of your network (Sharing). To open a shared folder of another PC: Start menu, Network share."
+msgstr "Il firewall non fa entrare nessuno, a meno che tu condivida una cartella o le stampanti con gli altri computer della tua rete (Condivisione). Per aprire una cartella condivisa di un altro PC: menu Start, Condivisione di rete."
+
+msgid "The firmware update did not work: see the messages below."
+msgstr "L'aggiornamento del firmware non ha funzionato: vedi i messaggi qui sotto."
+
+msgid "The firmware update is installed."
+msgstr "L'aggiornamento del firmware è installato."
+
+msgid "The firmware update is ready: it is installed while the computer restarts. Keep it plugged in."
+msgstr "L'aggiornamento del firmware è pronto: viene installato mentre il computer si riavvia. Lascialo collegato alla corrente."
+
+msgid "The full name can't contain \":\"."
+msgstr "Il nome completo non può contenere \":\"."
+
+msgid "The index is still empty, the indexer is working on it."
+msgstr "L'indice è ancora vuoto, l'indicizzatore ci sta lavorando."
+
+msgid "The kernel is locked down: hibernation is off."
+msgstr "Il kernel è bloccato: l'ibernazione è disattivata."
+
+msgid "The language of the menus and windows, and the format of dates and numbers. It applies from the next login. Programs that aren't translated stay in English."
+msgstr "La lingua dei menu e delle finestre, e il formato di date e numeri. Vale dal prossimo accesso. I programmi non tradotti restano in inglese."
+
+msgid "The live system keeps nothing after a reboot. Install it to keep your account."
+msgstr "Il sistema live non conserva nulla dopo un riavvio. Installalo per tenere il tuo account."
+
+msgid "The lock screen asks for your password. Lock it yourself with Super+L or Start menu, Lock screen. It also locks before the computer goes to sleep."
+msgstr "Il blocco schermo chiede la tua password. Blocca tu stesso con Super+L o menu Start, Blocca schermo. Si blocca anche prima che il computer vada in sospensione."
+
+msgid "The login screen checks this. 5 minutes before the time is over a notice appears, then the session ends (unsaved work is lost)."
+msgstr "La schermata di accesso lo controlla. 5 minuti prima della fine del tempo compare un avviso, poi la sessione termina (il lavoro non salvato va perso)."
+
+msgid "The name can't contain \":\"."
+msgstr "Il nome non può contenere \":\"."
+
+msgid "The old settings are back."
+msgstr "Le vecchie impostazioni sono tornate."
+
+msgid "The previous version is back. Restart the computer to finish."
+msgstr "La versione precedente è tornata. Riavvia il computer per finire."
+
+msgid "The scan did not work."
+msgstr "La scansione non ha funzionato."
+
+msgid "The screen can't show that."
+msgstr "Lo schermo non può mostrarlo."
+
+msgid "The share could not be opened (wrong name or password, or the server can't be reached)."
+msgstr "Impossibile aprire la condivisione (nome o password sbagliati, o il server non è raggiungibile)."
+
+msgid "The system files of the version before the last update come back. Your files, users and settings stay. Restart afterwards."
+msgstr "Tornano i file di sistema della versione precedente all'ultimo aggiornamento. I tuoi file, utenti e impostazioni restano. Riavvia dopo."
+
+msgid "The system settings belong to the administrator: type the root password."
+msgstr "Le impostazioni di sistema appartengono all'amministratore: scrivi la password di root."
+
+msgid "The system's language (Users and system)"
+msgstr "La lingua del sistema (Utenti e sistema)"
+
+msgid "The system's message bus (D-Bus) is not running."
+msgstr "Il bus dei messaggi del sistema (D-Bus) non è attivo."
+
+msgid "The test page is on its way."
+msgstr "La pagina di prova è in arrivo."
+
+msgid "The two passwords are not the same."
+msgstr "Le due password non sono uguali."
+
+msgid "The update did not work: see the messages below."
+msgstr "L'aggiornamento non ha funzionato: vedi i messaggi qui sotto."
+
+msgid "The update is installed. Restart the computer to finish. If something doesn't work afterwards, \"Undo last update\" goes back."
+msgstr "L'aggiornamento è installato. Riavvia il computer per finire. Se dopo qualcosa non funziona, \"Annulla l'ultimo aggiornamento\" torna indietro."
+
+msgid "The whole disk gets one new partition. Everything on it is deleted."
+msgstr "L'intero disco riceve una nuova partizione. Tutto ciò che contiene viene cancellato."
+
+msgid "Their home folder /home/%s and all files in it are deleted."
+msgstr "La sua cartella personale /home/%s e tutti i file al suo interno vengono cancellati."
+
+msgid "Theme"
+msgstr "Tema"
+
+msgid "Then click Yes (and confirm on the device, if it asks too)."
+msgstr "Poi fai clic su Sì (e conferma sul dispositivo, se lo chiede anche lui)."
+
+msgid "These packages are made for my-distro %s, but this is my-distro %s: they can't be installed. Update the system (System update), or wait until the packages for %s are out."
+msgstr "Questi pacchetti sono fatti per my-distro %s, ma questo è my-distro %s: non si possono installare. Aggiorna il sistema (Aggiornamento di sistema), o aspetta che escano i pacchetti per %s."
+
+msgid "This computer was started without UEFI: Secure Boot doesn't apply."
+msgstr "Questo computer è stato avviato senza UEFI: il Secure Boot non c'entra."
+
+msgid "This installation doesn't start through shim yet."
+msgstr "Questa installazione non si avvia ancora tramite shim."
+
+msgid "This is a disk inside the computer!"
+msgstr "Questo è un disco dentro il computer!"
+
+msgid "This is the disk my-distro runs from!"
+msgstr "Questo è il disco da cui gira my-distro!"
+
+msgid "This is the live system: programs you install here go into RAM and are gone when you shut down, like everything else. Install my-distro to a disk to keep them."
+msgstr "Questo è il sistema live: i programmi che installi qui vanno nella RAM e spariscono allo spegnimento, come tutto il resto. Installa my-distro su un disco per tenerli."
+
+msgid "Tile"
+msgstr "Affianca"
+
+msgid "Time zone"
+msgstr "Fuso orario"
+
+msgid "Time zone (for everyone, at once)"
+msgstr "Fuso orario (per tutti, subito)"
+
+msgid "Time zone set."
+msgstr "Fuso orario impostato."
+
+msgid "To use it again you need its config file."
+msgstr "Per usarla di nuovo ti serve il suo file di configurazione."
+
+msgid "Today's time on the computer (%d minutes) is used up."
+msgstr "Il tempo al computer di oggi (%d minuti) è esaurito."
+
+msgid "Top"
+msgstr "In alto"
+
+msgid "Try something like \"notes about my training plan\" or \"recipe\"."
+msgstr "Prova qualcosa come \"appunti sul mio piano di allenamento\" o \"ricetta\"."
+
+msgid "Try your keyboard here"
+msgstr "Prova qui la tua tastiera"
+
+msgid "Turkish"
+msgstr "Turco"
+
+msgid "Type %06u on %s, then press Enter on it."
+msgstr "Scrivi %06u su %s, poi premi Invio su di esso."
+
+msgid "Type %s on %s, then press Enter on it."
+msgstr "Scrivi %s su %s, poi premi Invio su di esso."
+
+msgid "Type only the address, like 192.168.1.20."
+msgstr "Scrivi solo l'indirizzo, come 192.168.1.20."
+
+msgid "Type the network's name."
+msgstr "Scrivi il nome della rete."
+
+msgid "Type your password and press Enter"
+msgstr "Scrivi la password e premi Invio"
+
+msgid "Type your user name and password."
+msgstr "Scrivi nome utente e password."
+
+msgid "Typing"
+msgstr "Digitazione"
+
+msgid "USB"
+msgstr "USB"
+
+msgid "Undo last change"
+msgstr "Annulla l'ultima modifica"
+
+msgid "Undo last update (back to %s)…"
+msgstr "Annulla l'ultimo aggiornamento (torna a %s)…"
+
+msgid "Undo last update…"
+msgstr "Annulla l'ultimo aggiornamento…"
+
+msgid "Undo this change"
+msgstr "Annulla questa modifica"
+
+msgid "Unknown time zone."
+msgstr "Fuso orario sconosciuto."
+
+msgid "Update all"
+msgstr "Aggiorna tutto"
+
+msgid "Use this password for the administrator (root) too"
+msgstr "Usa questa password anche per l'amministratore (root)"
+
+msgid "User"
+msgstr "Utente"
+
+msgid "User added."
+msgstr "Utente aggiunto."
+
+msgid "User name"
+msgstr "Nome utente"
+
+msgid "User name (to log in)"
+msgstr "Nome utente (per accedere)"
+
+msgid "User name: small letters a-z, digits, - and _, starting with a letter."
+msgstr "Nome utente: lettere minuscole a-z, cifre, - e _, iniziando con una lettera."
+
+msgid "User removed."
+msgstr "Utente rimosso."
+
+msgid "Users"
+msgstr "Utenti"
+
+msgid "Users and system"
+msgstr "Utenti e sistema"
+
+msgid "Users and system…"
+msgstr "Utenti e sistema…"
+
+msgid "VERSION"
+msgstr "VERSIONE"
+
+msgid "VPN"
+msgstr "VPN"
+
+msgid "VPN not available"
+msgstr "VPN non disponibile"
+
+msgid "Versions of"
+msgstr "Versioni di"
+
+msgid "Very large"
+msgstr "Molto grande"
+
+msgid "View"
+msgstr "Visualizza"
+
+msgid "Violet"
+msgstr "Viola"
+
+msgid "Wallpaper"
+msgstr "Sfondo"
+
+msgid "Welcome"
+msgstr "Benvenuto"
+
+msgid "Welcome to my-distro"
+msgstr "Benvenuto in my-distro"
+
+msgid "What each program may use, the next time you start it from the Start menu. A program without the microphone gets no sound at all (the sound server can't give it one without the other). Without the whole home folder it sees only Downloads (or nothing) and keeps its own settings separately."
+msgstr "Cosa può usare ogni programma, la prossima volta che lo avvii dal menu Start. Un programma senza microfono non ha nessun audio (il server audio non può dargli l'uno senza l'altro). Senza l'intera cartella personale vede solo Scaricati (o niente) e tiene le sue impostazioni a parte."
+
+msgid "Wi-Fi"
+msgstr "Wi-Fi"
+
+msgid "Wi-Fi is starting…"
+msgstr "Il Wi-Fi si sta avviando…"
+
+msgid "Wi-Fi password"
+msgstr "Password del Wi-Fi"
+
+msgid "Wi-Fi passwords have 8 to 63 characters."
+msgstr "Le password Wi-Fi hanno da 8 a 63 caratteri."
+
+msgid "With Secure Boot on, the computer can't hibernate (the kernel locks itself down and can't check a saved memory image). Suspend works."
+msgstr "Con il Secure Boot attivo il computer non può andare in ibernazione (il kernel si blocca e non può controllare un'immagine della memoria salvata). La sospensione funziona."
+
+msgid "Without proxy for"
+msgstr "Senza proxy per"
+
+msgid "Working…"
+msgstr "Al lavoro…"
+
+msgid "Working… (don't pull out the disk)"
+msgstr "Al lavoro… (non scollegare il disco)"
+
+msgid "Write the address as \\\\SERVER\\SHARE or smb://SERVER/SHARE."
+msgstr "Scrivi l'indirizzo come \\\\SERVER\\CONDIVISIONE o smb://SERVER/CONDIVISIONE."
+
+msgid "Write the proxy as NAME:PORT, e.g. proxy.example.com:3128."
+msgstr "Scrivi il proxy come NOME:PORTA, ad es. proxy.example.com:3128."
+
+msgid "Write the times like 08:00 and 20:00."
+msgstr "Scrivi gli orari come 08:00 e 20:00."
+
+msgid "Wrong password"
+msgstr "Password sbagliata"
+
+msgid "Wrong password."
+msgstr "Password sbagliata."
+
+msgid "Wrong password: nothing was done."
+msgstr "Password sbagliata: non è stato fatto nulla."
+
+msgid "Wrong user name or password"
+msgstr "Nome utente o password sbagliati"
+
+msgid "Your account"
+msgstr "Il tuo account"
+
+msgid "Your account \"%s\" is ready. Log in with your new password."
+msgstr "Il tuo account \"%s\" è pronto. Accedi con la nuova password."
+
+msgid "Your computer"
+msgstr "Il tuo computer"
+
+msgid "Your files, users and settings stay. Don't switch the computer off while it installs; restart it afterwards."
+msgstr "I tuoi file, utenti e impostazioni restano. Non spegnere il computer durante l'installazione; riavvialo dopo."
+
+msgid "Your home folder is always backed up (without caches and the trash). The settings include saved passwords: keep the disk safe."
+msgstr "La tua cartella personale viene sempre copiata (senza cache né cestino). Le impostazioni contengono password salvate: tieni il disco al sicuro."
+
+msgid "Your name"
+msgstr "Il tuo nome"
+
+msgid "Your own files made with it stay."
+msgstr "I tuoi file creati con esso restano."
+
+msgid "Your school's Wi-Fi page lists these. With a server domain (and the CA certificate if they give you one), my-distro checks that it really is their server before it sends your password."
+msgstr "La pagina Wi-Fi della tua scuola li indica. Con un dominio del server (e il certificato CA, se te lo danno), my-distro controlla che sia davvero il loro server prima di inviare la tua password."
+
+msgid "Your user may not change Wi-Fi yet (it is not in the group netdev). Log out and in again; if that doesn't help, as root: addgroup YOUR-NAME netdev, then log in again."
+msgstr "Il tuo utente non può ancora cambiare il Wi-Fi (non è nel gruppo netdev). Esci e rientra; se non basta, come root: addgroup TUO-NOME netdev, poi accedi di nuovo."
+
+msgid "Your user may not change printers yet (it is not in the group lpadmin). As root: addgroup YOUR-NAME lpadmin, then log in again."
+msgstr "Il tuo utente non può ancora cambiare le stampanti (non è nel gruppo lpadmin). Come root: addgroup TUO-NOME lpadmin, poi accedi di nuovo."
+
+msgid "connected   "
+msgstr "connesso"
+
+msgid "e.g. 192.168.1.20 or printer.local"
+msgstr "ad es. 192.168.1.20 o printer.local"
+
+msgid "e.g. name@school.ac.at"
+msgstr "ad es. nome@scuola.it"
+
+msgid "e.g. school.ac.at"
+msgstr "ad es. scuola.it"
+
+msgid "exFAT (Windows, Mac, cameras; big files)"
+msgstr "exFAT (Windows, Mac, fotocamere; file grandi)"
+
+msgid "ext4 (Linux only; best for backups)"
+msgstr "ext4 (solo Linux; il migliore per i backup)"
+
+msgid "fwupd is missing."
+msgstr "fwupd manca."
+
+msgid "in the network"
+msgstr "in rete"
+
+msgid "my-distro %s is out, but without an update package: download its ISO from GitHub."
+msgstr "my-distro %s è uscito, ma senza pacchetto di aggiornamento: scarica la sua ISO da GitHub."
+
+msgid "my-distro %s is out. This is the live system, which forgets updates: download the new ISO from GitHub."
+msgstr "my-distro %s è uscito. Questo è il sistema live, che dimentica gli aggiornamenti: scarica la nuova ISO da GitHub."
+
+msgid "my-distro %s is ready to install (you have %s). What's new:"
+msgstr "my-distro %s è pronto da installare (hai la %s). Novità:"
+
+msgid "my-distro %s is up to date."
+msgstr "my-distro %s è aggiornato."
+
+msgid "my-distro has no driver for this printer."
+msgstr "my-distro non ha un driver per questa stampante."
+
+msgid "my-distro starts with Secure Boot on once its key is enrolled in the PC (once; you need the computer's screen and keyboard for it). \"Prepare\" asks for a one-time password; at the next start a blue screen (MokManager) appears: choose \"Enroll MOK\", \"Continue\", \"Yes\", type the password, \"Reboot\". Then switch on Secure Boot in the firmware settings."
+msgstr "my-distro si avvia con il Secure Boot attivo non appena la sua chiave è registrata nel PC (una volta sola; servono lo schermo e la tastiera del computer). \"Prepara\" chiede una password monouso; all'avvio successivo compare una schermata blu (MokManager): scegli \"Enroll MOK\", \"Continue\", \"Yes\", scrivi la password, \"Reboot\". Poi attiva il Secure Boot nelle impostazioni del firmware."
+
+msgid "my-distro's key is enrolled at the next start (MokManager)."
+msgstr "La chiave di my-distro viene registrata al prossimo avvio (MokManager)."
+
+msgid "my-distro's key is enrolled."
+msgstr "La chiave di my-distro è registrata."
+
+msgid "my-distro's key is not enrolled yet."
+msgstr "La chiave di my-distro non è ancora registrata."
+
+msgid "my-update is missing."
+msgstr "my-update manca."
+
+msgid "my-vpnctl is missing."
+msgstr "my-vpnctl manca."
+
+msgid "not found"
+msgstr "non trovato"
+
+msgid "not ticked"
+msgstr "non selezionato"
+
+msgid "open   "
+msgstr "aperta"
+
+msgid "optional, e.g. anonymous@school.ac.at"
+msgstr "facoltativo, ad es. anonimo@scuola.it"
+
+msgid "saved   "
+msgstr "salvata"
+
+msgid "secured   "
+msgstr "protetta"
+
+msgid "space"
+msgstr "spazio"
+
+msgid "switched off"
+msgstr "spento"
+
+msgid "the device"
+msgstr "il dispositivo"
+
+msgid "ticked"
+msgstr "selezionato"
+
+msgid "to"
+msgstr "alle"
+
+msgid "unavailable"
+msgstr "non disponibile"
+
+msgid "user name   "
+msgstr "nome utente"
+
+msgid "v0 (first)"
+msgstr "v0 (la prima)"
+
+msgid "↑  Update to %s"
+msgstr "↑  Aggiorna a %s"
+
+msgid "Calculator"
+msgstr "Calcolatrice"
+
+msgid "Code editor (LazyVim)"
+msgstr "Editor di codice (LazyVim)"
+
+msgid "Eject USB stick"
+msgstr "Espelli chiavetta USB"
+
+msgid "Files"
+msgstr "File"
+
+msgid "Hibernate"
+msgstr "Iberna"
+
+msgid "Install to disk"
+msgstr "Installa su disco"
+
+msgid "Lock screen"
+msgstr "Blocca schermo"
+
+msgid "Log out"
+msgstr "Esci"
+
+msgid "Magnifier"
+msgstr "Lente d'ingrandimento"
+
+msgid "Media player"
+msgstr "Lettore multimediale"
+
+msgid "On-screen keyboard"
+msgstr "Tastiera su schermo"
+
+msgid "Record screen"
+msgstr "Registra lo schermo"
+
+msgid "Screenshot"
+msgstr "Schermata"
+
+msgid "Suspend"
+msgstr "Sospendi"
+
+msgid "System monitor"
+msgstr "Monitor di sistema"
+
+msgid "Terminal"
+msgstr "Terminale"
+
+msgid "Text editor"
+msgstr "Editor di testo"
+
+msgid "Web browser"
+msgstr "Browser web"
+
+msgid "Web browser (sandbox)"
+msgstr "Browser web (sandbox)"

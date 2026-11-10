@@ -1,15 +1,20 @@
 # German translation of my-distro's own programs.
 # The texts are C strings: keep %s, %d and \n exactly as in msgid.
 # Compiled by desktop/package/my-locale into /usr/share/locale/de/LC_MESSAGES.
-# Also used for Austria (de_AT) through LANGUAGE=de_AT:de.
 msgid ""
 msgstr ""
 "Project-Id-Version: my-distro\n"
+"PO-Revision-Date: 2026-11-10 12:00+0100\n"
+"Last-Translator: my-distro\n"
+"Language-Team: German\n"
 "Language: de\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "\nNeeds: "
+msgstr "\nBraucht: "
 
 msgid "   (current)"
 msgstr "   (aktuell)"
@@ -20,13 +25,13 @@ msgstr "   (Standard)"
 msgid "   (with system settings)"
 msgstr "   (mit Systemeinstellungen)"
 
-msgid "  \xe2\x80\x94 USB / card"
+msgid "  — USB / card"
 msgstr "  — USB / Karte"
 
-msgid "  \xe2\x80\x94 internal"
+msgid "  — internal"
 msgstr "  — eingebaut"
 
-msgid "  \xe2\x80\x94 my-distro runs from it"
+msgid "  — my-distro runs from it"
 msgstr "  — my-distro läuft davon"
 
 msgid " (getting an address…)"
@@ -80,6 +85,9 @@ msgstr "(kein Text, über den Namen gefunden)"
 
 msgid "(only the last 2 MB)"
 msgstr "(nur die letzten 2 MB)"
+
+msgid "(unchanged)"
+msgstr "(unverändert)"
 
 msgid "(used by the system)"
 msgstr "(vom System benutzt)"
@@ -189,11 +197,20 @@ msgstr "Administrator-Passwort geändert."
 msgid "Administrator password: type the same password twice."
 msgstr "Administrator-Passwort: gib zweimal dasselbe Passwort ein."
 
+msgid "Again"
+msgstr "Nochmal"
+
+msgid "All of it"
+msgstr "Alles"
+
 msgid "All programs"
 msgstr "Alle Programme"
 
 msgid "All set"
 msgstr "Fertig"
+
+msgid "Also share this computer's printers"
+msgstr "Auch die Drucker dieses Computers freigeben"
 
 msgid "Also the system settings (asks for the root password)"
 msgstr "Auch die Systemeinstellungen (fragt nach dem root-Passwort)"
@@ -209,6 +226,9 @@ msgstr "Anonyme Identität"
 
 msgid "Apply"
 msgstr "Anwenden"
+
+msgid "Asking the LVFS (fwupd.org) for firmware updates…"
+msgstr "Frage den LVFS (fwupd.org) nach Firmware-Updates…"
 
 msgid "At most, minutes per day"
 msgstr "Höchstens, Minuten pro Tag"
@@ -264,9 +284,6 @@ msgstr "Unten"
 msgid "CA certificate"
 msgstr "CA-Zertifikat"
 
-msgid "Calculator"
-msgstr "Rechner"
-
 msgid "Camera"
 msgstr "Kamera"
 
@@ -306,6 +323,9 @@ msgstr "Wähle ein Gerät und klicke auf Verbinden."
 msgid "Choose a disk or partition."
 msgstr "Wähle einen Datenträger oder eine Partition."
 
+msgid "Choose a folder first."
+msgstr "Wähle zuerst einen Ordner."
+
 msgid "Choose a password."
 msgstr "Wähle ein Passwort."
 
@@ -332,9 +352,6 @@ msgstr "Uhr-App"
 
 msgid "Close"
 msgstr "Schließen"
-
-msgid "Code editor (LazyVim)"
-msgstr "Code-Editor (LazyVim)"
 
 msgid "Color"
 msgstr "Farbe"
@@ -395,6 +412,9 @@ msgstr "Der Benutzer konnte nicht angelegt werden."
 
 msgid "Could not forget the device."
 msgstr "Das Gerät konnte nicht vergessen werden."
+
+msgid "Could not look for firmware updates (no internet?): %s"
+msgstr "Konnte nicht nach Firmware-Updates suchen (kein Internet?): %s"
 
 msgid "Could not look for updates (no internet?): %s"
 msgstr "Konnte nicht nach Updates suchen (kein Internet?): %s"
@@ -507,9 +527,6 @@ msgstr "Paketliste wird heruntergeladen…"
 msgid "Dutch"
 msgstr "Niederländisch"
 
-msgid "Eject USB stick"
-msgstr "USB-Stick auswerfen"
-
 msgid "Ember"
 msgstr "Glut"
 
@@ -540,9 +557,6 @@ msgstr "Zurücksetzen"
 msgid "File history"
 msgstr "Dateiverlauf"
 
-msgid "Files"
-msgstr "Dateien"
-
 msgid "Filesystem"
 msgstr "Dateisystem"
 
@@ -552,8 +566,23 @@ msgstr "Bildschirm füllen"
 msgid "Finish"
 msgstr "Fertigstellen"
 
+msgid "Firmware"
+msgstr "Firmware"
+
+msgid "Firmware is the software inside the computer's parts (UEFI, disks, docks, mice, ...). fwupd asks the LVFS (fwupd.org) for updates from their makers. Nothing is installed without asking."
+msgstr "Firmware ist die Software in den Teilen des Computers (UEFI, Festplatten, Docks, Mäuse, ...). fwupd fragt den LVFS (fwupd.org) nach Updates ihrer Hersteller. Ohne Nachfrage wird nichts installiert."
+
+msgid "Firmware updates for this computer:"
+msgstr "Firmware-Updates für diesen Computer:"
+
 msgid "Fit, keep all of it"
 msgstr "Einpassen, alles zeigen"
+
+msgid "Folder"
+msgstr "Ordner"
+
+msgid "Folder to share"
+msgstr "Ordner zum Freigeben"
 
 msgid "Forest"
 msgstr "Wald"
@@ -612,9 +641,6 @@ msgstr "HTTP- und HTTPS-Proxy"
 msgid "Height (pixels)"
 msgstr "Höhe (Pixel)"
 
-msgid "Hibernate"
-msgstr "Ruhezustand"
-
 msgid "High contrast"
 msgstr "Hoher Kontrast"
 
@@ -623,6 +649,9 @@ msgstr "Hoher Kontrast hell"
 
 msgid "History"
 msgstr "Verlauf"
+
+msgid "Home folder"
+msgstr "Persönlicher Ordner"
 
 msgid "Huge"
 msgstr "Riesig"
@@ -648,11 +677,14 @@ msgstr "Installieren"
 msgid "Install %s?"
 msgstr "%s installieren?"
 
+msgid "Install Samba…"
+msgstr "Samba installieren…"
+
 msgid "Install my-distro %s?"
 msgstr "my-distro %s installieren?"
 
-msgid "Install to disk"
-msgstr "Auf Festplatte installieren"
+msgid "Install the firmware update %s?"
+msgstr "Das Firmware-Update %s installieren?"
 
 msgid "Install update"
 msgstr "Update installieren"
@@ -666,11 +698,20 @@ msgstr "Installiert: my-distro %s"
 msgid "Installing and removing programs needs the administrator (root) password."
 msgstr "Zum Installieren und Entfernen von Programmen braucht es das Administrator-Passwort (root)."
 
+msgid "Installing the firmware update… don't switch the computer off."
+msgstr "Firmware-Update wird installiert… Computer nicht ausschalten."
+
 msgid "Installing… don't switch the computer off."
 msgstr "Wird installiert… Computer nicht ausschalten."
 
+msgid "Install…"
+msgstr "Installieren…"
+
 msgid "It asks to be paired with this computer."
 msgstr "Es möchte mit diesem Computer gekoppelt werden."
+
+msgid "It comes from the part's maker through the LVFS. Laptops: plug in the power. Don't switch the computer off until it is done; some updates finish while the computer restarts."
+msgstr "Es kommt vom Hersteller des Teils über den LVFS. Laptops: Netzteil anstecken. Schalte den Computer nicht aus, bis es fertig ist; manche Updates werden beim Neustart abgeschlossen."
 
 msgid "It didn't answer. Is it switched on, nearby and in pairing mode?"
 msgstr "Keine Antwort. Ist es eingeschaltet, in der Nähe und im Kopplungsmodus?"
@@ -738,9 +779,6 @@ msgstr "Sperren nach Nichtbenutzung von"
 msgid "Lock now"
 msgstr "Jetzt sperren"
 
-msgid "Lock screen"
-msgstr "Bildschirm sperren"
-
 msgid "Locked"
 msgstr "Gesperrt"
 
@@ -750,11 +788,11 @@ msgstr "Anmelden"
 msgid "Log in to \"%s\":"
 msgstr "Bei \"%s\" anmelden:"
 
-msgid "Log out"
-msgstr "Abmelden"
-
 msgid "Look for a new version of my-distro. Updates are checked automatically too: the taskbar shows a button when one is out."
 msgstr "Nach einer neuen Version von my-distro suchen. Updates werden auch automatisch gesucht: die Taskleiste zeigt dann einen Knopf."
+
+msgid "Look for firmware updates"
+msgstr "Nach Firmware-Updates suchen"
 
 msgid "Look for updates"
 msgstr "Nach Updates suchen"
@@ -774,9 +812,6 @@ msgstr "Suche Scanner…"
 msgid "Looking for updates…"
 msgstr "Suche nach Updates…"
 
-msgid "Magnifier"
-msgstr "Bildschirmlupe"
-
 msgid "Magnifier (Super+Z)"
 msgstr "Bildschirmlupe (Super+Z)"
 
@@ -795,11 +830,11 @@ msgstr "Passend zum Farbschema"
 msgid "May use the computer only from"
 msgstr "Darf den Computer nur benutzen von"
 
-msgid "Media player"
-msgstr "Medienspieler"
-
 msgid "Method"
 msgstr "Methode"
+
+msgid "Microphone"
+msgstr "Mikrofon"
 
 msgid "More settings"
 msgstr "Weitere Einstellungen"
@@ -849,8 +884,14 @@ msgstr "Keine Administratorrechte mehr."
 msgid "No changes yet. Edit a file and it shows up here."
 msgstr "Noch keine Änderungen. Bearbeite eine Datei, dann erscheint sie hier."
 
+msgid "No firmware updates for this computer."
+msgstr "Keine Firmware-Updates für diesen Computer."
+
 msgid "No limits for this user."
 msgstr "Keine Einschränkungen für diesen Benutzer."
+
+msgid "No microphone."
+msgstr "Kein Mikrofon."
 
 msgid "No package list (are you online?)."
 msgstr "Keine Paketliste (bist du online?)."
@@ -860,6 +901,9 @@ msgstr "Kein Drucker gefunden. Ist er eingeschaltet und im selben Netzwerk (oder
 
 msgid "No printers yet. Click Add printer. (Is the print service running? It starts at boot: /etc/init.d/S81cupsd)"
 msgstr "Noch keine Drucker. Klicke auf Drucker hinzufügen. (Läuft der Druckdienst? Er startet beim Hochfahren: /etc/init.d/S81cupsd)"
+
+msgid "No program is playing sound right now."
+msgstr "Gerade spielt kein Programm Ton ab."
 
 msgid "No programs installed yet."
 msgstr "Noch keine Programme installiert."
@@ -873,17 +917,26 @@ msgstr "Keine gespeicherten Versionen dieser Datei."
 msgid "No scanner found. Is it switched on, and plugged in or in the same network?"
 msgstr "Kein Scanner gefunden. Ist er eingeschaltet und angesteckt oder im selben Netzwerk?"
 
+msgid "No sound output: is the sound server running?"
+msgstr "Keine Tonausgabe: läuft der Sound-Server?"
+
 msgid "No spaces or quotes, please."
 msgstr "Bitte keine Leerzeichen oder Anführungszeichen."
 
 msgid "No such user."
 msgstr "Diesen Benutzer gibt es nicht."
 
+msgid "None"
+msgstr "Keiner"
+
 msgid "Normal"
 msgstr "Normal"
 
 msgid "Not needed on the live system: it starts fresh every time."
 msgstr "Im Live-System nicht nötig: es startet jedes Mal frisch."
+
+msgid "Not your login password: one only for sharing (at least 6 characters)."
+msgstr "Nicht dein Anmeldepasswort: eines nur für die Freigabe (mindestens 6 Zeichen)."
 
 msgid "Nothing found."
 msgstr "Nichts gefunden."
@@ -900,11 +953,14 @@ msgstr "OK"
 msgid "Ocean"
 msgstr "Ozean"
 
-msgid "On-screen keyboard"
-msgstr "Bildschirmtastatur"
+msgid "On"
+msgstr "An"
 
 msgid "On-screen keyboard (Super+K)"
 msgstr "Bildschirmtastatur (Super+K)"
+
+msgid "Only Downloads"
+msgstr "Nur Downloads"
 
 msgid "Only the administrator (root) may read %s."
 msgstr "Nur der Administrator (root) darf %s lesen."
@@ -941,6 +997,15 @@ msgstr "Anderes Netzwerk"
 
 msgid "Other network…"
 msgstr "Anderes Netzwerk…"
+
+msgid "Others may also change and add files"
+msgstr "Andere dürfen auch Dateien ändern und hinzufügen"
+
+msgid "Others may only read the files"
+msgstr "Andere dürfen die Dateien nur lesen"
+
+msgid "Output"
+msgstr "Ausgabe"
 
 msgid "Own accent color"
 msgstr "Eigene Akzentfarbe"
@@ -981,6 +1046,9 @@ msgstr "Passwort geändert."
 msgid "Password for \"%s\":"
 msgstr "Passwort für \"%s\":"
 
+msgid "Permissions"
+msgstr "Berechtigungen"
+
 msgid "Picture:"
 msgstr "Bild:"
 
@@ -1008,11 +1076,17 @@ msgstr "Position"
 msgid "Power off"
 msgstr "Ausschalten"
 
+msgid "Prepare for Secure Boot…"
+msgstr "Secure Boot vorbereiten…"
+
 msgid "Printers"
 msgstr "Drucker"
 
 msgid "Printers made since about 2015 work without a driver over the network (Wi-Fi or cable): connect it to your network and try again."
 msgstr "Drucker ab etwa 2015 gehen ohne Treiber über das Netzwerk (WLAN oder Kabel): verbinde ihn mit deinem Netzwerk und versuche es nochmal."
+
+msgid "Programs"
+msgstr "Programme"
 
 msgid "Programs you open from now on use the new size; all of the desktop after the next login."
 msgstr "Programme, die du ab jetzt öffnest, nutzen die neue Größe; der ganze Desktop ab der nächsten Anmeldung."
@@ -1032,6 +1106,9 @@ msgstr "Qualität"
 msgid "Read aloud (Super+R)"
 msgstr "Vorlesen (Super+R)"
 
+msgid "Read only"
+msgstr "Nur lesen"
+
 msgid "Read the selected text"
 msgstr "Markierten Text vorlesen"
 
@@ -1040,9 +1117,6 @@ msgstr "Neu starten"
 
 msgid "Recent file changes"
 msgstr "Letzte Dateiänderungen"
-
-msgid "Record screen"
-msgstr "Bildschirm aufnehmen"
 
 msgid "Refresh"
 msgstr "Aktualisieren"
@@ -1143,11 +1217,17 @@ msgstr "Scannen…"
 msgid "Screen lock"
 msgstr "Bildschirmsperre"
 
+msgid "Screen reader (Super+Alt+S)"
+msgstr "Bildschirmleser (Super+Alt+S)"
+
+msgid "Screen reader off"
+msgstr "Bildschirmleser aus"
+
+msgid "Screen reader on"
+msgstr "Bildschirmleser an"
+
 msgid "Screens"
 msgstr "Bildschirme"
-
-msgid "Screenshot"
-msgstr "Bildschirmfoto"
 
 msgid "Search"
 msgstr "Suchen"
@@ -1164,7 +1244,7 @@ msgstr "Dateien suchen"
 msgid "Search programs"
 msgstr "Programme suchen"
 
-msgid "Search your files by meaning\xe2\x80\xa6"
+msgid "Search your files by meaning…"
 msgstr "Deine Dateien nach Bedeutung durchsuchen…"
 
 msgid "Second screen"
@@ -1172,6 +1252,15 @@ msgstr "Zweiter Bildschirm"
 
 msgid "Second screen is"
 msgstr "Zweiter Bildschirm ist"
+
+msgid "Secure Boot"
+msgstr "Secure Boot"
+
+msgid "Secure Boot is off."
+msgstr "Secure Boot ist aus."
+
+msgid "Secure Boot is on."
+msgstr "Secure Boot ist an."
 
 msgid "Security"
 msgstr "Sicherheit"
@@ -1194,8 +1283,32 @@ msgstr "Einstellungen deiner Schule oder Uni"
 msgid "Setup"
 msgstr "Einrichtung"
 
-msgid "Sharing files from this computer is off: the firewall lets nobody in. To open a shared folder of another PC: Start menu, Network share."
-msgstr "Dateien von diesem Computer freizugeben ist aus: die Firewall lässt niemanden herein. Einen freigegebenen Ordner eines anderen PCs öffnen: Startmenü, Netzwerkfreigabe."
+msgid "Share"
+msgstr "Freigeben"
+
+msgid "Share a folder (and the printers) with the other computers in your network. They log in with your user name and a sharing password. Off until you switch it on."
+msgstr "Gib einen Ordner (und die Drucker) für die anderen Computer in deinem Netzwerk frei. Sie melden sich mit deinem Benutzernamen und einem Freigabe-Passwort an. Aus, bis du es einschaltest."
+
+msgid "Shared. On other computers open \\\\%s\\%s (Windows) or smb://%s/%s (Mac, Linux) and log in as %s with the sharing password."
+msgstr "Freigegeben. Öffne auf anderen Computern \\\\%s\\%s (Windows) oder smb://%s/%s (Mac, Linux) und melde dich als %s mit dem Freigabe-Passwort an."
+
+msgid "Sharing"
+msgstr "Freigabe"
+
+msgid "Sharing changes the system: type the root password."
+msgstr "Die Freigabe ändert das System: gib das root-Passwort ein."
+
+msgid "Sharing is off."
+msgstr "Die Freigabe ist aus."
+
+msgid "Sharing needs Samba, a package of the Software app (about 60 MB)."
+msgstr "Die Freigabe braucht Samba, ein Paket der Software-App (etwa 60 MB)."
+
+msgid "Sharing password"
+msgstr "Freigabe-Passwort"
+
+msgid "Sharing…"
+msgstr "Freigabe…"
 
 msgid "Show password"
 msgstr "Passwort anzeigen"
@@ -1221,6 +1334,12 @@ msgstr "Software"
 msgid "Some networks (schools, companies) only reach the internet through a proxy. It is used by the web browser, system updates and other programs that download. Leave it empty for none."
 msgstr "Manche Netzwerke (Schulen, Firmen) kommen nur über einen Proxy ins Internet. Er wird vom Webbrowser, den Systemupdates und anderen Programmen benutzt, die etwas herunterladen. Leer lassen für keinen."
 
+msgid "Sound"
+msgstr "Ton"
+
+msgid "Sound now plays here."
+msgstr "Der Ton spielt jetzt hier."
+
 msgid "Sound now plays here. Programs that were already playing: start them again."
 msgstr "Der Ton kommt jetzt hier. Programme, die schon abgespielt haben: starte sie neu."
 
@@ -1230,20 +1349,20 @@ msgstr "Spanisch"
 msgid "Start"
 msgstr "Start"
 
-msgid "Starting the indexer\xe2\x80\xa6"
+msgid "Starting the indexer…"
 msgstr "Indexer startet…"
 
 msgid "Starting…"
 msgstr "Starte…"
+
+msgid "Stop sharing"
+msgstr "Freigabe beenden"
 
 msgid "Stretch"
 msgstr "Strecken"
 
 msgid "Style"
 msgstr "Stil"
-
-msgid "Suspend"
-msgstr "Bereitschaft"
 
 msgid "Switch user"
 msgstr "Benutzer wechseln"
@@ -1253,9 +1372,6 @@ msgstr "Systemprotokolle"
 
 msgid "System messages"
 msgstr "Systemmeldungen"
-
-msgid "System monitor"
-msgstr "Systemmonitor"
 
 msgid "System update"
 msgstr "Systemupdate"
@@ -1272,23 +1388,17 @@ msgstr "Uhr in der Taskleiste"
 msgid "Teal"
 msgstr "Petrol"
 
-msgid "Terminal"
-msgstr "Terminal"
-
 msgid "Test page"
 msgstr "Testseite"
 
 msgid "Text and icons"
 msgstr "Text und Symbole"
 
-msgid "Text editor"
-msgstr "Texteditor"
-
 msgid "Text size"
 msgstr "Textgröße"
 
-msgid "Text size applies to programs you open from now on, all of the desktop after the next login. The on-screen keyboard is also on the login screen (the keyboard button). Read aloud: select text with the mouse in any program, then press Super+R; again stops it. A screen reader that reads everything on the screen (like Orca) is not in my-distro yet."
-msgstr "Die Textgröße gilt für Programme, die du ab jetzt öffnest, für den ganzen Desktop ab der nächsten Anmeldung. Die Bildschirmtastatur gibt es auch am Anmeldebildschirm (der Tastatur-Knopf). Vorlesen: markiere Text mit der Maus in einem beliebigen Programm und drücke Super+R; nochmal stoppt es. Ein Bildschirmleser, der alles auf dem Bildschirm vorliest (wie Orca), ist noch nicht in my-distro."
+msgid "Text size applies to programs you open from now on, all of the desktop after the next login. The on-screen keyboard is also on the login screen (the keyboard button). Read aloud: select text with the mouse in any program, then press Super+R; again stops it. The screen reader speaks window titles, the Start menu and what has the focus in GTK programs (buttons, fields, lists, menus); not terminals, web pages or the login screen."
+msgstr "Die Textgröße gilt für Programme, die du ab jetzt öffnest, für den ganzen Desktop ab der nächsten Anmeldung. Die Bildschirmtastatur gibt es auch auf dem Anmeldebildschirm (die Tastatur-Taste). Vorlesen: markiere Text mit der Maus in einem beliebigen Programm und drücke Super+R; nochmal stoppt es. Der Bildschirmleser spricht Fenstertitel, das Startmenü und was in GTK-Programmen den Fokus hat (Knöpfe, Felder, Listen, Menüs); nicht Terminals, Webseiten oder den Anmeldebildschirm."
 
 msgid "That did not work."
 msgstr "Das hat nicht geklappt."
@@ -1308,11 +1418,26 @@ msgstr "Das ist die älteste gespeicherte Version, davor gibt es nichts."
 msgid "The administrator (root) password is asked for when you install the system or change things here."
 msgstr "Das Administrator-Passwort (root) wird abgefragt, wenn du das System installierst oder hier etwas änderst."
 
+msgid "The firewall lets nobody in, unless you share a folder or the printers with the other computers of your network (Sharing). To open a shared folder of another PC: Start menu, Network share."
+msgstr "Die Firewall lässt niemanden herein, außer du gibst einen Ordner oder die Drucker für die anderen Computer deines Netzwerks frei (Freigabe). Einen freigegebenen Ordner eines anderen PCs öffnen: Startmenü, Netzwerkfreigabe."
+
+msgid "The firmware update did not work: see the messages below."
+msgstr "Das Firmware-Update hat nicht geklappt: siehe die Meldungen unten."
+
+msgid "The firmware update is installed."
+msgstr "Das Firmware-Update ist installiert."
+
+msgid "The firmware update is ready: it is installed while the computer restarts. Keep it plugged in."
+msgstr "Das Firmware-Update ist bereit: es wird beim Neustart des Computers installiert. Lass ihn am Strom."
+
 msgid "The full name can't contain \":\"."
 msgstr "Der vollständige Name darf kein \":\" enthalten."
 
 msgid "The index is still empty, the indexer is working on it."
 msgstr "Der Index ist noch leer, der Indexer arbeitet daran."
+
+msgid "The kernel is locked down: hibernation is off."
+msgstr "Der Kernel ist abgesichert (Lockdown): der Ruhezustand ist aus."
 
 msgid "The language of the menus and windows, and the format of dates and numbers. It applies from the next login. Programs that aren't translated stay in English."
 msgstr "Die Sprache der Menüs und Fenster und das Format von Datum und Zahlen. Gilt ab der nächsten Anmeldung. Programme ohne Übersetzung bleiben englisch."
@@ -1382,6 +1507,12 @@ msgstr "Dann klicke auf Ja (und bestätige am Gerät, falls es auch fragt)."
 
 msgid "These packages are made for my-distro %s, but this is my-distro %s: they can't be installed. Update the system (System update), or wait until the packages for %s are out."
 msgstr "Diese Pakete sind für my-distro %s, aber das ist my-distro %s: sie können nicht installiert werden. Aktualisiere das System (Systemupdate) oder warte, bis die Pakete für %s erscheinen."
+
+msgid "This computer was started without UEFI: Secure Boot doesn't apply."
+msgstr "Dieser Computer wurde ohne UEFI gestartet: Secure Boot spielt keine Rolle."
+
+msgid "This installation doesn't start through shim yet."
+msgstr "Diese Installation startet noch nicht über shim."
 
 msgid "This is a disk inside the computer!"
 msgstr "Das ist ein Datenträger im Computer!"
@@ -1518,17 +1649,14 @@ msgstr "Violett"
 msgid "Wallpaper"
 msgstr "Hintergrundbild"
 
-msgid "Web browser"
-msgstr "Webbrowser"
-
-msgid "Web browser (sandbox)"
-msgstr "Webbrowser (Sandbox)"
-
 msgid "Welcome"
 msgstr "Willkommen"
 
 msgid "Welcome to my-distro"
 msgstr "Willkommen bei my-distro"
+
+msgid "What each program may use, the next time you start it from the Start menu. A program without the microphone gets no sound at all (the sound server can't give it one without the other). Without the whole home folder it sees only Downloads (or nothing) and keeps its own settings separately."
+msgstr "Was jedes Programm benutzen darf, beim nächsten Start aus dem Startmenü. Ein Programm ohne Mikrofon bekommt gar keinen Ton (der Sound-Server kann ihm nicht das eine ohne das andere geben). Ohne den ganzen persönlichen Ordner sieht es nur Downloads (oder nichts) und hat eigene Einstellungen."
 
 msgid "Wi-Fi"
 msgstr "WLAN"
@@ -1541,6 +1669,9 @@ msgstr "WLAN-Passwort"
 
 msgid "Wi-Fi passwords have 8 to 63 characters."
 msgstr "WLAN-Passwörter haben 8 bis 63 Zeichen."
+
+msgid "With Secure Boot on, the computer can't hibernate (the kernel locks itself down and can't check a saved memory image). Suspend works."
+msgstr "Mit Secure Boot kann der Computer nicht in den Ruhezustand (der Kernel sichert sich ab und kann ein gespeichertes Speicherabbild nicht prüfen). Bereitschaft geht."
 
 msgid "Without proxy for"
 msgstr "Ohne Proxy für"
@@ -1602,12 +1733,6 @@ msgstr "Dein Benutzer darf das WLAN noch nicht ändern (er ist nicht in der Grup
 msgid "Your user may not change printers yet (it is not in the group lpadmin). As root: addgroup YOUR-NAME lpadmin, then log in again."
 msgstr "Dein Benutzer darf Drucker noch nicht ändern (er ist nicht in der Gruppe lpadmin). Als root: addgroup DEIN-NAME lpadmin, dann wieder anmelden."
 
-msgid "\nNeeds: "
-msgstr "\nBraucht: "
-
-msgid "\xe2\x86\x91  Update to %s"
-msgstr "↑  Update auf %s"
-
 msgid "connected   "
 msgstr "verbunden   "
 
@@ -1625,6 +1750,9 @@ msgstr "exFAT (Windows, Mac, Kameras; große Dateien)"
 
 msgid "ext4 (Linux only; best for backups)"
 msgstr "ext4 (nur Linux; am besten für Sicherungen)"
+
+msgid "fwupd is missing."
+msgstr "fwupd fehlt."
 
 msgid "in the network"
 msgstr "im Netzwerk"
@@ -1644,6 +1772,18 @@ msgstr "my-distro %s ist aktuell."
 msgid "my-distro has no driver for this printer."
 msgstr "my-distro hat keinen Treiber für diesen Drucker."
 
+msgid "my-distro starts with Secure Boot on once its key is enrolled in the PC (once; you need the computer's screen and keyboard for it). \"Prepare\" asks for a one-time password; at the next start a blue screen (MokManager) appears: choose \"Enroll MOK\", \"Continue\", \"Yes\", type the password, \"Reboot\". Then switch on Secure Boot in the firmware settings."
+msgstr "my-distro startet mit eingeschaltetem Secure Boot, sobald sein Schlüssel im PC eingetragen ist (einmal; dazu brauchst du Bildschirm und Tastatur des Computers). \"Vorbereiten\" fragt nach einem Einmal-Passwort; beim nächsten Start erscheint ein blauer Bildschirm (MokManager): wähle \"Enroll MOK\", \"Continue\", \"Yes\", gib das Passwort ein, \"Reboot\". Dann schalte Secure Boot in den Firmware-Einstellungen ein."
+
+msgid "my-distro's key is enrolled at the next start (MokManager)."
+msgstr "Der Schlüssel von my-distro wird beim nächsten Start eingetragen (MokManager)."
+
+msgid "my-distro's key is enrolled."
+msgstr "Der Schlüssel von my-distro ist eingetragen."
+
+msgid "my-distro's key is not enrolled yet."
+msgstr "Der Schlüssel von my-distro ist noch nicht eingetragen."
+
 msgid "my-update is missing."
 msgstr "my-update fehlt."
 
@@ -1652,6 +1792,9 @@ msgstr "my-vpnctl fehlt."
 
 msgid "not found"
 msgstr "nicht gefunden"
+
+msgid "not ticked"
+msgstr "nicht angehakt"
 
 msgid "open   "
 msgstr "offen   "
@@ -1665,17 +1808,86 @@ msgstr "gespeichert   "
 msgid "secured   "
 msgstr "gesichert   "
 
+msgid "space"
+msgstr "Leerzeichen"
+
 msgid "switched off"
 msgstr "ausgeschaltet"
 
 msgid "the device"
 msgstr "das Gerät"
 
+msgid "ticked"
+msgstr "angehakt"
+
 msgid "to"
 msgstr "bis"
+
+msgid "unavailable"
+msgstr "nicht verfügbar"
 
 msgid "user name   "
 msgstr "Benutzername   "
 
 msgid "v0 (first)"
 msgstr "v0 (erste)"
+
+msgid "↑  Update to %s"
+msgstr "↑  Update auf %s"
+
+msgid "Calculator"
+msgstr "Rechner"
+
+msgid "Code editor (LazyVim)"
+msgstr "Code-Editor (LazyVim)"
+
+msgid "Eject USB stick"
+msgstr "USB-Stick auswerfen"
+
+msgid "Files"
+msgstr "Dateien"
+
+msgid "Hibernate"
+msgstr "Ruhezustand"
+
+msgid "Install to disk"
+msgstr "Auf Festplatte installieren"
+
+msgid "Lock screen"
+msgstr "Bildschirm sperren"
+
+msgid "Log out"
+msgstr "Abmelden"
+
+msgid "Magnifier"
+msgstr "Bildschirmlupe"
+
+msgid "Media player"
+msgstr "Medienspieler"
+
+msgid "On-screen keyboard"
+msgstr "Bildschirmtastatur"
+
+msgid "Record screen"
+msgstr "Bildschirm aufnehmen"
+
+msgid "Screenshot"
+msgstr "Bildschirmfoto"
+
+msgid "Suspend"
+msgstr "Bereitschaft"
+
+msgid "System monitor"
+msgstr "Systemmonitor"
+
+msgid "Terminal"
+msgstr "Terminal"
+
+msgid "Text editor"
+msgstr "Texteditor"
+
+msgid "Web browser"
+msgstr "Webbrowser"
+
+msgid "Web browser (sandbox)"
+msgstr "Webbrowser (Sandbox)"

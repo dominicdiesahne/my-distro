@@ -1,0 +1,1893 @@
+# Turkish translation of my-distro's own programs.
+# The texts are C strings: keep %s, %d and \n exactly as in msgid.
+# Compiled by desktop/package/my-locale into /usr/share/locale/tr/LC_MESSAGES.
+msgid ""
+msgstr ""
+"Project-Id-Version: my-distro\n"
+"PO-Revision-Date: 2026-11-10 12:00+0100\n"
+"Last-Translator: my-distro\n"
+"Language-Team: Turkish\n"
+"Language: tr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "\nNeeds: "
+msgstr "\nGerekenler:"
+
+msgid "   (current)"
+msgstr "   (geçerli)"
+
+msgid "   (default)"
+msgstr "   (varsayılan)"
+
+msgid "   (with system settings)"
+msgstr "   (sistem ayarlarıyla)"
+
+msgid "  — USB / card"
+msgstr "  — USB / kart"
+
+msgid "  — internal"
+msgstr "  — dahili"
+
+msgid "  — my-distro runs from it"
+msgstr "  — my-distro bundan çalışıyor"
+
+msgid " (getting an address…)"
+msgstr " (adres alınıyor…)"
+
+msgid " It brings: "
+msgstr " Beraberinde getirdikleri:"
+
+msgid "%A, %d %B %Y"
+msgstr "%d %B %Y, %A"
+
+msgid "%d files found"
+msgstr "%d dosya bulundu"
+
+msgid "%d line"
+msgid_plural "%d lines"
+msgstr[0] "%d satır"
+msgstr[1] "%d satır"
+
+msgid "%d minute left on the computer today"
+msgid_plural "%d minutes left on the computer today"
+msgstr[0] "Bugün bilgisayarda %d dakikanız kaldı"
+msgstr[1] "Bugün bilgisayarda %d dakikanız kaldı"
+
+msgid "%d of %d lines"
+msgstr "%d / %d satır"
+
+msgid "%s doesn't exist (yet)."
+msgstr "%s (henüz) yok."
+
+msgid "%s free (%s).%s"
+msgstr "%s boş (%s).%s"
+
+msgid "%s is logged in on another screen (Ctrl+Alt+F%d)."
+msgstr "%s başka bir ekranda oturum açmış (Ctrl+Alt+F%d)."
+
+msgid "%s may use the computer from %02d:%02d to %02d:%02d."
+msgstr "%s bilgisayarı %02d:%02d ile %02d:%02d arasında kullanabilir."
+
+msgid "%s needs it, so it is removed too."
+msgstr "%s buna ihtiyaç duyuyor, bu yüzden o da kaldırılıyor."
+
+msgid "%s on disk"
+msgstr "Diskte %s"
+
+msgid "%s on disk\n%s download"
+msgstr "Diskte %s\n%s indirilecek"
+
+msgid "(no text, matched by its name)"
+msgstr "(metin yok, adıyla bulundu)"
+
+msgid "(only the last 2 MB)"
+msgstr "(yalnızca son 2 MB)"
+
+msgid "(unchanged)"
+msgstr "(değişmedi)"
+
+msgid "(used by the system)"
+msgstr "(sistem tarafından kullanılıyor)"
+
+msgid ", address "
+msgstr ", adres"
+
+msgid "1 hour"
+msgstr "1 saat"
+
+msgid "1 minute"
+msgstr "1 dakika"
+
+msgid "10 minutes"
+msgstr "10 dakika"
+
+msgid "15 minutes"
+msgstr "15 dakika"
+
+msgid "150 dpi (screen, e-mail)"
+msgstr "150 dpi (ekran, e-posta)"
+
+msgid "2 minutes"
+msgstr "2 dakika"
+
+msgid "200 % (for very sharp screens)"
+msgstr "%200 (çok keskin ekranlar için)"
+
+msgid "24-hour time"
+msgstr "24 saat biçimi"
+
+msgid "30 minutes"
+msgstr "30 dakika"
+
+msgid "300 dpi (documents)"
+msgstr "300 dpi (belgeler)"
+
+msgid "5 minutes"
+msgstr "5 dakika"
+
+msgid "600 dpi (photos)"
+msgstr "600 dpi (fotoğraflar)"
+
+msgid "<span size='x-large' weight='bold' foreground='#e5484d'>%s</span>\n\nEverything on <b>%s</b> will be deleted: documents, photos, other systems (Windows) that may be on it. This can't be undone.\n\nTo go on, type its name: <b>%s</b>"
+msgstr "<span size='x-large' weight='bold' foreground='#e5484d'>%s</span>\n\n<b>%s</b> üzerindeki her şey silinecek: belgeler, fotoğraflar, üzerinde olabilecek diğer sistemler (Windows). Bu geri alınamaz.\n\nDevam etmek için adını yazın: <b>%s</b>"
+
+msgid "A network that doesn't show its name (hidden). Type it exactly, with upper and lower case:"
+msgstr "Adını göstermeyen bir ağ (gizli). Adı büyük ve küçük harflere dikkat ederek tam olarak yazın:"
+
+msgid "Above the main screen"
+msgstr "Ana ekranın üstünde"
+
+msgid "Accent color"
+msgstr "Vurgu rengi"
+
+msgid "Accessibility"
+msgstr "Erişilebilirlik"
+
+msgid "Add"
+msgstr "Ekle"
+
+msgid "Add a user"
+msgstr "Kullanıcı ekle"
+
+msgid "Add printer"
+msgstr "Yazıcı ekle"
+
+msgid "Add printer…"
+msgstr "Yazıcı ekle…"
+
+msgid "Add user…"
+msgstr "Kullanıcı ekle…"
+
+msgid "Added. Print a test page to try it."
+msgstr "Eklendi. Denemek için bir test sayfası yazdırın."
+
+msgid "Adding the printer…"
+msgstr "Yazıcı ekleniyor…"
+
+msgid "Address"
+msgstr "Adres"
+
+msgid "Address %s\nLast answer from the server %d s ago · received %s · sent %s"
+msgstr "Adres %s\nSunucudan son yanıt %d sn önce · alınan %s · gönderilen %s"
+
+msgid "Address %s\nNo answer from the VPN server yet. Is the config right, and does this network allow VPNs?"
+msgstr "Adres %s\nVPN sunucusundan henüz yanıt yok. Yapılandırma doğru mu, bu ağ VPN'e izin veriyor mu?"
+
+msgid "Address %s\nWaiting for the VPN server…"
+msgstr "Adres %s\nVPN sunucusu bekleniyor…"
+
+msgid "Administrator"
+msgstr "Yönetici"
+
+msgid "Administrator now: may use sudo with their own password."
+msgstr "Artık yönetici: kendi parolasıyla sudo kullanabilir."
+
+msgid "Administrator password"
+msgstr "Yönetici parolası"
+
+msgid "Administrator password again"
+msgstr "Yönetici parolası (tekrar)"
+
+msgid "Administrator password changed."
+msgstr "Yönetici parolası değiştirildi."
+
+msgid "Administrator password: type the same password twice."
+msgstr "Yönetici parolası: aynı parolayı iki kez yazın."
+
+msgid "Again"
+msgstr "Tekrar"
+
+msgid "All of it"
+msgstr "Tamamı"
+
+msgid "All programs"
+msgstr "Tüm programlar"
+
+msgid "All set"
+msgstr "Her şey hazır"
+
+msgid "Also share this computer's printers"
+msgstr "Bu bilgisayarın yazıcılarını da paylaş"
+
+msgid "Also the system settings (asks for the root password)"
+msgstr "Sistem ayarları da (root parolasını sorar)"
+
+msgid "Also the system settings: Wi-Fi, VPNs, printers, Bluetooth, users (asks for the root password)"
+msgstr "Sistem ayarları da: Wi-Fi, VPN'ler, yazıcılar, Bluetooth, kullanıcılar (root parolasını sorar)"
+
+msgid "Analog"
+msgstr "Analog"
+
+msgid "Anonymous identity"
+msgstr "Anonim kimlik"
+
+msgid "Apply"
+msgstr "Uygula"
+
+msgid "Asking the LVFS (fwupd.org) for firmware updates…"
+msgstr "LVFS'ye (fwupd.org) donanım yazılımı güncellemeleri soruluyor…"
+
+msgid "At most, minutes per day"
+msgstr "En fazla, günde dakika"
+
+msgid "Audit"
+msgstr "Denetim"
+
+msgid "Automatic"
+msgstr "Otomatik"
+
+msgid "Back"
+msgstr "Geri"
+
+msgid "Back to the other desktop"
+msgstr "Diğer masaüstüne dön"
+
+msgid "Back to what the screens prefer."
+msgstr "Ekranların tercih ettiği ayarlara dönüldü."
+
+msgid "Back up now"
+msgstr "Şimdi yedekle"
+
+msgid "Back up to"
+msgstr "Yedekleme hedefi"
+
+msgid "Backup"
+msgstr "Yedekleme"
+
+msgid "Backups on this disk"
+msgstr "Bu diskteki yedekler"
+
+msgid "Battery low: %d %%"
+msgstr "Pil zayıf: %d %%"
+
+msgid "Below the main screen"
+msgstr "Ana ekranın altında"
+
+msgid "Bigger"
+msgstr "Daha büyük"
+
+msgid "Bluetooth"
+msgstr "Bluetooth"
+
+msgid "Bluetooth could not be switched on."
+msgstr "Bluetooth açılamadı."
+
+msgid "Bluetooth is off."
+msgstr "Bluetooth kapalı."
+
+msgid "Bottom"
+msgstr "Alt"
+
+msgid "CA certificate"
+msgstr "CA sertifikası"
+
+msgid "Camera"
+msgstr "Kamera"
+
+msgid "Can't load the search model."
+msgstr "Arama modeli yüklenemiyor."
+
+msgid "Cancel"
+msgstr "İptal"
+
+msgid "Careful"
+msgstr "Dikkat"
+
+msgid "Centre"
+msgstr "Ortala"
+
+msgid "Change password"
+msgstr "Parolayı değiştir"
+
+msgid "Change password…"
+msgstr "Parolayı değiştir…"
+
+msgid "Changes to your files, newest first"
+msgstr "Dosyalarınızdaki değişiklikler, en yenisi önce"
+
+msgid "Changing users and system settings needs the administrator (root) password."
+msgstr "Kullanıcıları ve sistem ayarlarını değiştirmek için yönetici (root) parolası gerekir."
+
+msgid "Check and repair"
+msgstr "Denetle ve onar"
+
+msgid "Checking…"
+msgstr "Denetleniyor…"
+
+msgid "Choose a device and click Connect."
+msgstr "Bir aygıt seçin ve Bağlan'a tıklayın."
+
+msgid "Choose a disk or partition."
+msgstr "Bir disk ya da bölüm seçin."
+
+msgid "Choose a folder first."
+msgstr "Önce bir klasör seçin."
+
+msgid "Choose a password."
+msgstr "Bir parola seçin."
+
+msgid "Choose a picture"
+msgstr "Bir resim seçin"
+
+msgid "Choose a printer, or type its address."
+msgstr "Bir yazıcı seçin ya da adresini yazın."
+
+msgid "Choose a user in the list first."
+msgstr "Önce listeden bir kullanıcı seçin."
+
+msgid "Choose your printer, or type its address below."
+msgstr "Yazıcınızı seçin ya da adresini aşağıya yazın."
+
+msgid "Click Search to find devices nearby."
+msgstr "Yakındaki aygıtları bulmak için Ara'ya tıklayın."
+
+msgid "Clock"
+msgstr "Saat"
+
+msgid "Clock app"
+msgstr "Saat uygulaması"
+
+msgid "Close"
+msgstr "Kapat"
+
+msgid "Color"
+msgstr "Renk"
+
+msgid "Colors"
+msgstr "Renkler"
+
+msgid "Colors (more choices later in Settings)"
+msgstr "Renkler (daha fazla seçenek sonra Ayarlar'da)"
+
+msgid "Computer"
+msgstr "Bilgisayar"
+
+msgid "Computer name"
+msgstr "Bilgisayar adı"
+
+msgid "Computer name (shown on the network and the login screen)"
+msgstr "Bilgisayar adı (ağda ve giriş ekranında görünür)"
+
+msgid "Computer name saved."
+msgstr "Bilgisayar adı kaydedildi."
+
+msgid "Computer name: letters, digits and -, no spaces."
+msgstr "Bilgisayar adı: harfler, rakamlar ve -, boşluksuz."
+
+msgid "Connect"
+msgstr "Bağlan"
+
+msgid "Connect to Wi-Fi"
+msgstr "Wi-Fi'ye bağlan"
+
+msgid "Connected to %s"
+msgstr "%s ağına bağlandı"
+
+msgid "Connected."
+msgstr "Bağlandı."
+
+msgid "Connecting…"
+msgstr "Bağlanıyor…"
+
+msgid "Could not add the network."
+msgstr "Ağ eklenemedi."
+
+msgid "Could not add the printer."
+msgstr "Yazıcı eklenemedi."
+
+msgid "Could not change the administrator rights."
+msgstr "Yönetici hakları değiştirilemedi."
+
+msgid "Could not connect to %s."
+msgstr "%s ağına bağlanılamadı."
+
+msgid "Could not connect. Wrong password, or the network is too far away?"
+msgstr "Bağlanılamadı. Parola yanlış mı, yoksa ağ çok mu uzakta?"
+
+msgid "Could not create the user."
+msgstr "Kullanıcı oluşturulamadı."
+
+msgid "Could not forget the device."
+msgstr "Aygıt unutulamadı."
+
+msgid "Could not look for firmware updates (no internet?): %s"
+msgstr "Donanım yazılımı güncellemeleri aranamadı (internet yok mu?): %s"
+
+msgid "Could not look for updates (no internet?): %s"
+msgstr "Güncellemeler aranamadı (internet yok mu?): %s"
+
+msgid "Could not make it the default printer."
+msgstr "Varsayılan yazıcı yapılamadı."
+
+msgid "Could not pair with %s."
+msgstr "%s ile eşleşilemedi."
+
+msgid "Could not print."
+msgstr "Yazdırılamadı."
+
+msgid "Could not read the kernel's messages."
+msgstr "Çekirdeğin iletileri okunamadı."
+
+msgid "Could not remove the printer."
+msgstr "Yazıcı kaldırılamadı."
+
+msgid "Could not remove the user."
+msgstr "Kullanıcı kaldırılamadı."
+
+msgid "Could not save the keyboard layout."
+msgstr "Klavye düzeni kaydedilemedi."
+
+msgid "Could not save the language."
+msgstr "Dil kaydedilemedi."
+
+msgid "Could not save the parental controls."
+msgstr "Ebeveyn denetimi kaydedilemedi."
+
+msgid "Could not search for devices."
+msgstr "Aygıt aranamadı."
+
+msgid "Could not set the administrator password."
+msgstr "Yönetici parolası ayarlanamadı."
+
+msgid "Could not set the password."
+msgstr "Parola ayarlanamadı."
+
+msgid "Could not set the time zone."
+msgstr "Saat dilimi ayarlanamadı."
+
+msgid "Could not start /usr/lib/my-distro/disk-tool."
+msgstr "/usr/lib/my-distro/disk-tool başlatılamadı."
+
+msgid "Could not start my-admin."
+msgstr "my-admin başlatılamadı."
+
+msgid "Could not start my-backup."
+msgstr "my-backup başlatılamadı."
+
+msgid "Could not start my-update."
+msgstr "my-update başlatılamadı."
+
+msgid "Could not start the factory reset."
+msgstr "Fabrika ayarlarına sıfırlama başlatılamadı."
+
+msgid "Could not write /etc/hostname."
+msgstr "/etc/hostname yazılamadı."
+
+msgid "Couldn't process that query."
+msgstr "Bu sorgu işlenemedi."
+
+msgid "Crashes"
+msgstr "Çökmeler"
+
+msgid "Czech"
+msgstr "Çekçe"
+
+msgid "Date format"
+msgstr "Tarih biçimi"
+
+msgid "Delete all users, files and settings?"
+msgstr "Tüm kullanıcılar, dosyalar ve ayarlar silinsin mi?"
+
+msgid "Delete everything"
+msgstr "Her şeyi sil"
+
+msgid "Digital"
+msgstr "Dijital"
+
+msgid "Disconnect"
+msgstr "Bağlantıyı kes"
+
+msgid "Disk"
+msgstr "Disk"
+
+msgid "Disk / partition"
+msgstr "Disk / bölüm"
+
+msgid "Disks"
+msgstr "Diskler"
+
+msgid "Display"
+msgstr "Ekran"
+
+msgid "Does %s show the number %06u?"
+msgstr "%s aygıtı %06u sayısını gösteriyor mu?"
+
+msgid "Done. Installed programs are in the Start menu, or start them in a terminal."
+msgstr "Bitti. Kurulan programlar Başlat menüsünde; ya da onları bir terminalde başlatın."
+
+msgid "Done: the picture is in your Pictures folder."
+msgstr "Bitti: resim Resimler klasörünüzde."
+
+msgid "Downloading the package list…"
+msgstr "Paket listesi indiriliyor…"
+
+msgid "Dutch"
+msgstr "Felemenkçe"
+
+msgid "Ember"
+msgstr "Kor"
+
+msgid "English (UK)"
+msgstr "İngilizce (Birleşik Krallık)"
+
+msgid "English (US)"
+msgstr "İngilizce (ABD)"
+
+msgid "Every saved change on the system, newest first"
+msgstr "Sistemde kaydedilen her değişiklik, en yenisi önce"
+
+msgid "Every user and everything in their home folders (documents, pictures, browser data) is deleted, and all settings: passwords, computer name, Wi-Fi networks, VPNs, time zone. Only the system stays. This can't be undone.\n\nThe computer restarts now; the reset takes a few seconds, then the setup starts as after installing."
+msgstr "Tüm kullanıcılar ve ev klasörlerindeki her şey (belgeler, resimler, tarayıcı verileri) silinir; tüm ayarlar da: parolalar, bilgisayar adı, Wi-Fi ağları, VPN'ler, saat dilimi. Yalnızca sistem kalır. Bu geri alınamaz.\n\nBilgisayar şimdi yeniden başlıyor; sıfırlama birkaç saniye sürer, ardından kurulumdan sonraki gibi ilk ayarlar başlar."
+
+msgid "Everything on this partition is deleted."
+msgstr "Bu bölümdeki her şey silinir."
+
+msgid "FAT32 (works everywhere; files up to 4 GB)"
+msgstr "FAT32 (her yerde çalışır; 4 GB'a kadar dosyalar)"
+
+msgid "FILE"
+msgstr "DOSYA"
+
+msgid "Factory reset"
+msgstr "Fabrika ayarlarına sıfırla"
+
+msgid "File history"
+msgstr "Dosya geçmişi"
+
+msgid "Filesystem"
+msgstr "Dosya sistemi"
+
+msgid "Fill the screen"
+msgstr "Ekranı doldur"
+
+msgid "Finish"
+msgstr "Bitir"
+
+msgid "Firmware"
+msgstr "Donanım yazılımı"
+
+msgid "Firmware is the software inside the computer's parts (UEFI, disks, docks, mice, ...). fwupd asks the LVFS (fwupd.org) for updates from their makers. Nothing is installed without asking."
+msgstr "Donanım yazılımı (firmware), bilgisayarın parçalarının içindeki yazılımdır (UEFI, diskler, yerleştirme istasyonları, fareler…). fwupd, üreticilerinin güncellemelerini LVFS'ye (fwupd.org) sorar. Sorulmadan hiçbir şey kurulmaz."
+
+msgid "Firmware updates for this computer:"
+msgstr "Bu bilgisayar için donanım yazılımı güncellemeleri:"
+
+msgid "Fit, keep all of it"
+msgstr "Sığdır, tamamını göster"
+
+msgid "Folder"
+msgstr "Klasör"
+
+msgid "Folder to share"
+msgstr "Paylaşılacak klasör"
+
+msgid "Forest"
+msgstr "Orman"
+
+msgid "Forget"
+msgstr "Unut"
+
+msgid "Format"
+msgstr "Biçimlendir"
+
+msgid "Formatting and repairing disks needs the administrator (root) password."
+msgstr "Diskleri biçimlendirmek ve onarmak için yönetici (root) parolası gerekir."
+
+msgid "Format…"
+msgstr "Biçimlendir…"
+
+msgid "French"
+msgstr "Fransızca"
+
+msgid "Full name"
+msgstr "Ad soyad"
+
+msgid "German"
+msgstr "Almanca"
+
+msgid "German (Austria)"
+msgstr "Almanca (Avusturya)"
+
+msgid "German (Switzerland)"
+msgstr "Almanca (İsviçre)"
+
+msgid "Go back"
+msgstr "Geri dön"
+
+msgid "Go back to my-distro %s?"
+msgstr "my-distro %s sürümüne geri dönülsün mü?"
+
+msgid "Go to the login screen"
+msgstr "Giriş ekranına git"
+
+msgid "Going back did not work: see the messages below."
+msgstr "Geri dönülemedi: aşağıdaki iletilere bakın."
+
+msgid "Going back to the old settings in %d seconds."
+msgstr "%d saniye içinde eski ayarlara dönülecek."
+
+msgid "Going back… don't switch the computer off."
+msgstr "Geri dönülüyor… bilgisayarı kapatmayın."
+
+msgid "Gray"
+msgstr "Gri"
+
+msgid "HTTP and HTTPS proxy"
+msgstr "HTTP ve HTTPS vekil sunucusu"
+
+msgid "Height (pixels)"
+msgstr "Yükseklik (piksel)"
+
+msgid "High contrast"
+msgstr "Yüksek karşıtlık"
+
+msgid "High contrast light"
+msgstr "Yüksek karşıtlık açık"
+
+msgid "History"
+msgstr "Geçmiş"
+
+msgid "Home folder"
+msgstr "Ev klasörü"
+
+msgid "Huge"
+msgstr "Kocaman"
+
+msgid "Hungarian"
+msgstr "Macarca"
+
+msgid "If the desktop doesn't start any more: choose \"recovery mode\" in the boot menu and run my-reset there."
+msgstr "Masaüstü artık başlamıyorsa: önyükleme menüsünde \"recovery mode\" seçin ve orada my-reset çalıştırın."
+
+msgid "Import"
+msgstr "İçe aktar"
+
+msgid "Import a WireGuard config"
+msgstr "Bir WireGuard yapılandırmasını içe aktar"
+
+msgid "Import…"
+msgstr "İçe aktar…"
+
+msgid "Install"
+msgstr "Kur"
+
+msgid "Install %s?"
+msgstr "%s kurulsun mu?"
+
+msgid "Install Samba…"
+msgstr "Samba'yı kur…"
+
+msgid "Install my-distro %s?"
+msgstr "my-distro %s kurulsun mu?"
+
+msgid "Install the firmware update %s?"
+msgstr "%s donanım yazılımı güncellemesi kurulsun mu?"
+
+msgid "Install update"
+msgstr "Güncellemeyi kur"
+
+msgid "Installed"
+msgstr "Kurulu"
+
+msgid "Installed: my-distro %s"
+msgstr "Kurulu: my-distro %s"
+
+msgid "Installing and removing programs needs the administrator (root) password."
+msgstr "Program kurmak ve kaldırmak için yönetici (root) parolası gerekir."
+
+msgid "Installing the firmware update… don't switch the computer off."
+msgstr "Donanım yazılımı güncellemesi kuruluyor… bilgisayarı kapatmayın."
+
+msgid "Installing… don't switch the computer off."
+msgstr "Kuruluyor… bilgisayarı kapatmayın."
+
+msgid "Install…"
+msgstr "Kur…"
+
+msgid "It asks to be paired with this computer."
+msgstr "Bu bilgisayarla eşleşmek istiyor."
+
+msgid "It comes from the part's maker through the LVFS. Laptops: plug in the power. Don't switch the computer off until it is done; some updates finish while the computer restarts."
+msgstr "Parçanın üreticisinden LVFS aracılığıyla gelir. Dizüstü bilgisayarlar: şarj aletini takın. Bitene kadar bilgisayarı kapatmayın; bazı güncellemeler bilgisayar yeniden başlarken tamamlanır."
+
+msgid "It didn't answer. Is it switched on, nearby and in pairing mode?"
+msgstr "Yanıt vermedi. Açık mı, yakında mı ve eşleştirme kipinde mi?"
+
+msgid "It doesn't answer as a driverless printer (IPP Everywhere). Check the address; some older printers only work over their USB cable."
+msgstr "Sürücüsüz yazıcı (IPP Everywhere) olarak yanıt vermiyor. Adresi kontrol edin; bazı eski yazıcılar yalnızca USB kablosuyla çalışır."
+
+msgid "It is switched off with a key or a switch on the laptop (often Fn with an aeroplane or Bluetooth sign). Switch it on there."
+msgstr "Dizüstü bilgisayarda bir tuş ya da anahtarla kapatılmış (çoğu zaman uçak ya da Bluetooth işaretli Fn). Oradan açın."
+
+msgid "It needs %s of space.%s%s%s"
+msgstr "%s alan gerekiyor.%s%s%s"
+
+msgid "Italian"
+msgstr "İtalyanca"
+
+msgid "Its files replace the ones with the same name in your home folder. Files you made after the backup stay. (File history keeps the versions from before: my-undo can bring them back.)"
+msgstr "Dosyaları, ev klasörünüzdeki aynı adlı dosyaların yerine geçer. Yedekten sonra oluşturduğunuz dosyalar kalır. (Dosya geçmişi önceki sürümleri saklar: my-undo onları geri getirebilir.)"
+
+msgid "Keep"
+msgstr "Koru"
+
+msgid "Keep these display settings?"
+msgstr "Bu ekran ayarları korunsun mu?"
+
+msgid "Kernel"
+msgstr "Çekirdek"
+
+msgid "Keyboard"
+msgstr "Klavye"
+
+msgid "Keyboard layout"
+msgstr "Klavye düzeni"
+
+msgid "Keyboard layout (for everyone, at once)"
+msgstr "Klavye düzeni (herkes için, hemen)"
+
+msgid "Keyboard layout changed."
+msgstr "Klavye düzeni değiştirildi."
+
+msgid "Language"
+msgstr "Dil"
+
+msgid "Language (for everyone who didn't choose their own in Settings; at the next login)"
+msgstr "Dil (Ayarlar'da kendi dilini seçmemiş herkes için; bir sonraki girişte)"
+
+msgid "Language saved: it is used from the next login."
+msgstr "Dil kaydedildi: bir sonraki girişten itibaren kullanılır."
+
+msgid "Large"
+msgstr "Büyük"
+
+msgid "Left of the main screen"
+msgstr "Ana ekranın solunda"
+
+msgid "Let's set up your computer: your keyboard, your own account and a name for the computer. It takes a minute, and you can change all of it later in \"Users and system\"."
+msgstr "Bilgisayarınızı ayarlayalım: klavyeniz, kendi hesabınız ve bilgisayar için bir ad. Bir dakika sürer ve hepsini daha sonra \"Kullanıcılar ve sistem\" içinde değiştirebilirsiniz."
+
+msgid "Light"
+msgstr "Açık"
+
+msgid "Lock after no use for"
+msgstr "Şu kadar kullanılmadığında kilitle"
+
+msgid "Lock now"
+msgstr "Şimdi kilitle"
+
+msgid "Locked"
+msgstr "Kilitli"
+
+msgid "Log in"
+msgstr "Giriş yap"
+
+msgid "Log in to \"%s\":"
+msgstr "\"%s\" için giriş:"
+
+msgid "Look for a new version of my-distro. Updates are checked automatically too: the taskbar shows a button when one is out."
+msgstr "my-distro'nun yeni bir sürümünü arar. Güncellemeler kendiliğinden de denetlenir: biri çıktığında görev çubuğunda bir düğme görünür."
+
+msgid "Look for firmware updates"
+msgstr "Donanım yazılımı güncellemelerini ara"
+
+msgid "Look for updates"
+msgstr "Güncellemeleri ara"
+
+msgid "Looking for devices… Put your device into pairing mode (see its manual; often: hold its power button)."
+msgstr "Aygıtlar aranıyor… Aygıtınızı eşleştirme kipine alın (kılavuzuna bakın; çoğu zaman: güç düğmesini basılı tutun)."
+
+msgid "Looking for networks…"
+msgstr "Ağlar aranıyor…"
+
+msgid "Looking for printers (10 seconds)…"
+msgstr "Yazıcılar aranıyor (10 saniye)…"
+
+msgid "Looking for scanners…"
+msgstr "Tarayıcılar aranıyor…"
+
+msgid "Looking for updates…"
+msgstr "Güncellemeler aranıyor…"
+
+msgid "Magnifier (Super+Z)"
+msgstr "Büyüteç (Super+Z)"
+
+msgid "Main screen"
+msgstr "Ana ekran"
+
+msgid "Make administrator"
+msgstr "Yönetici yap"
+
+msgid "Make default"
+msgstr "Varsayılan yap"
+
+msgid "Matching the theme"
+msgstr "Temaya uygun"
+
+msgid "May use the computer only from"
+msgstr "Bilgisayarı yalnızca şu saatlerde kullanabilir:"
+
+msgid "Method"
+msgstr "Yöntem"
+
+msgid "Microphone"
+msgstr "Mikrofon"
+
+msgid "More settings"
+msgstr "Diğer ayarlar"
+
+msgid "Mouse pointer"
+msgstr "Fare imleci"
+
+msgid "NTFS (Windows disks)"
+msgstr "NTFS (Windows diskleri)"
+
+msgid "Name"
+msgstr "Ad"
+
+msgid "Network"
+msgstr "Ağ"
+
+msgid "Network name"
+msgstr "Ağ adı"
+
+msgid "Network share"
+msgstr "Ağ paylaşımı"
+
+msgid "Never"
+msgstr "Asla"
+
+msgid "New administrator password"
+msgstr "Yeni yönetici parolası"
+
+msgid "New password"
+msgstr "Yeni parola"
+
+msgid "New password for %s"
+msgstr "%s için yeni parola"
+
+msgid "Next"
+msgstr "İleri"
+
+msgid "No Bluetooth adapter found. This computer has none, it is switched off (some laptops have a key or switch for it), or my-distro has no driver for it. A USB Bluetooth stick works too."
+msgstr "Bluetooth bağdaştırıcısı bulunamadı. Bu bilgisayarda yok, kapalı (bazı dizüstülerde bunun için bir tuş ya da anahtar vardır) ya da my-distro'nun bunun için sürücüsü yok. Bir USB Bluetooth çubuğu da çalışır."
+
+msgid "No Wi-Fi adapter found.\n\nThis computer has none, or my-distro has no driver for it (in a terminal, lspci -k shows the devices and their drivers). A network cable works without setting anything up."
+msgstr "Wi-Fi bağdaştırıcısı bulunamadı.\n\nBu bilgisayarda yok ya da my-distro'nun bunun için sürücüsü yok (bir terminalde lspci -k aygıtları ve sürücülerini gösterir). Ağ kablosu hiçbir ayar yapmadan çalışır."
+
+msgid "No administrator rights any more."
+msgstr "Artık yönetici hakları yok."
+
+msgid "No changes yet. Edit a file and it shows up here."
+msgstr "Henüz değişiklik yok. Bir dosyayı düzenleyin, burada görünür."
+
+msgid "No firmware updates for this computer."
+msgstr "Bu bilgisayar için donanım yazılımı güncellemesi yok."
+
+msgid "No limits for this user."
+msgstr "Bu kullanıcı için sınır yok."
+
+msgid "No microphone."
+msgstr "Mikrofon yok."
+
+msgid "No package list (are you online?)."
+msgstr "Paket listesi yok (çevrimiçi misiniz?)."
+
+msgid "No printer found. Is it switched on, and in the same network (or plugged in)? You can also type its address (IP or name) below."
+msgstr "Yazıcı bulunamadı. Açık mı, aynı ağda mı (ya da takılı mı)? Adresini (IP ya da ad) aşağıya da yazabilirsiniz."
+
+msgid "No printers yet. Click Add printer. (Is the print service running? It starts at boot: /etc/init.d/S81cupsd)"
+msgstr "Henüz yazıcı yok. Yazıcı ekle'ye tıklayın. (Yazdırma hizmeti çalışıyor mu? Açılışta başlar: /etc/init.d/S81cupsd)"
+
+msgid "No program is playing sound right now."
+msgstr "Şu anda hiçbir program ses çalmıyor."
+
+msgid "No programs installed yet."
+msgstr "Henüz kurulu program yok."
+
+msgid "No proxy. Log out and in again so that all programs know."
+msgstr "Vekil sunucu yok. Tüm programların bilmesi için oturumu kapatıp yeniden açın."
+
+msgid "No saved versions of this file."
+msgstr "Bu dosyanın kaydedilmiş sürümü yok."
+
+msgid "No scanner found. Is it switched on, and plugged in or in the same network?"
+msgstr "Tarayıcı bulunamadı. Açık mı, takılı mı ya da aynı ağda mı?"
+
+msgid "No sound output: is the sound server running?"
+msgstr "Ses çıkışı yok: ses sunucusu çalışıyor mu?"
+
+msgid "No spaces or quotes, please."
+msgstr "Lütfen boşluk ya da tırnak işareti kullanmayın."
+
+msgid "No such user."
+msgstr "Böyle bir kullanıcı yok."
+
+msgid "None"
+msgstr "Hiç"
+
+msgid "Normal"
+msgstr "Normal"
+
+msgid "Not needed on the live system: it starts fresh every time."
+msgstr "Canlı sistemde gerekmez: her seferinde sıfırdan başlar."
+
+msgid "Not your login password: one only for sharing (at least 6 characters)."
+msgstr "Giriş parolanız değil: yalnızca paylaşım için bir parola (en az 6 karakter)."
+
+msgid "Nothing found."
+msgstr "Hiçbir şey bulunamadı."
+
+msgid "Nothing to undo."
+msgstr "Geri alınacak bir şey yok."
+
+msgid "Nothing was changed."
+msgstr "Hiçbir şey değiştirilmedi."
+
+msgid "OK"
+msgstr "Tamam"
+
+msgid "Ocean"
+msgstr "Okyanus"
+
+msgid "On"
+msgstr "Açık"
+
+msgid "On-screen keyboard (Super+K)"
+msgstr "Ekran klavyesi (Super+K)"
+
+msgid "Only Downloads"
+msgstr "Yalnızca İndirilenler"
+
+msgid "Only the administrator (root) may read %s."
+msgstr "%s dosyasını yalnızca yönetici (root) okuyabilir."
+
+msgid "Only the main screen"
+msgstr "Yalnızca ana ekran"
+
+msgid "Only the second screen"
+msgstr "Yalnızca ikinci ekran"
+
+msgid "Open"
+msgstr "Aç"
+
+msgid "Open a shared folder of a Windows PC or a network drive (NAS). Leave the user name empty to connect as a guest."
+msgstr "Bir Windows bilgisayarının ya da ağ sürücüsünün (NAS) paylaşılan klasörünü açın. Konuk olarak bağlanmak için kullanıcı adını boş bırakın."
+
+msgid "Open folder"
+msgstr "Klasörü aç"
+
+msgid "Open in"
+msgstr "Şununla aç"
+
+msgid "Open the magnifier"
+msgstr "Büyüteci aç"
+
+msgid "Open the on-screen keyboard"
+msgstr "Ekran klavyesini aç"
+
+msgid "Or its address:"
+msgstr "Ya da adresi:"
+
+msgid "Other network"
+msgstr "Başka ağ"
+
+msgid "Other network…"
+msgstr "Başka ağ…"
+
+msgid "Others may also change and add files"
+msgstr "Diğerleri dosyaları değiştirebilir ve ekleyebilir de"
+
+msgid "Others may only read the files"
+msgstr "Diğerleri dosyaları yalnızca okuyabilir"
+
+msgid "Output"
+msgstr "Çıkış"
+
+msgid "Own accent color"
+msgstr "Kendi vurgu rengi"
+
+msgid "PIN for %s (often 0000 or 1234, see its manual):"
+msgstr "%s için PIN (çoğu zaman 0000 ya da 1234, kılavuzuna bakın):"
+
+msgid "Pair with %s?"
+msgstr "%s ile eşleşilsin mi?"
+
+msgid "Pairing was refused. Put the device into pairing mode and try again."
+msgstr "Eşleşme reddedildi. Aygıtı eşleştirme kipine alın ve yeniden deneyin."
+
+msgid "Pairing… If the device shows a number or asks for one, follow it."
+msgstr "Eşleşiyor… Aygıt bir sayı gösterir ya da isterse, ona uyun."
+
+msgid "Parental controls for %s"
+msgstr "%s için ebeveyn denetimi"
+
+msgid "Parental controls saved."
+msgstr "Ebeveyn denetimi kaydedildi."
+
+msgid "Parental controls…"
+msgstr "Ebeveyn denetimi…"
+
+msgid "Partitions the running system uses can't be changed. Formatting deletes everything on the disk or partition."
+msgstr "Çalışan sistemin kullandığı bölümler değiştirilemez. Biçimlendirme disk ya da bölümdeki her şeyi siler."
+
+msgid "Password"
+msgstr "Parola"
+
+msgid "Password again"
+msgstr "Parola (tekrar)"
+
+msgid "Password changed."
+msgstr "Parola değiştirildi."
+
+msgid "Password for \"%s\":"
+msgstr "\"%s\" için parola:"
+
+msgid "Permissions"
+msgstr "İzinler"
+
+msgid "Picture:"
+msgstr "Resim:"
+
+msgid "Pictures"
+msgstr "Resimler"
+
+msgid "Plain color"
+msgstr "Düz renk"
+
+msgid "Please wait until this is finished."
+msgstr "Lütfen bu bitene kadar bekleyin."
+
+msgid "Plug in a USB stick or disk: it opens by itself and appears here."
+msgstr "Bir USB bellek ya da disk takın: kendiliğinden açılır ve burada görünür."
+
+msgid "Plug in the charger, or save your work."
+msgstr "Şarj aletini takın ya da çalışmanızı kaydedin."
+
+msgid "Polish"
+msgstr "Lehçe"
+
+msgid "Position"
+msgstr "Konum"
+
+msgid "Power off"
+msgstr "Kapat"
+
+msgid "Prepare for Secure Boot…"
+msgstr "Güvenli Önyüklemeye (Secure Boot) hazırla…"
+
+msgid "Printers"
+msgstr "Yazıcılar"
+
+msgid "Printers made since about 2015 work without a driver over the network (Wi-Fi or cable): connect it to your network and try again."
+msgstr "Yaklaşık 2015'ten beri üretilen yazıcılar ağ üzerinden (Wi-Fi ya da kablo) sürücüsüz çalışır: yazıcıyı ağınıza bağlayıp yeniden deneyin."
+
+msgid "Programs"
+msgstr "Programlar"
+
+msgid "Programs you open from now on use the new size; all of the desktop after the next login."
+msgstr "Şimdiden sonra açtığınız programlar yeni boyutu kullanır; masaüstünün tamamı bir sonraki girişten sonra."
+
+msgid "Proxy"
+msgstr "Vekil sunucu"
+
+msgid "Put this backup back?"
+msgstr "Bu yedek geri yüklensin mi?"
+
+msgid "Puts this computer back to how it was right after installing my-distro: all users, their files and all settings are deleted. The system itself stays, in the version it has now. Then the setup starts."
+msgstr "Bu bilgisayarı my-distro kurulduktan hemen sonraki haline getirir: tüm kullanıcılar, dosyaları ve tüm ayarlar silinir. Sistemin kendisi şimdiki sürümüyle kalır. Ardından ilk ayarlar başlar."
+
+msgid "Quality"
+msgstr "Kalite"
+
+msgid "Read aloud (Super+R)"
+msgstr "Sesli oku (Super+R)"
+
+msgid "Read only"
+msgstr "Salt okunur"
+
+msgid "Read the selected text"
+msgstr "Seçili metni oku"
+
+msgid "Reboot"
+msgstr "Yeniden başlat"
+
+msgid "Recent file changes"
+msgstr "Son dosya değişiklikleri"
+
+msgid "Refresh"
+msgstr "Yenile"
+
+msgid "Remove"
+msgstr "Kaldır"
+
+msgid "Remove %s?"
+msgstr "%s kaldırılsın mı?"
+
+msgid "Remove administrator rights"
+msgstr "Yönetici haklarını kaldır"
+
+msgid "Remove both"
+msgstr "İkisini de kaldır"
+
+msgid "Remove the VPN \"%s\"?"
+msgstr "\"%s\" VPN'i kaldırılsın mı?"
+
+msgid "Remove the printer \"%s\"?"
+msgstr "\"%s\" yazıcısı kaldırılsın mı?"
+
+msgid "Remove the user \"%s\"?"
+msgstr "\"%s\" kullanıcısı kaldırılsın mı?"
+
+msgid "Remove user…"
+msgstr "Kullanıcıyı kaldır…"
+
+msgid "Remove…"
+msgstr "Kaldır…"
+
+msgid "Replace"
+msgstr "Değiştir"
+
+msgid "Replace the VPN \"%s\"?"
+msgstr "\"%s\" VPN'i değiştirilsin mi?"
+
+msgid "Reset and restart"
+msgstr "Sıfırla ve yeniden başlat"
+
+msgid "Reset this computer…"
+msgstr "Bu bilgisayarı sıfırla…"
+
+msgid "Reset to defaults"
+msgstr "Varsayılanlara dön"
+
+msgid "Resolution"
+msgstr "Çözünürlük"
+
+msgid "Restart now"
+msgstr "Şimdi yeniden başlat"
+
+msgid "Restore this version"
+msgstr "Bu sürümü geri yükle"
+
+msgid "Restored %s to version %d."
+msgstr "%s, %d sürümüne geri yüklendi."
+
+msgid "Restore…"
+msgstr "Geri yükle…"
+
+msgid "Right of the main screen"
+msgstr "Ana ekranın sağında"
+
+msgid "Romanian"
+msgstr "Romence"
+
+msgid "SIZE"
+msgstr "BOYUT"
+
+msgid "Same picture on both"
+msgstr "İkisinde de aynı resim"
+
+msgid "Save"
+msgstr "Kaydet"
+
+msgid "Saved. Log out and in again so that all programs use it."
+msgstr "Kaydedildi. Tüm programların kullanması için oturumu kapatıp yeniden açın."
+
+msgid "Saved: also at the next login."
+msgstr "Kaydedildi: bir sonraki girişte de."
+
+msgid "Scan"
+msgstr "Tara"
+
+msgid "Scanned"
+msgstr "Tarandı"
+
+msgid "Scanner"
+msgstr "Tarayıcı"
+
+msgid "Scanning…"
+msgstr "Taranıyor…"
+
+msgid "Scan…"
+msgstr "Tara…"
+
+msgid "Screen lock"
+msgstr "Ekran kilidi"
+
+msgid "Screen reader (Super+Alt+S)"
+msgstr "Ekran okuyucu (Super+Alt+S)"
+
+msgid "Screen reader off"
+msgstr "Ekran okuyucu kapalı"
+
+msgid "Screen reader on"
+msgstr "Ekran okuyucu açık"
+
+msgid "Screens"
+msgstr "Ekranlar"
+
+msgid "Search"
+msgstr "Ara"
+
+msgid "Search (only lines with this text)"
+msgstr "Ara (yalnızca bu metni içeren satırlar)"
+
+msgid "Search again"
+msgstr "Yeniden ara"
+
+msgid "Search files"
+msgstr "Dosya ara"
+
+msgid "Search programs"
+msgstr "Program ara"
+
+msgid "Search your files by meaning…"
+msgstr "Dosyalarınızı anlamlarına göre arayın…"
+
+msgid "Second screen"
+msgstr "İkinci ekran"
+
+msgid "Second screen is"
+msgstr "İkinci ekran"
+
+msgid "Secure Boot"
+msgstr "Güvenli Önyükleme (Secure Boot)"
+
+msgid "Secure Boot is off."
+msgstr "Güvenli Önyükleme kapalı."
+
+msgid "Secure Boot is on."
+msgstr "Güvenli Önyükleme açık."
+
+msgid "Security"
+msgstr "Güvenlik"
+
+msgid "Seeing"
+msgstr "Görme"
+
+msgid "Select a line first."
+msgstr "Önce bir satır seçin."
+
+msgid "Server domain"
+msgstr "Sunucu alan adı"
+
+msgid "Settings"
+msgstr "Ayarlar"
+
+msgid "Settings from your school or university"
+msgstr "Okulunuzun ya da üniversitenizin ayarları"
+
+msgid "Setup"
+msgstr "İlk ayarlar"
+
+msgid "Share"
+msgstr "Paylaş"
+
+msgid "Share a folder (and the printers) with the other computers in your network. They log in with your user name and a sharing password. Off until you switch it on."
+msgstr "Bir klasörü (ve yazıcıları) ağınızdaki diğer bilgisayarlarla paylaşın. Kullanıcı adınız ve bir paylaşım parolasıyla giriş yaparlar. Siz açana kadar kapalıdır."
+
+msgid "Shared. On other computers open \\\\%s\\%s (Windows) or smb://%s/%s (Mac, Linux) and log in as %s with the sharing password."
+msgstr "Paylaşıldı. Diğer bilgisayarlarda \\\\%s\\%s (Windows) ya da smb://%s/%s (Mac, Linux) adresini açın ve paylaşım parolasıyla %s olarak giriş yapın."
+
+msgid "Sharing"
+msgstr "Paylaşım"
+
+msgid "Sharing changes the system: type the root password."
+msgstr "Paylaşım sistemi değiştirir: root parolasını yazın."
+
+msgid "Sharing is off."
+msgstr "Paylaşım kapalı."
+
+msgid "Sharing needs Samba, a package of the Software app (about 60 MB)."
+msgstr "Paylaşım için Samba gerekir; bu, Yazılım uygulamasının bir paketidir (yaklaşık 60 MB)."
+
+msgid "Sharing password"
+msgstr "Paylaşım parolası"
+
+msgid "Sharing…"
+msgstr "Paylaşım…"
+
+msgid "Show password"
+msgstr "Parolayı göster"
+
+msgid "Show seconds"
+msgstr "Saniyeleri göster"
+
+msgid "Show the date"
+msgstr "Tarihi göster"
+
+msgid "Size"
+msgstr "Boyut"
+
+msgid "Size of text and icons"
+msgstr "Metin ve simge boyutu"
+
+msgid "Skip: try it with the demo account"
+msgstr "Atla: tanıtım hesabıyla dene"
+
+msgid "Software"
+msgstr "Yazılım"
+
+msgid "Some networks (schools, companies) only reach the internet through a proxy. It is used by the web browser, system updates and other programs that download. Leave it empty for none."
+msgstr "Bazı ağlar (okullar, şirketler) internete yalnızca bir vekil sunucu üzerinden ulaşır. Web tarayıcısı, sistem güncellemeleri ve indirme yapan diğer programlar onu kullanır. Yoksa boş bırakın."
+
+msgid "Sound"
+msgstr "Ses"
+
+msgid "Sound now plays here."
+msgstr "Ses artık burada çalıyor."
+
+msgid "Sound now plays here. Programs that were already playing: start them again."
+msgstr "Ses artık burada çalıyor. Zaten çalan programları yeniden başlatın."
+
+msgid "Spanish"
+msgstr "İspanyolca"
+
+msgid "Start"
+msgstr "Başlat"
+
+msgid "Starting the indexer…"
+msgstr "Dizinleyici başlatılıyor…"
+
+msgid "Starting…"
+msgstr "Başlatılıyor…"
+
+msgid "Stop sharing"
+msgstr "Paylaşımı durdur"
+
+msgid "Stretch"
+msgstr "Uzat"
+
+msgid "Style"
+msgstr "Biçem"
+
+msgid "Switch user"
+msgstr "Kullanıcı değiştir"
+
+msgid "System logs"
+msgstr "Sistem günlükleri"
+
+msgid "System messages"
+msgstr "Sistem iletileri"
+
+msgid "System update"
+msgstr "Sistem güncellemesi"
+
+msgid "TIME"
+msgstr "SAAT"
+
+msgid "Taskbar"
+msgstr "Görev çubuğu"
+
+msgid "Taskbar clock"
+msgstr "Görev çubuğu saati"
+
+msgid "Teal"
+msgstr "Turkuaz"
+
+msgid "Test page"
+msgstr "Test sayfası"
+
+msgid "Text and icons"
+msgstr "Metin ve simgeler"
+
+msgid "Text size"
+msgstr "Metin boyutu"
+
+msgid "Text size applies to programs you open from now on, all of the desktop after the next login. The on-screen keyboard is also on the login screen (the keyboard button). Read aloud: select text with the mouse in any program, then press Super+R; again stops it. The screen reader speaks window titles, the Start menu and what has the focus in GTK programs (buttons, fields, lists, menus); not terminals, web pages or the login screen."
+msgstr "Metin boyutu, şimdiden sonra açtığınız programlara, masaüstünün tamamına bir sonraki girişten sonra uygulanır. Ekran klavyesi giriş ekranında da vardır (klavye düğmesi). Sesli okuma: herhangi bir programda fareyle metin seçin, sonra Super+R'ye basın; yeniden basmak durdurur. Ekran okuyucu pencere başlıklarını, Başlat menüsünü ve GTK programlarında odakta olanı (düğmeler, alanlar, listeler, menüler) okur; terminalleri, web sayfalarını ya da giriş ekranını okumaz."
+
+msgid "That did not work."
+msgstr "Bu işe yaramadı."
+
+msgid "That did not work: nothing was changed, or only part of it (see the message)."
+msgstr "Bu işe yaramadı: hiçbir şey ya da yalnızca bir kısmı değişti (iletiye bakın)."
+
+msgid "That user already exists."
+msgstr "Bu kullanıcı zaten var."
+
+msgid "That user name belongs to the system. Choose another one."
+msgstr "Bu kullanıcı adı sisteme ait. Başka bir ad seçin."
+
+msgid "That's the oldest saved version, there is nothing before it."
+msgstr "Bu kaydedilmiş en eski sürüm, öncesinde bir şey yok."
+
+msgid "The administrator (root) password is asked for when you install the system or change things here."
+msgstr "Yönetici (root) parolası, sistemi kurduğunuzda ya da burada bir şey değiştirdiğinizde sorulur."
+
+msgid "The firewall lets nobody in, unless you share a folder or the printers with the other computers of your network (Sharing). To open a shared folder of another PC: Start menu, Network share."
+msgstr "Güvenlik duvarı kimseyi içeri almaz; ancak bir klasörü ya da yazıcıları ağınızdaki diğer bilgisayarlarla paylaşırsanız (Paylaşım) başka. Başka bir bilgisayarın paylaşılan klasörünü açmak için: Başlat menüsü, Ağ paylaşımı."
+
+msgid "The firmware update did not work: see the messages below."
+msgstr "Donanım yazılımı güncellemesi başarısız oldu: aşağıdaki iletilere bakın."
+
+msgid "The firmware update is installed."
+msgstr "Donanım yazılımı güncellemesi kuruldu."
+
+msgid "The firmware update is ready: it is installed while the computer restarts. Keep it plugged in."
+msgstr "Donanım yazılımı güncellemesi hazır: bilgisayar yeniden başlarken kurulacak. Fişini çekmeyin."
+
+msgid "The full name can't contain \":\"."
+msgstr "Ad soyad \":\" içeremez."
+
+msgid "The index is still empty, the indexer is working on it."
+msgstr "Dizin henüz boş, dizinleyici üzerinde çalışıyor."
+
+msgid "The kernel is locked down: hibernation is off."
+msgstr "Çekirdek kilitli: hazırda bekletme kapalı."
+
+msgid "The language of the menus and windows, and the format of dates and numbers. It applies from the next login. Programs that aren't translated stay in English."
+msgstr "Menülerin ve pencerelerin dili ile tarih ve sayıların biçimi. Bir sonraki girişten itibaren geçerlidir. Çevrilmemiş programlar İngilizce kalır."
+
+msgid "The live system keeps nothing after a reboot. Install it to keep your account."
+msgstr "Canlı sistem yeniden başlatıldıktan sonra hiçbir şey saklamaz. Hesabınızı korumak için onu kurun."
+
+msgid "The lock screen asks for your password. Lock it yourself with Super+L or Start menu, Lock screen. It also locks before the computer goes to sleep."
+msgstr "Kilit ekranı parolanızı sorar. Super+L ile ya da Başlat menüsü, Ekranı kilitle ile kendiniz kilitleyin. Bilgisayar uykuya geçmeden önce de kilitlenir."
+
+msgid "The login screen checks this. 5 minutes before the time is over a notice appears, then the session ends (unsaved work is lost)."
+msgstr "Giriş ekranı bunu denetler. Süre bitmeden 5 dakika önce bir uyarı görünür, sonra oturum sona erer (kaydedilmemiş çalışmalar kaybolur)."
+
+msgid "The name can't contain \":\"."
+msgstr "Ad \":\" içeremez."
+
+msgid "The old settings are back."
+msgstr "Eski ayarlar geri geldi."
+
+msgid "The previous version is back. Restart the computer to finish."
+msgstr "Önceki sürüm geri geldi. Tamamlamak için bilgisayarı yeniden başlatın."
+
+msgid "The scan did not work."
+msgstr "Tarama başarısız oldu."
+
+msgid "The screen can't show that."
+msgstr "Ekran bunu gösteremiyor."
+
+msgid "The share could not be opened (wrong name or password, or the server can't be reached)."
+msgstr "Paylaşım açılamadı (ad ya da parola yanlış veya sunucuya ulaşılamıyor)."
+
+msgid "The system files of the version before the last update come back. Your files, users and settings stay. Restart afterwards."
+msgstr "Son güncellemeden önceki sürümün sistem dosyaları geri gelir. Dosyalarınız, kullanıcılarınız ve ayarlarınız kalır. Sonra yeniden başlatın."
+
+msgid "The system settings belong to the administrator: type the root password."
+msgstr "Sistem ayarları yöneticiye aittir: root parolasını yazın."
+
+msgid "The system's language (Users and system)"
+msgstr "Sistemin dili (Kullanıcılar ve sistem)"
+
+msgid "The system's message bus (D-Bus) is not running."
+msgstr "Sistemin ileti veri yolu (D-Bus) çalışmıyor."
+
+msgid "The test page is on its way."
+msgstr "Test sayfası yolda."
+
+msgid "The two passwords are not the same."
+msgstr "İki parola aynı değil."
+
+msgid "The update did not work: see the messages below."
+msgstr "Güncelleme başarısız oldu: aşağıdaki iletilere bakın."
+
+msgid "The update is installed. Restart the computer to finish. If something doesn't work afterwards, \"Undo last update\" goes back."
+msgstr "Güncelleme kuruldu. Tamamlamak için bilgisayarı yeniden başlatın. Sonrasında bir şey çalışmazsa \"Son güncellemeyi geri al\" geri döner."
+
+msgid "The whole disk gets one new partition. Everything on it is deleted."
+msgstr "Diskin tamamı tek bir yeni bölüm alır. Üzerindeki her şey silinir."
+
+msgid "Their home folder /home/%s and all files in it are deleted."
+msgstr "Ev klasörü /home/%s ve içindeki tüm dosyalar silinir."
+
+msgid "Theme"
+msgstr "Tema"
+
+msgid "Then click Yes (and confirm on the device, if it asks too)."
+msgstr "Ardından Evet'e tıklayın (ve aygıt da sorarsa onda onaylayın)."
+
+msgid "These packages are made for my-distro %s, but this is my-distro %s: they can't be installed. Update the system (System update), or wait until the packages for %s are out."
+msgstr "Bu paketler my-distro %s için yapıldı, ama bu my-distro %s: kurulamazlar. Sistemi güncelleyin (Sistem güncellemesi) ya da %s paketleri çıkana kadar bekleyin."
+
+msgid "This computer was started without UEFI: Secure Boot doesn't apply."
+msgstr "Bu bilgisayar UEFI olmadan başlatıldı: Güvenli Önyükleme geçerli değil."
+
+msgid "This installation doesn't start through shim yet."
+msgstr "Bu kurulum henüz shim üzerinden başlamıyor."
+
+msgid "This is a disk inside the computer!"
+msgstr "Bu, bilgisayarın içindeki bir disk!"
+
+msgid "This is the disk my-distro runs from!"
+msgstr "Bu, my-distro'nun çalıştığı disk!"
+
+msgid "This is the live system: programs you install here go into RAM and are gone when you shut down, like everything else. Install my-distro to a disk to keep them."
+msgstr "Bu canlı sistem: burada kurduğunuz programlar RAM'e gider ve kapattığınızda her şey gibi kaybolur. Onları korumak için my-distro'yu bir diske kurun."
+
+msgid "Tile"
+msgstr "Döşe"
+
+msgid "Time zone"
+msgstr "Saat dilimi"
+
+msgid "Time zone (for everyone, at once)"
+msgstr "Saat dilimi (herkes için, hemen)"
+
+msgid "Time zone set."
+msgstr "Saat dilimi ayarlandı."
+
+msgid "To use it again you need its config file."
+msgstr "Yeniden kullanmak için yapılandırma dosyası gerekir."
+
+msgid "Today's time on the computer (%d minutes) is used up."
+msgstr "Bugünkü bilgisayar süresi (%d dakika) doldu."
+
+msgid "Top"
+msgstr "Üst"
+
+msgid "Try something like \"notes about my training plan\" or \"recipe\"."
+msgstr "\"antrenman planımla ilgili notlar\" ya da \"tarif\" gibi bir şey deneyin."
+
+msgid "Try your keyboard here"
+msgstr "Klavyenizi burada deneyin"
+
+msgid "Turkish"
+msgstr "Türkçe"
+
+msgid "Type %06u on %s, then press Enter on it."
+msgstr "%06u yazın (%s üzerinde), sonra orada Enter'a basın."
+
+msgid "Type %s on %s, then press Enter on it."
+msgstr "%s yazın (%s üzerinde), sonra orada Enter'a basın."
+
+msgid "Type only the address, like 192.168.1.20."
+msgstr "Yalnızca adresi yazın, örneğin 192.168.1.20."
+
+msgid "Type the network's name."
+msgstr "Ağın adını yazın."
+
+msgid "Type your password and press Enter"
+msgstr "Parolanızı yazın ve Enter'a basın"
+
+msgid "Type your user name and password."
+msgstr "Kullanıcı adınızı ve parolanızı yazın."
+
+msgid "Typing"
+msgstr "Yazma"
+
+msgid "USB"
+msgstr "USB"
+
+msgid "Undo last change"
+msgstr "Son değişikliği geri al"
+
+msgid "Undo last update (back to %s)…"
+msgstr "Son güncellemeyi geri al (%s sürümüne dön)…"
+
+msgid "Undo last update…"
+msgstr "Son güncellemeyi geri al…"
+
+msgid "Undo this change"
+msgstr "Bu değişikliği geri al"
+
+msgid "Unknown time zone."
+msgstr "Bilinmeyen saat dilimi."
+
+msgid "Update all"
+msgstr "Tümünü güncelle"
+
+msgid "Use this password for the administrator (root) too"
+msgstr "Bu parolayı yönetici (root) için de kullan"
+
+msgid "User"
+msgstr "Kullanıcı"
+
+msgid "User added."
+msgstr "Kullanıcı eklendi."
+
+msgid "User name"
+msgstr "Kullanıcı adı"
+
+msgid "User name (to log in)"
+msgstr "Kullanıcı adı (giriş için)"
+
+msgid "User name: small letters a-z, digits, - and _, starting with a letter."
+msgstr "Kullanıcı adı: küçük harfler a-z, rakamlar, - ve _; bir harfle başlamalı."
+
+msgid "User removed."
+msgstr "Kullanıcı kaldırıldı."
+
+msgid "Users"
+msgstr "Kullanıcılar"
+
+msgid "Users and system"
+msgstr "Kullanıcılar ve sistem"
+
+msgid "Users and system…"
+msgstr "Kullanıcılar ve sistem…"
+
+msgid "VERSION"
+msgstr "SÜRÜM"
+
+msgid "VPN"
+msgstr "VPN"
+
+msgid "VPN not available"
+msgstr "VPN kullanılamıyor"
+
+msgid "Versions of"
+msgstr "Sürümleri:"
+
+msgid "Very large"
+msgstr "Çok büyük"
+
+msgid "View"
+msgstr "Görünüm"
+
+msgid "Violet"
+msgstr "Mor"
+
+msgid "Wallpaper"
+msgstr "Duvar kâğıdı"
+
+msgid "Welcome"
+msgstr "Hoş geldiniz"
+
+msgid "Welcome to my-distro"
+msgstr "my-distro'ya hoş geldiniz"
+
+msgid "What each program may use, the next time you start it from the Start menu. A program without the microphone gets no sound at all (the sound server can't give it one without the other). Without the whole home folder it sees only Downloads (or nothing) and keeps its own settings separately."
+msgstr "Her programın, Başlat menüsünden bir sonraki başlatılışında neleri kullanabileceği. Mikrofonu olmayan bir program hiç ses alamaz (ses sunucusu birini diğeri olmadan veremez). Ev klasörünün tamamı olmadan yalnızca İndirilenler'i (ya da hiçbir şeyi) görür ve kendi ayarlarını ayrı tutar."
+
+msgid "Wi-Fi"
+msgstr "Wi-Fi"
+
+msgid "Wi-Fi is starting…"
+msgstr "Wi-Fi başlıyor…"
+
+msgid "Wi-Fi password"
+msgstr "Wi-Fi parolası"
+
+msgid "Wi-Fi passwords have 8 to 63 characters."
+msgstr "Wi-Fi parolaları 8 ile 63 karakter arasındadır."
+
+msgid "With Secure Boot on, the computer can't hibernate (the kernel locks itself down and can't check a saved memory image). Suspend works."
+msgstr "Güvenli Önyükleme açıkken bilgisayar hazırda bekletilemez (çekirdek kendini kilitler ve kaydedilmiş bir bellek görüntüsünü denetleyemez). Uyku çalışır."
+
+msgid "Without proxy for"
+msgstr "Şunlar için vekil sunucu yok"
+
+msgid "Working…"
+msgstr "Çalışıyor…"
+
+msgid "Working… (don't pull out the disk)"
+msgstr "Çalışıyor… (diski çıkarmayın)"
+
+msgid "Write the address as \\\\SERVER\\SHARE or smb://SERVER/SHARE."
+msgstr "Adresi \\\\SUNUCU\\PAYLAŞIM ya da smb://SUNUCU/PAYLAŞIM olarak yazın."
+
+msgid "Write the proxy as NAME:PORT, e.g. proxy.example.com:3128."
+msgstr "Vekil sunucuyu AD:PORT olarak yazın, örneğin proxy.example.com:3128."
+
+msgid "Write the times like 08:00 and 20:00."
+msgstr "Saatleri 08:00 ve 20:00 gibi yazın."
+
+msgid "Wrong password"
+msgstr "Yanlış parola"
+
+msgid "Wrong password."
+msgstr "Yanlış parola."
+
+msgid "Wrong password: nothing was done."
+msgstr "Yanlış parola: hiçbir şey yapılmadı."
+
+msgid "Wrong user name or password"
+msgstr "Yanlış kullanıcı adı ya da parola"
+
+msgid "Your account"
+msgstr "Hesabınız"
+
+msgid "Your account \"%s\" is ready. Log in with your new password."
+msgstr "\"%s\" hesabınız hazır. Yeni parolanızla giriş yapın."
+
+msgid "Your computer"
+msgstr "Bilgisayarınız"
+
+msgid "Your files, users and settings stay. Don't switch the computer off while it installs; restart it afterwards."
+msgstr "Dosyalarınız, kullanıcılarınız ve ayarlarınız kalır. Kurulum sürerken bilgisayarı kapatmayın; sonra yeniden başlatın."
+
+msgid "Your home folder is always backed up (without caches and the trash). The settings include saved passwords: keep the disk safe."
+msgstr "Ev klasörünüz her zaman yedeklenir (önbellekler ve çöp kutusu olmadan). Ayarlar kayıtlı parolaları içerir: diski güvenli tutun."
+
+msgid "Your name"
+msgstr "Adınız"
+
+msgid "Your own files made with it stay."
+msgstr "Onunla oluşturduğunuz kendi dosyalarınız kalır."
+
+msgid "Your school's Wi-Fi page lists these. With a server domain (and the CA certificate if they give you one), my-distro checks that it really is their server before it sends your password."
+msgstr "Okulunuzun Wi-Fi sayfası bunları listeler. Bir sunucu alan adıyla (ve size verildiyse CA sertifikasıyla) my-distro, parolanızı göndermeden önce gerçekten onların sunucusu olduğunu denetler."
+
+msgid "Your user may not change Wi-Fi yet (it is not in the group netdev). Log out and in again; if that doesn't help, as root: addgroup YOUR-NAME netdev, then log in again."
+msgstr "Kullanıcınız henüz Wi-Fi'yi değiştiremiyor (netdev grubunda değil). Oturumu kapatıp yeniden açın; işe yaramazsa root olarak: addgroup ADINIZ netdev, sonra yeniden giriş yapın."
+
+msgid "Your user may not change printers yet (it is not in the group lpadmin). As root: addgroup YOUR-NAME lpadmin, then log in again."
+msgstr "Kullanıcınız henüz yazıcıları değiştiremiyor (lpadmin grubunda değil). Root olarak: addgroup ADINIZ lpadmin, sonra yeniden giriş yapın."
+
+msgid "connected   "
+msgstr "bağlı"
+
+msgid "e.g. 192.168.1.20 or printer.local"
+msgstr "örn. 192.168.1.20 ya da printer.local"
+
+msgid "e.g. name@school.ac.at"
+msgstr "örn. ad@okul.edu.tr"
+
+msgid "e.g. school.ac.at"
+msgstr "örn. okul.edu.tr"
+
+msgid "exFAT (Windows, Mac, cameras; big files)"
+msgstr "exFAT (Windows, Mac, kameralar; büyük dosyalar)"
+
+msgid "ext4 (Linux only; best for backups)"
+msgstr "ext4 (yalnızca Linux; yedekler için en iyisi)"
+
+msgid "fwupd is missing."
+msgstr "fwupd eksik."
+
+msgid "in the network"
+msgstr "ağda"
+
+msgid "my-distro %s is out, but without an update package: download its ISO from GitHub."
+msgstr "my-distro %s çıktı, ama güncelleme paketi olmadan: ISO'sunu GitHub'dan indirin."
+
+msgid "my-distro %s is out. This is the live system, which forgets updates: download the new ISO from GitHub."
+msgstr "my-distro %s çıktı. Bu, güncellemeleri unutan canlı sistem: yeni ISO'yu GitHub'dan indirin."
+
+msgid "my-distro %s is ready to install (you have %s). What's new:"
+msgstr "my-distro %s kurulmaya hazır (sizdeki %s). Yenilikler:"
+
+msgid "my-distro %s is up to date."
+msgstr "my-distro %s güncel."
+
+msgid "my-distro has no driver for this printer."
+msgstr "my-distro'nun bu yazıcı için sürücüsü yok."
+
+msgid "my-distro starts with Secure Boot on once its key is enrolled in the PC (once; you need the computer's screen and keyboard for it). \"Prepare\" asks for a one-time password; at the next start a blue screen (MokManager) appears: choose \"Enroll MOK\", \"Continue\", \"Yes\", type the password, \"Reboot\". Then switch on Secure Boot in the firmware settings."
+msgstr "my-distro, anahtarı bilgisayara kaydedildiği anda Güvenli Önyükleme açıkken başlar (bir kez; bunun için bilgisayarın ekranı ve klavyesi gerekir). \"Hazırla\" tek kullanımlık bir parola sorar; bir sonraki açılışta mavi bir ekran (MokManager) görünür: \"Enroll MOK\", \"Continue\", \"Yes\" seçin, parolayı yazın, \"Reboot\". Ardından donanım yazılımı ayarlarında Güvenli Önyüklemeyi açın."
+
+msgid "my-distro's key is enrolled at the next start (MokManager)."
+msgstr "my-distro'nun anahtarı bir sonraki açılışta kaydedilecek (MokManager)."
+
+msgid "my-distro's key is enrolled."
+msgstr "my-distro'nun anahtarı kayıtlı."
+
+msgid "my-distro's key is not enrolled yet."
+msgstr "my-distro'nun anahtarı henüz kayıtlı değil."
+
+msgid "my-update is missing."
+msgstr "my-update eksik."
+
+msgid "my-vpnctl is missing."
+msgstr "my-vpnctl eksik."
+
+msgid "not found"
+msgstr "bulunamadı"
+
+msgid "not ticked"
+msgstr "işaretli değil"
+
+msgid "open   "
+msgstr "açık"
+
+msgid "optional, e.g. anonymous@school.ac.at"
+msgstr "isteğe bağlı, örn. anonim@okul.edu.tr"
+
+msgid "saved   "
+msgstr "kayıtlı"
+
+msgid "secured   "
+msgstr "güvenli"
+
+msgid "space"
+msgstr "boşluk"
+
+msgid "switched off"
+msgstr "kapalı"
+
+msgid "the device"
+msgstr "aygıt"
+
+msgid "ticked"
+msgstr "işaretli"
+
+msgid "to"
+msgstr "-"
+
+msgid "unavailable"
+msgstr "kullanılamıyor"
+
+msgid "user name   "
+msgstr "kullanıcı adı"
+
+msgid "v0 (first)"
+msgstr "v0 (ilk)"
+
+msgid "↑  Update to %s"
+msgstr "↑  %s sürümüne güncelle"
+
+msgid "Calculator"
+msgstr "Hesap makinesi"
+
+msgid "Code editor (LazyVim)"
+msgstr "Kod düzenleyici (LazyVim)"
+
+msgid "Eject USB stick"
+msgstr "USB belleği çıkar"
+
+msgid "Files"
+msgstr "Dosyalar"
+
+msgid "Hibernate"
+msgstr "Hazırda beklet"
+
+msgid "Install to disk"
+msgstr "Diske kur"
+
+msgid "Lock screen"
+msgstr "Ekranı kilitle"
+
+msgid "Log out"
+msgstr "Oturumu kapat"
+
+msgid "Magnifier"
+msgstr "Büyüteç"
+
+msgid "Media player"
+msgstr "Medya oynatıcı"
+
+msgid "On-screen keyboard"
+msgstr "Ekran klavyesi"
+
+msgid "Record screen"
+msgstr "Ekranı kaydet"
+
+msgid "Screenshot"
+msgstr "Ekran görüntüsü"
+
+msgid "Suspend"
+msgstr "Uyku"
+
+msgid "System monitor"
+msgstr "Sistem izleyici"
+
+msgid "Terminal"
+msgstr "Uçbirim"
+
+msgid "Text editor"
+msgstr "Metin düzenleyici"
+
+msgid "Web browser"
+msgstr "Web tarayıcısı"
+
+msgid "Web browser (sandbox)"
+msgstr "Web tarayıcısı (korumalı alan)"

@@ -1,0 +1,2048 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the my-distro package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: my-distro\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-11-10 08:51+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
+
+msgid ""
+"\n"
+"Needs: "
+msgstr ""
+
+msgid "   (current)"
+msgstr ""
+
+msgid "   (default)"
+msgstr ""
+
+msgid "   (with system settings)"
+msgstr ""
+
+msgid "  — USB / card"
+msgstr ""
+
+msgid "  — internal"
+msgstr ""
+
+msgid "  — my-distro runs from it"
+msgstr ""
+
+msgid " (getting an address…)"
+msgstr ""
+
+msgid " It brings: "
+msgstr ""
+
+#. TRANSLATORS: the date on the login screen, see "man strftime"
+msgid "%A, %d %B %Y"
+msgstr ""
+
+#, c-format
+msgid "%d files found"
+msgstr ""
+
+#, c-format
+msgid "%d line"
+msgid_plural "%d lines"
+msgstr[0] ""
+msgstr[1] ""
+
+#, c-format
+msgid "%d minute left on the computer today"
+msgid_plural "%d minutes left on the computer today"
+msgstr[0] ""
+msgstr[1] ""
+
+#, c-format
+msgid "%d of %d lines"
+msgstr ""
+
+#, c-format
+msgid "%s doesn't exist (yet)."
+msgstr ""
+
+#, c-format
+msgid "%s free (%s).%s"
+msgstr ""
+
+#, c-format
+msgid "%s is logged in on another screen (Ctrl+Alt+F%d)."
+msgstr ""
+
+#, c-format
+msgid "%s may use the computer from %02d:%02d to %02d:%02d."
+msgstr ""
+
+#, c-format
+msgid "%s needs it, so it is removed too."
+msgstr ""
+
+#, c-format
+msgid "%s on disk"
+msgstr ""
+
+#, c-format
+msgid ""
+"%s on disk\n"
+"%s download"
+msgstr ""
+
+msgid "(no text, matched by its name)"
+msgstr ""
+
+msgid "(only the last 2 MB)"
+msgstr ""
+
+msgid "(unchanged)"
+msgstr ""
+
+msgid "(used by the system)"
+msgstr ""
+
+msgid ", address "
+msgstr ""
+
+msgid "1 hour"
+msgstr ""
+
+msgid "1 minute"
+msgstr ""
+
+msgid "10 minutes"
+msgstr ""
+
+msgid "15 minutes"
+msgstr ""
+
+msgid "150 dpi (screen, e-mail)"
+msgstr ""
+
+msgid "2 minutes"
+msgstr ""
+
+msgid "200 % (for very sharp screens)"
+msgstr ""
+
+msgid "24-hour time"
+msgstr ""
+
+msgid "30 minutes"
+msgstr ""
+
+msgid "300 dpi (documents)"
+msgstr ""
+
+msgid "5 minutes"
+msgstr ""
+
+msgid "600 dpi (photos)"
+msgstr ""
+
+#, c-format
+msgid ""
+"<span size='x-large' weight='bold' foreground='#e5484d'>%s</span>\n"
+"\n"
+"Everything on <b>%s</b> will be deleted: documents, photos, other systems "
+"(Windows) that may be on it. This can't be undone.\n"
+"\n"
+"To go on, type its name: <b>%s</b>"
+msgstr ""
+
+msgid ""
+"A network that doesn't show its name (hidden). Type it exactly, with upper "
+"and lower case:"
+msgstr ""
+
+msgid "Above the main screen"
+msgstr ""
+
+msgid "Accent color"
+msgstr ""
+
+msgid "Accessibility"
+msgstr ""
+
+msgid "Add"
+msgstr ""
+
+msgid "Add a user"
+msgstr ""
+
+msgid "Add printer"
+msgstr ""
+
+msgid "Add printer…"
+msgstr ""
+
+msgid "Add user…"
+msgstr ""
+
+msgid "Added. Print a test page to try it."
+msgstr ""
+
+msgid "Adding the printer…"
+msgstr ""
+
+msgid "Address"
+msgstr ""
+
+#, c-format
+msgid ""
+"Address %s\n"
+"Last answer from the server %d s ago · received %s · sent %s"
+msgstr ""
+
+#, c-format
+msgid ""
+"Address %s\n"
+"No answer from the VPN server yet. Is the config right, and does this "
+"network allow VPNs?"
+msgstr ""
+
+#, c-format
+msgid ""
+"Address %s\n"
+"Waiting for the VPN server…"
+msgstr ""
+
+msgid "Administrator"
+msgstr ""
+
+msgid "Administrator now: may use sudo with their own password."
+msgstr ""
+
+msgid "Administrator password"
+msgstr ""
+
+msgid "Administrator password again"
+msgstr ""
+
+msgid "Administrator password changed."
+msgstr ""
+
+msgid "Administrator password: type the same password twice."
+msgstr ""
+
+msgid "Again"
+msgstr ""
+
+msgid "All of it"
+msgstr ""
+
+msgid "All programs"
+msgstr ""
+
+msgid "All set"
+msgstr ""
+
+msgid "Also share this computer's printers"
+msgstr ""
+
+msgid "Also the system settings (asks for the root password)"
+msgstr ""
+
+msgid ""
+"Also the system settings: Wi-Fi, VPNs, printers, Bluetooth, users (asks for "
+"the root password)"
+msgstr ""
+
+msgid "Analog"
+msgstr ""
+
+msgid "Anonymous identity"
+msgstr ""
+
+msgid "Apply"
+msgstr ""
+
+msgid "Asking the LVFS (fwupd.org) for firmware updates…"
+msgstr ""
+
+msgid "At most, minutes per day"
+msgstr ""
+
+msgid "Audit"
+msgstr ""
+
+msgid "Automatic"
+msgstr ""
+
+msgid "Back"
+msgstr ""
+
+msgid "Back to the other desktop"
+msgstr ""
+
+msgid "Back to what the screens prefer."
+msgstr ""
+
+msgid "Back up now"
+msgstr ""
+
+msgid "Back up to"
+msgstr ""
+
+msgid "Backup"
+msgstr ""
+
+msgid "Backups on this disk"
+msgstr ""
+
+#, c-format
+msgid "Battery low: %d %%"
+msgstr ""
+
+msgid "Below the main screen"
+msgstr ""
+
+msgid "Bigger"
+msgstr ""
+
+msgid "Bluetooth"
+msgstr ""
+
+msgid "Bluetooth could not be switched on."
+msgstr ""
+
+msgid "Bluetooth is off."
+msgstr ""
+
+msgid "Bottom"
+msgstr ""
+
+msgid "CA certificate"
+msgstr ""
+
+msgid "Camera"
+msgstr ""
+
+msgid "Can't load the search model."
+msgstr ""
+
+msgid "Cancel"
+msgstr ""
+
+msgid "Careful"
+msgstr ""
+
+msgid "Centre"
+msgstr ""
+
+msgid "Change password"
+msgstr ""
+
+msgid "Change password…"
+msgstr ""
+
+msgid "Changes to your files, newest first"
+msgstr ""
+
+msgid ""
+"Changing users and system settings needs the administrator (root) password."
+msgstr ""
+
+msgid "Check and repair"
+msgstr ""
+
+msgid "Checking…"
+msgstr ""
+
+msgid "Choose a device and click Connect."
+msgstr ""
+
+msgid "Choose a disk or partition."
+msgstr ""
+
+msgid "Choose a folder first."
+msgstr ""
+
+msgid "Choose a password."
+msgstr ""
+
+msgid "Choose a picture"
+msgstr ""
+
+msgid "Choose a printer, or type its address."
+msgstr ""
+
+msgid "Choose a user in the list first."
+msgstr ""
+
+msgid "Choose your printer, or type its address below."
+msgstr ""
+
+msgid "Click Search to find devices nearby."
+msgstr ""
+
+msgid "Clock"
+msgstr ""
+
+msgid "Clock app"
+msgstr ""
+
+msgid "Close"
+msgstr ""
+
+msgid "Color"
+msgstr ""
+
+msgid "Colors"
+msgstr ""
+
+msgid "Colors (more choices later in Settings)"
+msgstr ""
+
+msgid "Computer"
+msgstr ""
+
+msgid "Computer name"
+msgstr ""
+
+msgid "Computer name (shown on the network and the login screen)"
+msgstr ""
+
+msgid "Computer name saved."
+msgstr ""
+
+msgid "Computer name: letters, digits and -, no spaces."
+msgstr ""
+
+msgid "Connect"
+msgstr ""
+
+msgid "Connect to Wi-Fi"
+msgstr ""
+
+#, c-format
+msgid "Connected to %s"
+msgstr ""
+
+msgid "Connected."
+msgstr ""
+
+msgid "Connecting…"
+msgstr ""
+
+msgid "Could not add the network."
+msgstr ""
+
+msgid "Could not add the printer."
+msgstr ""
+
+msgid "Could not change the administrator rights."
+msgstr ""
+
+#, c-format
+msgid "Could not connect to %s."
+msgstr ""
+
+msgid "Could not connect. Wrong password, or the network is too far away?"
+msgstr ""
+
+msgid "Could not create the user."
+msgstr ""
+
+msgid "Could not forget the device."
+msgstr ""
+
+#, c-format
+msgid "Could not look for firmware updates (no internet?): %s"
+msgstr ""
+
+#, c-format
+msgid "Could not look for updates (no internet?): %s"
+msgstr ""
+
+msgid "Could not make it the default printer."
+msgstr ""
+
+#, c-format
+msgid "Could not pair with %s."
+msgstr ""
+
+msgid "Could not print."
+msgstr ""
+
+msgid "Could not read the kernel's messages."
+msgstr ""
+
+msgid "Could not remove the printer."
+msgstr ""
+
+msgid "Could not remove the user."
+msgstr ""
+
+msgid "Could not save the keyboard layout."
+msgstr ""
+
+msgid "Could not save the language."
+msgstr ""
+
+msgid "Could not save the parental controls."
+msgstr ""
+
+msgid "Could not search for devices."
+msgstr ""
+
+msgid "Could not set the administrator password."
+msgstr ""
+
+msgid "Could not set the password."
+msgstr ""
+
+msgid "Could not set the time zone."
+msgstr ""
+
+msgid "Could not start /usr/lib/my-distro/disk-tool."
+msgstr ""
+
+msgid "Could not start my-admin."
+msgstr ""
+
+msgid "Could not start my-backup."
+msgstr ""
+
+msgid "Could not start my-update."
+msgstr ""
+
+msgid "Could not start the factory reset."
+msgstr ""
+
+msgid "Could not write /etc/hostname."
+msgstr ""
+
+msgid "Couldn't process that query."
+msgstr ""
+
+msgid "Crashes"
+msgstr ""
+
+msgid "Czech"
+msgstr ""
+
+msgid "Date format"
+msgstr ""
+
+msgid "Delete all users, files and settings?"
+msgstr ""
+
+msgid "Delete everything"
+msgstr ""
+
+msgid "Digital"
+msgstr ""
+
+msgid "Disconnect"
+msgstr ""
+
+msgid "Disk"
+msgstr ""
+
+msgid "Disk / partition"
+msgstr ""
+
+msgid "Disks"
+msgstr ""
+
+msgid "Display"
+msgstr ""
+
+#, c-format
+msgid "Does %s show the number %06u?"
+msgstr ""
+
+msgid ""
+"Done. Installed programs are in the Start menu, or start them in a terminal."
+msgstr ""
+
+msgid "Done: the picture is in your Pictures folder."
+msgstr ""
+
+msgid "Downloading the package list…"
+msgstr ""
+
+msgid "Dutch"
+msgstr ""
+
+msgid "Ember"
+msgstr ""
+
+msgid "English (UK)"
+msgstr ""
+
+msgid "English (US)"
+msgstr ""
+
+msgid "Every saved change on the system, newest first"
+msgstr ""
+
+msgid ""
+"Every user and everything in their home folders (documents, pictures, "
+"browser data) is deleted, and all settings: passwords, computer name, Wi-Fi "
+"networks, VPNs, time zone. Only the system stays. This can't be undone.\n"
+"\n"
+"The computer restarts now; the reset takes a few seconds, then the setup "
+"starts as after installing."
+msgstr ""
+
+msgid "Everything on this partition is deleted."
+msgstr ""
+
+msgid "FAT32 (works everywhere; files up to 4 GB)"
+msgstr ""
+
+msgid "FILE"
+msgstr ""
+
+msgid "Factory reset"
+msgstr ""
+
+msgid "File history"
+msgstr ""
+
+msgid "Filesystem"
+msgstr ""
+
+msgid "Fill the screen"
+msgstr ""
+
+msgid "Finish"
+msgstr ""
+
+msgid "Firmware"
+msgstr ""
+
+msgid ""
+"Firmware is the software inside the computer's parts (UEFI, disks, docks, "
+"mice, ...). fwupd asks the LVFS (fwupd.org) for updates from their makers. "
+"Nothing is installed without asking."
+msgstr ""
+
+msgid "Firmware updates for this computer:"
+msgstr ""
+
+msgid "Fit, keep all of it"
+msgstr ""
+
+msgid "Folder"
+msgstr ""
+
+msgid "Folder to share"
+msgstr ""
+
+msgid "Forest"
+msgstr ""
+
+msgid "Forget"
+msgstr ""
+
+msgid "Format"
+msgstr ""
+
+msgid "Formatting and repairing disks needs the administrator (root) password."
+msgstr ""
+
+msgid "Format…"
+msgstr ""
+
+msgid "French"
+msgstr ""
+
+msgid "Full name"
+msgstr ""
+
+msgid "German"
+msgstr ""
+
+msgid "German (Austria)"
+msgstr ""
+
+msgid "German (Switzerland)"
+msgstr ""
+
+msgid "Go back"
+msgstr ""
+
+#, c-format
+msgid "Go back to my-distro %s?"
+msgstr ""
+
+msgid "Go to the login screen"
+msgstr ""
+
+msgid "Going back did not work: see the messages below."
+msgstr ""
+
+#, c-format
+msgid "Going back to the old settings in %d seconds."
+msgstr ""
+
+msgid "Going back… don't switch the computer off."
+msgstr ""
+
+msgid "Gray"
+msgstr ""
+
+msgid "HTTP and HTTPS proxy"
+msgstr ""
+
+msgid "Height (pixels)"
+msgstr ""
+
+msgid "High contrast"
+msgstr ""
+
+msgid "High contrast light"
+msgstr ""
+
+msgid "History"
+msgstr ""
+
+msgid "Home folder"
+msgstr ""
+
+msgid "Huge"
+msgstr ""
+
+msgid "Hungarian"
+msgstr ""
+
+msgid ""
+"If the desktop doesn't start any more: choose \"recovery mode\" in the boot "
+"menu and run my-reset there."
+msgstr ""
+
+msgid "Import"
+msgstr ""
+
+msgid "Import a WireGuard config"
+msgstr ""
+
+msgid "Import…"
+msgstr ""
+
+msgid "Install"
+msgstr ""
+
+#, c-format
+msgid "Install %s?"
+msgstr ""
+
+msgid "Install Samba…"
+msgstr ""
+
+#, c-format
+msgid "Install my-distro %s?"
+msgstr ""
+
+#, c-format
+msgid "Install the firmware update %s?"
+msgstr ""
+
+msgid "Install update"
+msgstr ""
+
+msgid "Installed"
+msgstr ""
+
+#, c-format
+msgid "Installed: my-distro %s"
+msgstr ""
+
+msgid ""
+"Installing and removing programs needs the administrator (root) password."
+msgstr ""
+
+msgid "Installing the firmware update… don't switch the computer off."
+msgstr ""
+
+msgid "Installing… don't switch the computer off."
+msgstr ""
+
+msgid "Install…"
+msgstr ""
+
+msgid "It asks to be paired with this computer."
+msgstr ""
+
+msgid ""
+"It comes from the part's maker through the LVFS. Laptops: plug in the power. "
+"Don't switch the computer off until it is done; some updates finish while "
+"the computer restarts."
+msgstr ""
+
+msgid "It didn't answer. Is it switched on, nearby and in pairing mode?"
+msgstr ""
+
+msgid ""
+"It doesn't answer as a driverless printer (IPP Everywhere). Check the "
+"address; some older printers only work over their USB cable."
+msgstr ""
+
+msgid ""
+"It is switched off with a key or a switch on the laptop (often Fn with an "
+"aeroplane or Bluetooth sign). Switch it on there."
+msgstr ""
+
+#, c-format
+msgid "It needs %s of space.%s%s%s"
+msgstr ""
+
+msgid "Italian"
+msgstr ""
+
+msgid ""
+"Its files replace the ones with the same name in your home folder. Files you "
+"made after the backup stay. (File history keeps the versions from before: my-"
+"undo can bring them back.)"
+msgstr ""
+
+msgid "Keep"
+msgstr ""
+
+msgid "Keep these display settings?"
+msgstr ""
+
+msgid "Kernel"
+msgstr ""
+
+msgid "Keyboard"
+msgstr ""
+
+msgid "Keyboard layout"
+msgstr ""
+
+msgid "Keyboard layout (for everyone, at once)"
+msgstr ""
+
+msgid "Keyboard layout changed."
+msgstr ""
+
+msgid "Language"
+msgstr ""
+
+msgid ""
+"Language (for everyone who didn't choose their own in Settings; at the next "
+"login)"
+msgstr ""
+
+msgid "Language saved: it is used from the next login."
+msgstr ""
+
+msgid "Large"
+msgstr ""
+
+msgid "Left of the main screen"
+msgstr ""
+
+msgid ""
+"Let's set up your computer: your keyboard, your own account and a name for "
+"the computer. It takes a minute, and you can change all of it later in "
+"\"Users and system\"."
+msgstr ""
+
+msgid "Light"
+msgstr ""
+
+msgid "Lock after no use for"
+msgstr ""
+
+msgid "Lock now"
+msgstr ""
+
+msgid "Locked"
+msgstr ""
+
+msgid "Log in"
+msgstr ""
+
+#, c-format
+msgid "Log in to \"%s\":"
+msgstr ""
+
+msgid ""
+"Look for a new version of my-distro. Updates are checked automatically too: "
+"the taskbar shows a button when one is out."
+msgstr ""
+
+msgid "Look for firmware updates"
+msgstr ""
+
+msgid "Look for updates"
+msgstr ""
+
+msgid ""
+"Looking for devices… Put your device into pairing mode (see its manual; "
+"often: hold its power button)."
+msgstr ""
+
+msgid "Looking for networks…"
+msgstr ""
+
+msgid "Looking for printers (10 seconds)…"
+msgstr ""
+
+msgid "Looking for scanners…"
+msgstr ""
+
+msgid "Looking for updates…"
+msgstr ""
+
+msgid "Magnifier (Super+Z)"
+msgstr ""
+
+msgid "Main screen"
+msgstr ""
+
+msgid "Make administrator"
+msgstr ""
+
+msgid "Make default"
+msgstr ""
+
+msgid "Matching the theme"
+msgstr ""
+
+msgid "May use the computer only from"
+msgstr ""
+
+msgid "Method"
+msgstr ""
+
+msgid "Microphone"
+msgstr ""
+
+msgid "More settings"
+msgstr ""
+
+msgid "Mouse pointer"
+msgstr ""
+
+msgid "NTFS (Windows disks)"
+msgstr ""
+
+msgid "Name"
+msgstr ""
+
+msgid "Network"
+msgstr ""
+
+msgid "Network name"
+msgstr ""
+
+msgid "Network share"
+msgstr ""
+
+msgid "Never"
+msgstr ""
+
+msgid "New administrator password"
+msgstr ""
+
+msgid "New password"
+msgstr ""
+
+#, c-format
+msgid "New password for %s"
+msgstr ""
+
+msgid "Next"
+msgstr ""
+
+msgid ""
+"No Bluetooth adapter found. This computer has none, it is switched off (some "
+"laptops have a key or switch for it), or my-distro has no driver for it. A "
+"USB Bluetooth stick works too."
+msgstr ""
+
+msgid ""
+"No Wi-Fi adapter found.\n"
+"\n"
+"This computer has none, or my-distro has no driver for it (in a terminal, "
+"lspci -k shows the devices and their drivers). A network cable works without "
+"setting anything up."
+msgstr ""
+
+msgid "No administrator rights any more."
+msgstr ""
+
+msgid "No changes yet. Edit a file and it shows up here."
+msgstr ""
+
+msgid "No firmware updates for this computer."
+msgstr ""
+
+msgid "No limits for this user."
+msgstr ""
+
+msgid "No microphone."
+msgstr ""
+
+msgid "No package list (are you online?)."
+msgstr ""
+
+msgid ""
+"No printer found. Is it switched on, and in the same network (or plugged "
+"in)? You can also type its address (IP or name) below."
+msgstr ""
+
+msgid ""
+"No printers yet. Click Add printer. (Is the print service running? It starts "
+"at boot: /etc/init.d/S81cupsd)"
+msgstr ""
+
+msgid "No program is playing sound right now."
+msgstr ""
+
+msgid "No programs installed yet."
+msgstr ""
+
+msgid "No proxy. Log out and in again so that all programs know."
+msgstr ""
+
+msgid "No saved versions of this file."
+msgstr ""
+
+msgid ""
+"No scanner found. Is it switched on, and plugged in or in the same network?"
+msgstr ""
+
+msgid "No sound output: is the sound server running?"
+msgstr ""
+
+msgid "No spaces or quotes, please."
+msgstr ""
+
+msgid "No such user."
+msgstr ""
+
+msgid "None"
+msgstr ""
+
+msgid "Normal"
+msgstr ""
+
+msgid "Not needed on the live system: it starts fresh every time."
+msgstr ""
+
+msgid "Not your login password: one only for sharing (at least 6 characters)."
+msgstr ""
+
+msgid "Nothing found."
+msgstr ""
+
+msgid "Nothing to undo."
+msgstr ""
+
+msgid "Nothing was changed."
+msgstr ""
+
+msgid "OK"
+msgstr ""
+
+msgid "Ocean"
+msgstr ""
+
+msgid "On"
+msgstr ""
+
+msgid "On-screen keyboard (Super+K)"
+msgstr ""
+
+msgid "Only Downloads"
+msgstr ""
+
+#, c-format
+msgid "Only the administrator (root) may read %s."
+msgstr ""
+
+msgid "Only the main screen"
+msgstr ""
+
+msgid "Only the second screen"
+msgstr ""
+
+msgid "Open"
+msgstr ""
+
+msgid ""
+"Open a shared folder of a Windows PC or a network drive (NAS). Leave the "
+"user name empty to connect as a guest."
+msgstr ""
+
+msgid "Open folder"
+msgstr ""
+
+msgid "Open in"
+msgstr ""
+
+msgid "Open the magnifier"
+msgstr ""
+
+msgid "Open the on-screen keyboard"
+msgstr ""
+
+msgid "Or its address:"
+msgstr ""
+
+msgid "Other network"
+msgstr ""
+
+msgid "Other network…"
+msgstr ""
+
+msgid "Others may also change and add files"
+msgstr ""
+
+msgid "Others may only read the files"
+msgstr ""
+
+msgid "Output"
+msgstr ""
+
+msgid "Own accent color"
+msgstr ""
+
+#, c-format
+msgid "PIN for %s (often 0000 or 1234, see its manual):"
+msgstr ""
+
+#, c-format
+msgid "Pair with %s?"
+msgstr ""
+
+msgid "Pairing was refused. Put the device into pairing mode and try again."
+msgstr ""
+
+msgid "Pairing… If the device shows a number or asks for one, follow it."
+msgstr ""
+
+#, c-format
+msgid "Parental controls for %s"
+msgstr ""
+
+msgid "Parental controls saved."
+msgstr ""
+
+msgid "Parental controls…"
+msgstr ""
+
+msgid ""
+"Partitions the running system uses can't be changed. Formatting deletes "
+"everything on the disk or partition."
+msgstr ""
+
+msgid "Password"
+msgstr ""
+
+msgid "Password again"
+msgstr ""
+
+msgid "Password changed."
+msgstr ""
+
+#, c-format
+msgid "Password for \"%s\":"
+msgstr ""
+
+msgid "Permissions"
+msgstr ""
+
+msgid "Picture:"
+msgstr ""
+
+msgid "Pictures"
+msgstr ""
+
+msgid "Plain color"
+msgstr ""
+
+msgid "Please wait until this is finished."
+msgstr ""
+
+msgid "Plug in a USB stick or disk: it opens by itself and appears here."
+msgstr ""
+
+msgid "Plug in the charger, or save your work."
+msgstr ""
+
+msgid "Polish"
+msgstr ""
+
+msgid "Position"
+msgstr ""
+
+msgid "Power off"
+msgstr ""
+
+msgid "Prepare for Secure Boot…"
+msgstr ""
+
+msgid "Printers"
+msgstr ""
+
+msgid ""
+"Printers made since about 2015 work without a driver over the network (Wi-Fi "
+"or cable): connect it to your network and try again."
+msgstr ""
+
+msgid "Programs"
+msgstr ""
+
+msgid ""
+"Programs you open from now on use the new size; all of the desktop after the "
+"next login."
+msgstr ""
+
+msgid "Proxy"
+msgstr ""
+
+msgid "Put this backup back?"
+msgstr ""
+
+msgid ""
+"Puts this computer back to how it was right after installing my-distro: all "
+"users, their files and all settings are deleted. The system itself stays, in "
+"the version it has now. Then the setup starts."
+msgstr ""
+
+msgid "Quality"
+msgstr ""
+
+msgid "Read aloud (Super+R)"
+msgstr ""
+
+msgid "Read only"
+msgstr ""
+
+msgid "Read the selected text"
+msgstr ""
+
+msgid "Reboot"
+msgstr ""
+
+msgid "Recent file changes"
+msgstr ""
+
+msgid "Refresh"
+msgstr ""
+
+msgid "Remove"
+msgstr ""
+
+#, c-format
+msgid "Remove %s?"
+msgstr ""
+
+msgid "Remove administrator rights"
+msgstr ""
+
+msgid "Remove both"
+msgstr ""
+
+#, c-format
+msgid "Remove the VPN \"%s\"?"
+msgstr ""
+
+#, c-format
+msgid "Remove the printer \"%s\"?"
+msgstr ""
+
+#, c-format
+msgid "Remove the user \"%s\"?"
+msgstr ""
+
+msgid "Remove user…"
+msgstr ""
+
+msgid "Remove…"
+msgstr ""
+
+msgid "Replace"
+msgstr ""
+
+#, c-format
+msgid "Replace the VPN \"%s\"?"
+msgstr ""
+
+msgid "Reset and restart"
+msgstr ""
+
+msgid "Reset this computer…"
+msgstr ""
+
+msgid "Reset to defaults"
+msgstr ""
+
+msgid "Resolution"
+msgstr ""
+
+msgid "Restart now"
+msgstr ""
+
+msgid "Restore this version"
+msgstr ""
+
+#, c-format
+msgid "Restored %s to version %d."
+msgstr ""
+
+msgid "Restore…"
+msgstr ""
+
+msgid "Right of the main screen"
+msgstr ""
+
+msgid "Romanian"
+msgstr ""
+
+msgid "SIZE"
+msgstr ""
+
+msgid "Same picture on both"
+msgstr ""
+
+msgid "Save"
+msgstr ""
+
+msgid "Saved. Log out and in again so that all programs use it."
+msgstr ""
+
+msgid "Saved: also at the next login."
+msgstr ""
+
+msgid "Scan"
+msgstr ""
+
+msgid "Scanned"
+msgstr ""
+
+msgid "Scanner"
+msgstr ""
+
+msgid "Scanning…"
+msgstr ""
+
+msgid "Scan…"
+msgstr ""
+
+msgid "Screen lock"
+msgstr ""
+
+msgid "Screen reader (Super+Alt+S)"
+msgstr ""
+
+msgid "Screen reader off"
+msgstr ""
+
+msgid "Screen reader on"
+msgstr ""
+
+msgid "Screens"
+msgstr ""
+
+msgid "Search"
+msgstr ""
+
+msgid "Search (only lines with this text)"
+msgstr ""
+
+msgid "Search again"
+msgstr ""
+
+msgid "Search files"
+msgstr ""
+
+msgid "Search programs"
+msgstr ""
+
+msgid "Search your files by meaning…"
+msgstr ""
+
+msgid "Second screen"
+msgstr ""
+
+msgid "Second screen is"
+msgstr ""
+
+msgid "Secure Boot"
+msgstr ""
+
+msgid "Secure Boot is off."
+msgstr ""
+
+msgid "Secure Boot is on."
+msgstr ""
+
+msgid "Security"
+msgstr ""
+
+msgid "Seeing"
+msgstr ""
+
+msgid "Select a line first."
+msgstr ""
+
+msgid "Server domain"
+msgstr ""
+
+msgid "Settings"
+msgstr ""
+
+msgid "Settings from your school or university"
+msgstr ""
+
+msgid "Setup"
+msgstr ""
+
+msgid "Share"
+msgstr ""
+
+msgid ""
+"Share a folder (and the printers) with the other computers in your network. "
+"They log in with your user name and a sharing password. Off until you switch "
+"it on."
+msgstr ""
+
+#, c-format
+msgid ""
+"Shared. On other computers open \\\\%s\\%s (Windows) or smb://%s/%s (Mac, "
+"Linux) and log in as %s with the sharing password."
+msgstr ""
+
+msgid "Sharing"
+msgstr ""
+
+msgid "Sharing changes the system: type the root password."
+msgstr ""
+
+msgid "Sharing is off."
+msgstr ""
+
+msgid "Sharing needs Samba, a package of the Software app (about 60 MB)."
+msgstr ""
+
+msgid "Sharing password"
+msgstr ""
+
+msgid "Sharing…"
+msgstr ""
+
+msgid "Show password"
+msgstr ""
+
+msgid "Show seconds"
+msgstr ""
+
+msgid "Show the date"
+msgstr ""
+
+msgid "Size"
+msgstr ""
+
+msgid "Size of text and icons"
+msgstr ""
+
+msgid "Skip: try it with the demo account"
+msgstr ""
+
+msgid "Software"
+msgstr ""
+
+msgid ""
+"Some networks (schools, companies) only reach the internet through a proxy. "
+"It is used by the web browser, system updates and other programs that "
+"download. Leave it empty for none."
+msgstr ""
+
+msgid "Sound"
+msgstr ""
+
+msgid "Sound now plays here."
+msgstr ""
+
+msgid ""
+"Sound now plays here. Programs that were already playing: start them again."
+msgstr ""
+
+msgid "Spanish"
+msgstr ""
+
+msgid "Start"
+msgstr ""
+
+msgid "Starting the indexer…"
+msgstr ""
+
+msgid "Starting…"
+msgstr ""
+
+msgid "Stop sharing"
+msgstr ""
+
+msgid "Stretch"
+msgstr ""
+
+msgid "Style"
+msgstr ""
+
+msgid "Switch user"
+msgstr ""
+
+msgid "System logs"
+msgstr ""
+
+msgid "System messages"
+msgstr ""
+
+msgid "System update"
+msgstr ""
+
+msgid "TIME"
+msgstr ""
+
+msgid "Taskbar"
+msgstr ""
+
+msgid "Taskbar clock"
+msgstr ""
+
+msgid "Teal"
+msgstr ""
+
+msgid "Test page"
+msgstr ""
+
+msgid "Text and icons"
+msgstr ""
+
+msgid "Text size"
+msgstr ""
+
+msgid ""
+"Text size applies to programs you open from now on, all of the desktop after "
+"the next login. The on-screen keyboard is also on the login screen (the "
+"keyboard button). Read aloud: select text with the mouse in any program, "
+"then press Super+R; again stops it. The screen reader speaks window titles, "
+"the Start menu and what has the focus in GTK programs (buttons, fields, "
+"lists, menus); not terminals, web pages or the login screen."
+msgstr ""
+
+msgid "That did not work."
+msgstr ""
+
+msgid ""
+"That did not work: nothing was changed, or only part of it (see the message)."
+msgstr ""
+
+msgid "That user already exists."
+msgstr ""
+
+msgid "That user name belongs to the system. Choose another one."
+msgstr ""
+
+msgid "That's the oldest saved version, there is nothing before it."
+msgstr ""
+
+msgid ""
+"The administrator (root) password is asked for when you install the system "
+"or change things here."
+msgstr ""
+
+msgid ""
+"The firewall lets nobody in, unless you share a folder or the printers with "
+"the other computers of your network (Sharing). To open a shared folder of "
+"another PC: Start menu, Network share."
+msgstr ""
+
+msgid "The firmware update did not work: see the messages below."
+msgstr ""
+
+msgid "The firmware update is installed."
+msgstr ""
+
+msgid ""
+"The firmware update is ready: it is installed while the computer restarts. "
+"Keep it plugged in."
+msgstr ""
+
+msgid "The full name can't contain \":\"."
+msgstr ""
+
+msgid "The index is still empty, the indexer is working on it."
+msgstr ""
+
+msgid "The kernel is locked down: hibernation is off."
+msgstr ""
+
+msgid ""
+"The language of the menus and windows, and the format of dates and numbers. "
+"It applies from the next login. Programs that aren't translated stay in "
+"English."
+msgstr ""
+
+msgid ""
+"The live system keeps nothing after a reboot. Install it to keep your "
+"account."
+msgstr ""
+
+msgid ""
+"The lock screen asks for your password. Lock it yourself with Super+L or "
+"Start menu, Lock screen. It also locks before the computer goes to sleep."
+msgstr ""
+
+msgid ""
+"The login screen checks this. 5 minutes before the time is over a notice "
+"appears, then the session ends (unsaved work is lost)."
+msgstr ""
+
+msgid "The name can't contain \":\"."
+msgstr ""
+
+msgid "The old settings are back."
+msgstr ""
+
+msgid "The previous version is back. Restart the computer to finish."
+msgstr ""
+
+msgid "The scan did not work."
+msgstr ""
+
+msgid "The screen can't show that."
+msgstr ""
+
+msgid ""
+"The share could not be opened (wrong name or password, or the server can't "
+"be reached)."
+msgstr ""
+
+msgid ""
+"The system files of the version before the last update come back. Your "
+"files, users and settings stay. Restart afterwards."
+msgstr ""
+
+msgid ""
+"The system settings belong to the administrator: type the root password."
+msgstr ""
+
+msgid "The system's language (Users and system)"
+msgstr ""
+
+msgid "The system's message bus (D-Bus) is not running."
+msgstr ""
+
+msgid "The test page is on its way."
+msgstr ""
+
+msgid "The two passwords are not the same."
+msgstr ""
+
+msgid "The update did not work: see the messages below."
+msgstr ""
+
+msgid ""
+"The update is installed. Restart the computer to finish. If something "
+"doesn't work afterwards, \"Undo last update\" goes back."
+msgstr ""
+
+msgid "The whole disk gets one new partition. Everything on it is deleted."
+msgstr ""
+
+#, c-format
+msgid "Their home folder /home/%s and all files in it are deleted."
+msgstr ""
+
+msgid "Theme"
+msgstr ""
+
+msgid "Then click Yes (and confirm on the device, if it asks too)."
+msgstr ""
+
+#, c-format
+msgid ""
+"These packages are made for my-distro %s, but this is my-distro %s: they "
+"can't be installed. Update the system (System update), or wait until the "
+"packages for %s are out."
+msgstr ""
+
+msgid "This computer was started without UEFI: Secure Boot doesn't apply."
+msgstr ""
+
+msgid "This installation doesn't start through shim yet."
+msgstr ""
+
+msgid "This is a disk inside the computer!"
+msgstr ""
+
+msgid "This is the disk my-distro runs from!"
+msgstr ""
+
+msgid ""
+"This is the live system: programs you install here go into RAM and are gone "
+"when you shut down, like everything else. Install my-distro to a disk to "
+"keep them."
+msgstr ""
+
+msgid "Tile"
+msgstr ""
+
+msgid "Time zone"
+msgstr ""
+
+msgid "Time zone (for everyone, at once)"
+msgstr ""
+
+msgid "Time zone set."
+msgstr ""
+
+msgid "To use it again you need its config file."
+msgstr ""
+
+#, c-format
+msgid "Today's time on the computer (%d minutes) is used up."
+msgstr ""
+
+msgid "Top"
+msgstr ""
+
+msgid "Try something like \"notes about my training plan\" or \"recipe\"."
+msgstr ""
+
+msgid "Try your keyboard here"
+msgstr ""
+
+msgid "Turkish"
+msgstr ""
+
+#, c-format
+msgid "Type %06u on %s, then press Enter on it."
+msgstr ""
+
+#, c-format
+msgid "Type %s on %s, then press Enter on it."
+msgstr ""
+
+msgid "Type only the address, like 192.168.1.20."
+msgstr ""
+
+msgid "Type the network's name."
+msgstr ""
+
+msgid "Type your password and press Enter"
+msgstr ""
+
+msgid "Type your user name and password."
+msgstr ""
+
+msgid "Typing"
+msgstr ""
+
+msgid "USB"
+msgstr ""
+
+msgid "Undo last change"
+msgstr ""
+
+#, c-format
+msgid "Undo last update (back to %s)…"
+msgstr ""
+
+msgid "Undo last update…"
+msgstr ""
+
+msgid "Undo this change"
+msgstr ""
+
+msgid "Unknown time zone."
+msgstr ""
+
+msgid "Update all"
+msgstr ""
+
+msgid "Use this password for the administrator (root) too"
+msgstr ""
+
+msgid "User"
+msgstr ""
+
+msgid "User added."
+msgstr ""
+
+msgid "User name"
+msgstr ""
+
+msgid "User name (to log in)"
+msgstr ""
+
+msgid "User name: small letters a-z, digits, - and _, starting with a letter."
+msgstr ""
+
+msgid "User removed."
+msgstr ""
+
+msgid "Users"
+msgstr ""
+
+msgid "Users and system"
+msgstr ""
+
+msgid "Users and system…"
+msgstr ""
+
+msgid "VERSION"
+msgstr ""
+
+msgid "VPN"
+msgstr ""
+
+msgid "VPN not available"
+msgstr ""
+
+msgid "Versions of"
+msgstr ""
+
+msgid "Very large"
+msgstr ""
+
+msgid "View"
+msgstr ""
+
+msgid "Violet"
+msgstr ""
+
+msgid "Wallpaper"
+msgstr ""
+
+msgid "Welcome"
+msgstr ""
+
+msgid "Welcome to my-distro"
+msgstr ""
+
+msgid ""
+"What each program may use, the next time you start it from the Start menu. A "
+"program without the microphone gets no sound at all (the sound server can't "
+"give it one without the other). Without the whole home folder it sees only "
+"Downloads (or nothing) and keeps its own settings separately."
+msgstr ""
+
+msgid "Wi-Fi"
+msgstr ""
+
+msgid "Wi-Fi is starting…"
+msgstr ""
+
+msgid "Wi-Fi password"
+msgstr ""
+
+msgid "Wi-Fi passwords have 8 to 63 characters."
+msgstr ""
+
+msgid ""
+"With Secure Boot on, the computer can't hibernate (the kernel locks itself "
+"down and can't check a saved memory image). Suspend works."
+msgstr ""
+
+msgid "Without proxy for"
+msgstr ""
+
+msgid "Working…"
+msgstr ""
+
+msgid "Working… (don't pull out the disk)"
+msgstr ""
+
+msgid "Write the address as \\\\SERVER\\SHARE or smb://SERVER/SHARE."
+msgstr ""
+
+msgid "Write the proxy as NAME:PORT, e.g. proxy.example.com:3128."
+msgstr ""
+
+msgid "Write the times like 08:00 and 20:00."
+msgstr ""
+
+msgid "Wrong password"
+msgstr ""
+
+msgid "Wrong password."
+msgstr ""
+
+msgid "Wrong password: nothing was done."
+msgstr ""
+
+msgid "Wrong user name or password"
+msgstr ""
+
+msgid "Your account"
+msgstr ""
+
+#, c-format
+msgid "Your account \"%s\" is ready. Log in with your new password."
+msgstr ""
+
+msgid "Your computer"
+msgstr ""
+
+msgid ""
+"Your files, users and settings stay. Don't switch the computer off while it "
+"installs; restart it afterwards."
+msgstr ""
+
+msgid ""
+"Your home folder is always backed up (without caches and the trash). The "
+"settings include saved passwords: keep the disk safe."
+msgstr ""
+
+msgid "Your name"
+msgstr ""
+
+msgid "Your own files made with it stay."
+msgstr ""
+
+msgid ""
+"Your school's Wi-Fi page lists these. With a server domain (and the CA "
+"certificate if they give you one), my-distro checks that it really is their "
+"server before it sends your password."
+msgstr ""
+
+msgid ""
+"Your user may not change Wi-Fi yet (it is not in the group netdev). Log out "
+"and in again; if that doesn't help, as root: addgroup YOUR-NAME netdev, then "
+"log in again."
+msgstr ""
+
+msgid ""
+"Your user may not change printers yet (it is not in the group lpadmin). As "
+"root: addgroup YOUR-NAME lpadmin, then log in again."
+msgstr ""
+
+msgid "connected   "
+msgstr ""
+
+msgid "e.g. 192.168.1.20 or printer.local"
+msgstr ""
+
+msgid "e.g. name@school.ac.at"
+msgstr ""
+
+msgid "e.g. school.ac.at"
+msgstr ""
+
+msgid "exFAT (Windows, Mac, cameras; big files)"
+msgstr ""
+
+msgid "ext4 (Linux only; best for backups)"
+msgstr ""
+
+msgid "fwupd is missing."
+msgstr ""
+
+msgid "in the network"
+msgstr ""
+
+#, c-format
+msgid ""
+"my-distro %s is out, but without an update package: download its ISO from "
+"GitHub."
+msgstr ""
+
+#, c-format
+msgid ""
+"my-distro %s is out. This is the live system, which forgets updates: "
+"download the new ISO from GitHub."
+msgstr ""
+
+#, c-format
+msgid "my-distro %s is ready to install (you have %s). What's new:"
+msgstr ""
+
+#, c-format
+msgid "my-distro %s is up to date."
+msgstr ""
+
+msgid "my-distro has no driver for this printer."
+msgstr ""
+
+msgid ""
+"my-distro starts with Secure Boot on once its key is enrolled in the PC "
+"(once; you need the computer's screen and keyboard for it). \"Prepare\" asks "
+"for a one-time password; at the next start a blue screen (MokManager) "
+"appears: choose \"Enroll MOK\", \"Continue\", \"Yes\", type the password, "
+"\"Reboot\". Then switch on Secure Boot in the firmware settings."
+msgstr ""
+
+msgid "my-distro's key is enrolled at the next start (MokManager)."
+msgstr ""
+
+msgid "my-distro's key is enrolled."
+msgstr ""
+
+msgid "my-distro's key is not enrolled yet."
+msgstr ""
+
+msgid "my-update is missing."
+msgstr ""
+
+msgid "my-vpnctl is missing."
+msgstr ""
+
+msgid "not found"
+msgstr ""
+
+msgid "not ticked"
+msgstr ""
+
+msgid "open   "
+msgstr ""
+
+msgid "optional, e.g. anonymous@school.ac.at"
+msgstr ""
+
+msgid "saved   "
+msgstr ""
+
+msgid "secured   "
+msgstr ""
+
+msgid "space"
+msgstr ""
+
+msgid "switched off"
+msgstr ""
+
+msgid "the device"
+msgstr ""
+
+msgid "ticked"
+msgstr ""
+
+msgid "to"
+msgstr ""
+
+msgid "unavailable"
+msgstr ""
+
+msgid "user name   "
+msgstr ""
+
+#, c-format
+msgid "v0 (first)"
+msgstr ""
+
+#, c-format
+msgid "↑  Update to %s"
+msgstr ""
