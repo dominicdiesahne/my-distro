@@ -1697,6 +1697,227 @@ static void on_reset(GtkButton *b, gpointer d)
 	kill(1, SIGTERM);                 /* our init: TERM = reboot */
 }
 
+/* --- Firmware updates page (0.9.7): /usr/lib/my-distro/firmware, fwupd -------- */
+
+static GtkWidget *fw_status, *fw_list, *fw_check, *fw_view, *fw_restart;
+static GtkTextBuffer *fw_buf;
+static GString *fw_out;           /* what the running helper printed so far */
+static int fw_installing;
+
+static gboolean on_fw_output(GIOChannel *ch, GIOCondition cond, gpointer d)
+{
+	char *line;
+	gsize n;
+
+	(void)d;
+	if (cond & G_IO_IN)
+		while (g_io_channel_read_line(ch, &line, &n, NULL, NULL) == G_IO_STATUS_NORMAL) {
+			g_string_append(fw_out, line);
+			if (fw_installing) {
+				GtkTextIter end;
+
+				gtk_text_buffer_get_end_iter(fw_buf, &end);
+				gtk_text_buffer_insert(fw_buf, &end, line, -1);
+			}
+			g_free(line);
+		}
+	return !(cond & (G_IO_HUP | G_IO_ERR));
+}
+
+static void on_fw_install(GtkButton *b, gpointer d);
+
+/* The helper's "update" lines become rows with an Install button */
+static void fw_show_updates(void)
+{
+	char **lines = g_strsplit(fw_out->str, "\n", -1);
+	GList *old = gtk_container_get_children(GTK_CONTAINER(fw_list));
+	int n = 0;
+
+	for (GList *l = old; l; l = l->next)
+		gtk_widget_destroy(l->data);
+	g_list_free(old);
+	for (int i = 0; lines[i]; i++) {
+		char **f = g_strsplit(lines[i], "\t", 6);
+
+		if (g_strv_length(f) == 6 && !strcmp(f[0], "update")) {
+			GtkWidget *row = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 10);
+			char *t = g_strdup_printf("%s: %s → %s\n%s", f[4], f[2], f[3], f[5]);
+			GtkWidget *l = label(t, NULL), *btn = gtk_button_new_with_label(_("Install…"));
+
+			g_object_set_data_full(G_OBJECT(btn), "device", g_strdup(f[1]), g_free);
+			g_object_set_data_full(G_OBJECT(btn), "what", g_strdup_printf("%s %s", f[4], f[3]), g_free);
+			g_signal_connect(btn, "clicked", G_CALLBACK(on_fw_install), NULL);
+			g_object_set(row, "margin", 6, NULL);
+			gtk_box_pack_start(GTK_BOX(row), l, TRUE, TRUE, 0);
+			gtk_box_pack_end(GTK_BOX(row), btn, FALSE, FALSE, 0);
+			gtk_list_box_insert(GTK_LIST_BOX(fw_list), row, -1);
+			g_free(t);
+			n++;
+		} else if (g_strv_length(f) >= 2 && !strcmp(f[0], "error")) {
+			char *t = g_strdup_printf(_("Could not look for firmware updates (no internet?): %s"), f[1]);
+
+			gtk_label_set_text(GTK_LABEL(fw_status), t);
+			g_free(t);
+			n = -1;
+		}
+		g_strfreev(f);
+	}
+	g_strfreev(lines);
+	if (n == 0)
+		gtk_label_set_text(GTK_LABEL(fw_status), _("No firmware updates for this computer."));
+	else if (n > 0)
+		gtk_label_set_text(GTK_LABEL(fw_status), _("Firmware updates for this computer:"));
+	gtk_widget_show_all(fw_list);
+}
+
+static void on_fw_done(GPid pid, gint st, gpointer d)
+{
+	(void)d;
+	g_spawn_close_pid(pid);
+	gtk_widget_set_sensitive(fw_check, TRUE);
+	gtk_widget_set_sensitive(fw_list, TRUE);
+	if (!fw_installing) {
+		fw_show_updates();
+	} else if (g_spawn_check_wait_status(st, NULL)) {
+		if (strstr(fw_out->str, "\nreboot")) {
+			gtk_label_set_text(GTK_LABEL(fw_status), _("The firmware update is ready: it is "
+				"installed while the computer restarts. Keep it plugged in."));
+			gtk_widget_show(fw_restart);
+		} else {
+			gtk_label_set_text(GTK_LABEL(fw_status), _("The firmware update is installed."));
+		}
+	} else {
+		gtk_label_set_text(GTK_LABEL(fw_status), _("The firmware update did not work: see the "
+			"messages below."));
+	}
+	fw_installing = 0;
+}
+
+static void fw_run(const char **argv)
+{
+	GPid pid;
+	int out;
+	GIOChannel *ch;
+
+	if (!g_spawn_async_with_pipes(NULL, (char **)argv, NULL,
+	                              G_SPAWN_DO_NOT_REAP_CHILD | G_SPAWN_STDERR_TO_DEV_NULL,
+	                              NULL, NULL, &pid, NULL, &out, NULL, NULL)) {
+		gtk_label_set_text(GTK_LABEL(fw_status), _("fwupd is missing."));
+		return;
+	}
+	g_string_truncate(fw_out, 0);
+	gtk_widget_set_sensitive(fw_check, FALSE);
+	gtk_widget_set_sensitive(fw_list, FALSE);
+	ch = g_io_channel_unix_new(out);
+	g_io_channel_set_flags(ch, G_IO_FLAG_NONBLOCK, NULL);
+	g_io_channel_set_close_on_unref(ch, TRUE);
+	g_io_add_watch(ch, G_IO_IN | G_IO_HUP | G_IO_ERR, on_fw_output, NULL);
+	g_io_channel_unref(ch);
+	g_child_watch_add(pid, on_fw_done, NULL);
+}
+
+static void on_fw_check(GtkButton *b, gpointer d)
+{
+	const char *argv[] = { "/usr/lib/my-distro/firmware", "check", NULL };
+
+	(void)b; (void)d;
+	fw_installing = 0;
+	gtk_label_set_text(GTK_LABEL(fw_status), _("Asking the LVFS (fwupd.org) for firmware "
+		"updates…"));
+	fw_run(argv);
+}
+
+/* Firmware updates always ask first: a wrong one, or switching off while
+ * it is written, can leave a part (or the whole computer) unusable */
+static void on_fw_install(GtkButton *b, gpointer d)
+{
+	const char *argv[] = { "/usr/lib/my-distro/firmware", "install",
+	                       g_object_get_data(G_OBJECT(b), "device"), NULL };
+	GtkWidget *ask;
+	int answer;
+
+	(void)d;
+	ask = gtk_message_dialog_new(GTK_WINDOW(mg_win), GTK_DIALOG_MODAL, GTK_MESSAGE_WARNING,
+		GTK_BUTTONS_NONE, _("Install the firmware update %s?"),
+		(char *)g_object_get_data(G_OBJECT(b), "what"));
+	gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(ask),
+		_("It comes from the part's maker through the LVFS. Laptops: plug in the power. "
+		"Don't switch the computer off until it is done; some updates finish while the "
+		"computer restarts."));
+	gtk_dialog_add_buttons(GTK_DIALOG(ask), _("Cancel"), GTK_RESPONSE_CANCEL,
+	                       _("Install"), GTK_RESPONSE_ACCEPT, NULL);
+	answer = gtk_dialog_run(GTK_DIALOG(ask));
+	gtk_widget_destroy(ask);
+	if (answer != GTK_RESPONSE_ACCEPT)
+		return;
+	fw_installing = 1;
+	gtk_text_buffer_set_text(fw_buf, "", -1);
+	gtk_label_set_text(GTK_LABEL(fw_status), _("Installing the firmware update… don't "
+		"switch the computer off."));
+	fw_run(argv);
+}
+
+/* --- Secure Boot page (0.9.7): my-secureboot ---------------------------------- */
+
+static GtkWidget *sb_label;
+
+static void sb_fill(void)
+{
+	const char *argv[] = { "/usr/sbin/my-secureboot", "status", NULL };
+	char *out = NULL, state[32] = "", enrolled[32] = "", inst[32] = "", lock[32] = "";
+	GString *t = g_string_new(NULL);
+
+	/* status prints "key = value" lines */
+	if (g_spawn_sync(NULL, (char **)argv, NULL, G_SPAWN_STDERR_TO_DEV_NULL, NULL, NULL,
+	                 &out, NULL, NULL, NULL) && out) {
+		char **lines = g_strsplit(out, "\n", -1);
+
+		for (int i = 0; lines[i]; i++) {
+			char *eq = strstr(lines[i], " = ");
+
+			if (!eq)
+				continue;
+			*eq = '\0';
+			if (!strcmp(lines[i], "secureboot")) g_strlcpy(state, eq + 3, sizeof state);
+			if (!strcmp(lines[i], "enrolled")) g_strlcpy(enrolled, eq + 3, sizeof enrolled);
+			if (!strcmp(lines[i], "installation")) g_strlcpy(inst, eq + 3, sizeof inst);
+			if (!strcmp(lines[i], "lockdown")) g_strlcpy(lock, eq + 3, sizeof lock);
+		}
+		g_strfreev(lines);
+	}
+	if (!strcmp(state, "unsupported"))
+		g_string_append(t, _("This computer was started without UEFI: Secure Boot doesn't apply."));
+	else {
+		g_string_append(t, !strcmp(state, "on") ? _("Secure Boot is on.") : _("Secure Boot is off."));
+		g_string_append(t, " ");
+		g_string_append(t, !strcmp(enrolled, "yes") ? _("my-distro's key is enrolled.") :
+		                   !strcmp(enrolled, "next start") ? _("my-distro's key is enrolled at the next start (MokManager).") :
+		                   _("my-distro's key is not enrolled yet."));
+		if (!strcmp(inst, "grub")) {
+			g_string_append(t, " ");
+			g_string_append(t, _("This installation doesn't start through shim yet."));
+		}
+		if (lock[0] && strcmp(lock, "none")) {
+			g_string_append(t, " ");
+			g_string_append(t, _("The kernel is locked down: hibernation is off."));
+		}
+	}
+	gtk_label_set_text(GTK_LABEL(sb_label), t->str);
+	g_string_free(t, TRUE);
+	g_free(out);
+}
+
+static void on_sb_prepare(GtkButton *b, gpointer d)
+{
+	const char *argv[] = { "xterm", "-T", "Secure Boot", "-hold", "-e",
+	                       "/usr/sbin/my-secureboot", "prepare", NULL };
+	int st;
+
+	(void)b; (void)d;
+	g_spawn_sync(NULL, (char **)argv, NULL, G_SPAWN_SEARCH_PATH, NULL, NULL, NULL, NULL, &st, NULL);
+	sb_fill();
+}
+
 static GtkWidget *mg_page(GtkWidget *stack, const char *name, const char *title)
 {
 	GtkWidget *box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
@@ -1826,6 +2047,54 @@ static int manage(int open_update)
 	gtk_box_pack_start(GTK_BOX(row), up_undo, FALSE, FALSE, 0);
 	gtk_box_pack_end(GTK_BOX(row), up_restart, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(p), row, FALSE, FALSE, 0);
+
+	/* Firmware updates (0.9.7) */
+	p = mg_page(stack, "firmware", _("Firmware"));
+	fw_out = g_string_new(NULL);
+	fw_status = label(_("Firmware is the software inside the computer's parts (UEFI, disks, "
+		"docks, mice, ...). fwupd asks the LVFS (fwupd.org) for updates from their makers. "
+		"Nothing is installed without asking."), "dim");
+	gtk_box_pack_start(GTK_BOX(p), fw_status, FALSE, FALSE, 0);
+	fw_list = gtk_list_box_new();
+	gtk_list_box_set_selection_mode(GTK_LIST_BOX(fw_list), GTK_SELECTION_NONE);
+	scroll = gtk_scrolled_window_new(NULL, NULL);
+	gtk_scrolled_window_set_shadow_type(GTK_SCROLLED_WINDOW(scroll), GTK_SHADOW_IN);
+	gtk_container_add(GTK_CONTAINER(scroll), fw_list);
+	gtk_box_pack_start(GTK_BOX(p), scroll, TRUE, TRUE, 0);
+	fw_view = gtk_text_view_new();
+	gtk_text_view_set_editable(GTK_TEXT_VIEW(fw_view), FALSE);
+	gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(fw_view), GTK_WRAP_WORD_CHAR);
+	fw_buf = gtk_text_view_get_buffer(GTK_TEXT_VIEW(fw_view));
+	scroll = gtk_scrolled_window_new(NULL, NULL);
+	gtk_scrolled_window_set_shadow_type(GTK_SCROLLED_WINDOW(scroll), GTK_SHADOW_IN);
+	gtk_widget_set_size_request(scroll, -1, 90);
+	gtk_container_add(GTK_CONTAINER(scroll), fw_view);
+	gtk_box_pack_start(GTK_BOX(p), scroll, FALSE, FALSE, 0);
+	row = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+	fw_check = button(_("Look for firmware updates"), G_CALLBACK(on_fw_check));
+	fw_restart = button(_("Restart now"), G_CALLBACK(on_restart));
+	gtk_widget_set_no_show_all(fw_restart, TRUE);
+	gtk_box_pack_start(GTK_BOX(row), fw_check, FALSE, FALSE, 0);
+	gtk_box_pack_end(GTK_BOX(row), fw_restart, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(p), row, FALSE, FALSE, 0);
+
+	/* Secure Boot (0.9.7) */
+	p = mg_page(stack, "secureboot", _("Secure Boot"));
+	sb_label = label("", NULL);
+	gtk_box_pack_start(GTK_BOX(p), sb_label, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(p), label(_("my-distro starts with Secure Boot on once its key "
+		"is enrolled in the PC (once; you need the computer's screen and keyboard for it). "
+		"\"Prepare\" asks for a one-time password; at the next start a blue screen "
+		"(MokManager) appears: choose \"Enroll MOK\", \"Continue\", \"Yes\", type the "
+		"password, \"Reboot\". Then switch on Secure Boot in the firmware settings."), "dim"),
+		FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(p), label(_("With Secure Boot on, the computer can't "
+		"hibernate (the kernel locks itself down and can't check a saved memory image). "
+		"Suspend works."), "dim"), FALSE, FALSE, 0);
+	row = button(_("Prepare for Secure Boot…"), G_CALLBACK(on_sb_prepare));
+	gtk_widget_set_halign(row, GTK_ALIGN_START);
+	gtk_box_pack_start(GTK_BOX(p), row, FALSE, FALSE, 8);
+	sb_fill();
 
 	/* Factory reset */
 	p = mg_page(stack, "reset", _("Factory reset"));

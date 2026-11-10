@@ -1,0 +1,120 @@
+#!/usr/bin/env python3
+"""firmware: firmware updates with fwupd, for the Firmware page of
+"Users and system" (my-setup, runs as root). 0.9.7.
+
+  firmware devices         this computer's parts that fwupd knows:
+      dev  DEVICE-ID  VERSION  NAME
+  firmware check           downloads the newest list from the LVFS
+                           (fwupd.org) and prints what can be updated:
+      update  DEVICE-ID  CURRENT  NEW  NAME  SUMMARY
+    or "none" or "error  TEXT"   (fields separated by tabs)
+  firmware install DEVICE-ID   installs the newest firmware for that part.
+                           Only after asking (the window asks; in a
+                           terminal: fwupdmgr update asks itself). Prints
+                           fwupd's messages, and "reboot" when the computer
+                           has to restart to finish (UEFI capsules).
+
+fwupdmgr talks to fwupd's daemon over the system D-Bus; the daemon is
+started here when it isn't running yet (/usr/libexec/fwupd/fwupd).
+UEFI capsule updates are written to the EFI partition, which is mounted at
+/boot/efi for that (/usr/lib/my-distro/esp-mount).
+"""
+import json
+import os
+import subprocess
+import sys
+import time
+
+FWUPD = "/usr/libexec/fwupd/fwupd"
+
+
+def start_daemon():
+    """fwupd's daemon, if D-Bus didn't start it already"""
+    try:
+        r = subprocess.run(["fwupdmgr", "--version"], capture_output=True, text=True, timeout=20)
+        if "daemon" in r.stdout.lower() or "runtime" in r.stdout.lower():
+            return
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+    if os.path.exists(FWUPD):
+        log = open("/var/log/fwupd.log", "a")
+        subprocess.Popen([FWUPD], stdout=log, stderr=log, stdin=subprocess.DEVNULL,
+                         start_new_session=True)
+        time.sleep(3)
+
+
+def fwupdmgr_json(*args):
+    r = subprocess.run(["fwupdmgr", "--json", "--no-unreported-check"] + list(args),
+                       capture_output=True, text=True, timeout=300)
+    try:
+        return json.loads(r.stdout or "{}"), r
+    except ValueError:
+        return {}, r
+
+
+def clean(s):
+    return " ".join(str(s or "").split())
+
+
+def mount_esp():
+    """The EFI partition at /boot/efi, where capsules go"""
+    helper = "/usr/lib/my-distro/esp-mount"
+    if os.path.exists(helper):
+        subprocess.run([helper], capture_output=True)
+
+
+def cmd_devices():
+    data, _ = fwupdmgr_json("get-devices")
+    for d in data.get("Devices", []):
+        print("dev\t%s\t%s\t%s" % (d.get("DeviceId", ""), clean(d.get("Version")),
+                                   clean(d.get("Name"))))
+
+
+def cmd_check():
+    r = subprocess.run(["fwupdmgr", "refresh", "--force", "--no-unreported-check"],
+                       capture_output=True, text=True, timeout=300)
+    if r.returncode not in (0, 2):
+        print("error\t" + clean(r.stderr or r.stdout))
+        return
+    data, r = fwupdmgr_json("get-updates")
+    n = 0
+    for d in data.get("Devices", []):
+        rel = (d.get("Releases") or [{}])[0]
+        if not rel:
+            continue
+        print("update\t%s\t%s\t%s\t%s\t%s" % (d.get("DeviceId", ""), clean(d.get("Version")),
+              clean(rel.get("Version")), clean(d.get("Name")), clean(rel.get("Summary"))))
+        n += 1
+    if not n:
+        print("none")
+
+
+def cmd_install(device):
+    mount_esp()
+    p = subprocess.run(["fwupdmgr", "update", device, "--assume-yes", "--no-reboot-check",
+                        "--no-unreported-check"], stdin=subprocess.DEVNULL, text=True,
+                       stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=3600)
+    sys.stdout.write(p.stdout)
+    if "reboot" in p.stdout.lower() or "restart" in p.stdout.lower():
+        print("reboot")
+    sys.exit(p.returncode)
+
+
+def main():
+    a = sys.argv[1:]
+    if os.getuid() != 0:
+        sys.exit("firmware: needs root")
+    start_daemon()
+    if a == ["devices"]:
+        cmd_devices()
+    elif a == ["check"]:
+        cmd_check()
+    elif len(a) == 2 and a[0] == "install" and all(c.isalnum() for c in a[1]):
+        cmd_install(a[1])
+    else:
+        sys.stderr.write(__doc__)
+        sys.exit(2)
+
+
+if __name__ == "__main__":
+    main()
