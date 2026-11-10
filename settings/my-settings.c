@@ -21,7 +21,10 @@
  *     HighContrast style), the size of text (the same setting as on the
  *     Display page) and of the mouse pointer (Xcursor.size, GTK's
  *     gtk-cursor-theme-size), and buttons for the magnifier (my-zoom), read
- *     aloud (my-speak) and the on-screen keyboard (my-keyboard)
+ *     aloud (my-speak) and the on-screen keyboard (my-keyboard); 0.9.7: the
+ *     screen reader (my-reader) on or off
+ *   - Permissions page (0.9.7): camera, microphone and home folder per
+ *     program, applied by my-run when the Start menu starts it
  *
  * `my-settings --apply` only does apply_desktop and exits; Openbox's
  * autostart runs it at every login. Run it yourself after editing the
@@ -1022,6 +1025,21 @@ static void on_run(GtkButton *b, gpointer cmd)
 	g_spawn_command_line_async(cmd, NULL);
 }
 
+/* The screen reader (0.9.7): on now and at every login, or off */
+static GtkWidget *reader_switch;
+
+static void on_reader(GObject *sw, GParamSpec *ps, gpointer d)
+{
+	int on = gtk_switch_get_active(GTK_SWITCH(sw));
+
+	(void)ps; (void)d;
+	if (building || on == cfg.screen_reader)
+		return;
+	cfg.screen_reader = on;
+	changed();
+	g_spawn_command_line_async(on ? "my-reader --autostart" : "my-reader --stop", NULL);
+}
+
 static void build_access(GtkWidget *stack)
 {
 	static const char *const scales[][2] = {
@@ -1051,6 +1069,10 @@ static void build_access(GtkWidget *stack)
 	b = gtk_button_new_with_label(_("Read the selected text"));
 	g_signal_connect(b, "clicked", G_CALLBACK(on_run), "my-speak");
 	row(g, y++, _("Read aloud (Super+R)"), b);
+	reader_switch = gtk_switch_new();
+	gtk_widget_set_halign(reader_switch, GTK_ALIGN_START);
+	g_signal_connect(reader_switch, "notify::active", G_CALLBACK(on_reader), NULL);
+	row(g, y++, _("Screen reader (Super+Alt+S)"), reader_switch);
 
 	heading(g, y++, _("Typing"));
 	b = gtk_button_new_with_label(_("Open the on-screen keyboard"));
@@ -1060,13 +1082,178 @@ static void build_access(GtkWidget *stack)
 	l = gtk_label_new(_("Text size applies to programs you open from now on, all of the "
 		"desktop after the next login. The on-screen keyboard is also on the login "
 		"screen (the keyboard button). Read aloud: select text with the mouse in any "
-		"program, then press Super+R; again stops it. A screen reader that reads "
-		"everything on the screen (like Orca) is not in my-distro yet."));
+		"program, then press Super+R; again stops it. The screen reader speaks window "
+		"titles, the Start menu and what has the focus in GTK programs (buttons, fields, "
+		"lists, menus); not terminals, web pages or the login screen."));
 	gtk_label_set_line_wrap(GTK_LABEL(l), TRUE);
 	gtk_label_set_xalign(GTK_LABEL(l), 0);
 	gtk_label_set_max_width_chars(GTK_LABEL(l), 60);
 	gtk_style_context_add_class(gtk_widget_get_style_context(l), "dim-label");
 	gtk_grid_attach(GTK_GRID(g), l, 0, y, 2, 1);
+}
+
+/* --- Permissions (0.9.7) ---------------------------------------------------- */
+/*
+ * Per program: may it use the camera, the microphone, and how much of the
+ * home folder may it see. Saved in ~/.config/my-distro/permissions; my-run
+ * applies it (with a sandbox) when the Start menu starts the program. A
+ * program with every permission has no line there and starts as it always
+ * did. The list: the Start menu's programs (system tools left out: they
+ * need the system).
+ */
+#define PERM_FILE ".config/my-distro/permissions"
+
+struct perm {
+	char prog[64], label[64];
+	int camera, mic;
+	char home[16];                 /* full, read, downloads, none */
+};
+static struct perm perms[64];
+static int nperms;
+
+static void perm_save(void)
+{
+	char *path = g_build_filename(g_get_home_dir(), PERM_FILE, NULL), *dir;
+	GString *s = g_string_new("# Permissions of programs started from the Start menu "
+		"(Settings, Permissions; my-run applies them).\n# PROGRAM camera=yes|no "
+		"microphone=yes|no home=full|read|downloads|none\n");
+
+	for (int i = 0; i < nperms; i++)
+		if (!perms[i].camera || !perms[i].mic || strcmp(perms[i].home, "full"))
+			g_string_append_printf(s, "%s camera=%s microphone=%s home=%s\n", perms[i].prog,
+			                       perms[i].camera ? "yes" : "no", perms[i].mic ? "yes" : "no",
+			                       perms[i].home);
+	dir = g_path_get_dirname(path);
+	g_mkdir_with_parents(dir, 0755);
+	g_file_set_contents(path, s->str, -1, NULL);
+	g_free(dir);
+	g_free(path);
+	g_string_free(s, TRUE);
+}
+
+/* The menu files' programs, with what the permissions file says */
+static void perm_load(void)
+{
+	const char *menus[] = { "/etc/my-panel/menu", "/var/lib/my-pkg/menu" };
+	char *path = g_build_filename(g_get_home_dir(), PERM_FILE, NULL), *text = NULL;
+
+	nperms = 0;
+	for (size_t m = 0; m < G_N_ELEMENTS(menus); m++) {
+		char **lines;
+
+		if (!g_file_get_contents(menus[m], &text, NULL, NULL))
+			continue;
+		lines = g_strsplit(text, "\n", -1);
+		for (int i = 0; lines[i] && nperms < (int)G_N_ELEMENTS(perms); i++) {
+			char **f = g_strsplit(lines[i], "|", 3), *prog;
+			int dup = 0;
+
+			if (g_strv_length(f) < 2 || lines[i][0] == '#') {
+				g_strfreev(f);
+				continue;
+			}
+			g_strstrip(f[1]);
+			f[1][strcspn(f[1], " ")] = '\0';     /* the command's first word */
+			prog = g_path_get_basename(f[1]);
+			for (int j = 0; j < nperms; j++)
+				dup |= !strcmp(perms[j].prog, prog);
+			/* my-distro's own tools, terminals and the session's controls */
+			if (!dup && strncmp(prog, "my-", 3) && strcmp(prog, "xterm") &&
+			    strcmp(prog, "openbox") && strcmp(prog, "pcmanfm")) {
+				struct perm *p = &perms[nperms++];
+
+				g_strlcpy(p->prog, prog, sizeof p->prog);
+				g_strlcpy(p->label, _(f[0]), sizeof p->label);
+				p->camera = p->mic = 1;
+				g_strlcpy(p->home, "full", sizeof p->home);
+			}
+			g_free(prog);
+			g_strfreev(f);
+		}
+		g_strfreev(lines);
+		g_free(text);
+	}
+	if (g_file_get_contents(path, &text, NULL, NULL)) {
+		char **lines = g_strsplit(text, "\n", -1);
+
+		for (int i = 0; lines[i]; i++) {
+			char prog[64], cam[8] = "yes", mic[8] = "yes", home[16] = "full";
+
+			if (lines[i][0] == '#' || sscanf(lines[i], "%63s camera=%7s microphone=%7s home=%15s",
+			                                 prog, cam, mic, home) < 1)
+				continue;
+			for (int j = 0; j < nperms; j++)
+				if (!strcmp(perms[j].prog, prog)) {
+					perms[j].camera = strcmp(cam, "no") != 0;
+					perms[j].mic = strcmp(mic, "no") != 0;
+					g_strlcpy(perms[j].home, home, sizeof perms[j].home);
+				}
+		}
+		g_strfreev(lines);
+		g_free(text);
+	}
+	g_free(path);
+}
+
+static void on_perm_check(GtkToggleButton *b, gpointer field)
+{
+	*(int *)field = gtk_toggle_button_get_active(b);
+	perm_save();
+}
+
+static void on_perm_home(GtkComboBox *c, gpointer d)
+{
+	struct perm *p = d;
+	const char *id = gtk_combo_box_get_active_id(c);
+
+	if (id) {
+		g_strlcpy(p->home, id, sizeof p->home);
+		perm_save();
+	}
+}
+
+static void build_permissions(GtkWidget *stack)
+{
+	GtkWidget *g = page(stack, "permissions", _("Permissions"));
+	GtkWidget *l = gtk_label_new(_("What each program may use, the next time you start it from "
+		"the Start menu. A program without the microphone gets no sound at all (the sound "
+		"server can't give it one without the other). Without the whole home folder it sees "
+		"only Downloads (or nothing) and keeps its own settings separately."));
+	int y = 1;
+
+	gtk_label_set_line_wrap(GTK_LABEL(l), TRUE);
+	gtk_label_set_xalign(GTK_LABEL(l), 0);
+	gtk_label_set_max_width_chars(GTK_LABEL(l), 60);
+	gtk_style_context_add_class(gtk_widget_get_style_context(l), "dim-label");
+	gtk_grid_attach(GTK_GRID(g), l, 0, 0, 4, 1);
+	gtk_grid_set_row_spacing(GTK_GRID(g), 8);
+	gtk_grid_attach(GTK_GRID(g), gtk_label_new(_("Camera")), 1, y, 1, 1);
+	gtk_grid_attach(GTK_GRID(g), gtk_label_new(_("Microphone")), 2, y, 1, 1);
+	gtk_grid_attach(GTK_GRID(g), gtk_label_new(_("Home folder")), 3, y++, 1, 1);
+	perm_load();
+	for (int i = 0; i < nperms; i++, y++) {
+		struct perm *p = &perms[i];
+		GtkWidget *name = gtk_label_new(p->label), *cam = gtk_check_button_new(),
+		          *mic = gtk_check_button_new(), *home = gtk_combo_box_text_new();
+
+		gtk_widget_set_halign(name, GTK_ALIGN_START);
+		gtk_widget_set_halign(cam, GTK_ALIGN_CENTER);
+		gtk_widget_set_halign(mic, GTK_ALIGN_CENTER);
+		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(cam), p->camera);
+		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(mic), p->mic);
+		gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(home), "full", _("All of it"));
+		gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(home), "read", _("Read only"));
+		gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(home), "downloads", _("Only Downloads"));
+		gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(home), "none", _("None"));
+		gtk_combo_box_set_active_id(GTK_COMBO_BOX(home), p->home);
+		g_signal_connect(cam, "toggled", G_CALLBACK(on_perm_check), &p->camera);
+		g_signal_connect(mic, "toggled", G_CALLBACK(on_perm_check), &p->mic);
+		g_signal_connect(home, "changed", G_CALLBACK(on_perm_home), p);
+		gtk_grid_attach(GTK_GRID(g), name, 0, y, 1, 1);
+		gtk_grid_attach(GTK_GRID(g), cam, 1, y, 1, 1);
+		gtk_grid_attach(GTK_GRID(g), mic, 2, y, 1, 1);
+		gtk_grid_attach(GTK_GRID(g), home, 3, y, 1, 1);
+	}
 }
 
 /* --- Language ------------------------------------------------------------- */
@@ -1201,12 +1388,17 @@ static void build_network(GtkWidget *stack)
 	gtk_label_set_xalign(GTK_LABEL(proxy_status), 0);
 	gtk_label_set_line_wrap(GTK_LABEL(proxy_status), TRUE);
 	gtk_grid_attach(GTK_GRID(g), proxy_status, 0, 5, 2, 1);
-	l = gtk_label_new(_("Sharing files from this computer is off: the firewall lets "
-		"nobody in. To open a shared folder of another PC: Start menu, Network share."));
+	heading(g, 6, _("Sharing"));
+	l = gtk_label_new(_("The firewall lets nobody in, unless you share a folder or the "
+		"printers with the other computers of your network (Sharing). To open a shared "
+		"folder of another PC: Start menu, Network share."));
 	gtk_label_set_line_wrap(GTK_LABEL(l), TRUE);
 	gtk_label_set_xalign(GTK_LABEL(l), 0);
 	gtk_style_context_add_class(gtk_widget_get_style_context(l), "dim-label");
-	gtk_grid_attach(GTK_GRID(g), l, 0, 6, 2, 1);
+	gtk_grid_attach(GTK_GRID(g), l, 0, 7, 2, 1);
+	save = gtk_button_new_with_label(_("Sharing…"));
+	g_signal_connect(save, "clicked", G_CALLBACK(on_run), "my-sharing");
+	row(g, 8, "", save);
 }
 
 /* Puts the values of cfg into the widgets (without reacting to it). */
@@ -1298,6 +1490,7 @@ static void update_widgets(void)
 		gtk_combo_box_set_active_id(GTK_COMBO_BOX(a11y_scale_combo), example);
 	}
 	gtk_switch_set_active(GTK_SWITCH(contrast_switch), settings_high_contrast(&cfg));
+	gtk_switch_set_active(GTK_SWITCH(reader_switch), cfg.screen_reader);
 	snprintf(example, sizeof example, "%d", cfg.cursor_size);
 	if (!gtk_combo_box_set_active_id(GTK_COMBO_BOX(cursor_combo), example)) {
 		gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(cursor_combo), example, example);
@@ -1346,6 +1539,7 @@ int main(int argc, char **argv)
 	build_display(stack);
 	build_lock(stack);
 	build_access(stack);
+	build_permissions(stack);
 	build_language(stack);
 	build_network(stack);
 

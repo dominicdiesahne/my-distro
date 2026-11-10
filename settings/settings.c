@@ -115,6 +115,8 @@ static void apply(struct settings *s, const char *key, const char *v)
 		s->scale = clamp(atoi(v), 100, 200);
 	else if (strcmp(key, "cursor_size") == 0)
 		s->cursor_size = clamp(atoi(v), 24, 96);
+	else if (strcmp(key, "screen_reader") == 0)
+		s->screen_reader = yes(v);
 	else if (strcmp(key, "language") == 0)
 		SET(s->language, v);
 	else if (strcmp(key, "proxy") == 0)
@@ -234,7 +236,9 @@ int settings_save(const struct settings *s)
 		"# Size of text and icons in percent, 100-200 (at the next login)\n"
 		"scale = %d\n"
 		"# Size of the mouse pointer in pixels: 24 (normal), 32, 48, 64, 96\n"
-		"cursor_size = %d\n\n"
+		"cursor_size = %d\n"
+		"# Screen reader (my-reader, Super+Alt+S): yes = it starts at login\n"
+		"screen_reader = %s\n\n"
 		"# Language, e.g. de_DE.UTF-8 (empty = the system's; at the next login)\n"
 		"language = %s\n"
 		"# Proxy for the web browser, updates and other downloads, e.g.\n"
@@ -247,7 +251,7 @@ int settings_save(const struct settings *s)
 		s->clock_date ? "yes" : "no", s->date_format,
 		s->panel_position == PANEL_TOP ? "top" : "bottom",
 		s->panel_height, s->font_size, s->lock_minutes, s->scale, s->cursor_size,
-		s->language, s->proxy, s->no_proxy);
+		s->screen_reader ? "yes" : "no", s->language, s->proxy, s->no_proxy);
 	if (fclose(f) != 0)
 		return -1;
 	return rename(tmp, path);

@@ -1,0 +1,2 @@
+  <!-- my-distro 0.9.7: screen reader on/off -->
+  <keybind key="W-A-s"><action name="Execute"><command>my-reader --toggle</command></action></keybind>

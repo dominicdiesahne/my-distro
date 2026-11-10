@@ -29,9 +29,11 @@
  * - "Update to 0.9" next to the clock when a new version of my-distro is out.
  *   my-update watch writes that into ~/.cache/my-distro/update; a click
  *   opens System update (my-setup --update).
- * - A speaker with the volume, when there is a sound card (ALSA's mixer).
- *   Scroll on it: louder / quieter; click: sound off / on; right-click: all
- *   controls (alsamixer). The volume keys (my-volume) change the same
+ * - A speaker with the volume, when there is a sound card (ALSA's mixer;
+ *   with PipeWire, 0.9.7, ALSA's "default" mixer is the default output's).
+ *   Scroll on it: louder / quieter; click: sound off / on; right-click: the
+ *   Sound window (my-sound: outputs, a volume per program), or alsamixer
+ *   without PipeWire. The volume keys (my-volume) change the same
  *   control, and the speaker follows. Your volume is saved in
  *   ~/.config/my-distro/volume and set again at the next login.
  * - A battery with its charge, on laptops (/sys/class/power_supply). Below
@@ -731,6 +733,7 @@ static void draw_wifi(int right)
 }
 
 static void run(const char *cmd);
+static void run_app(const char *cmd);
 
 /* A cairo context for drawing into the panel's pixmap, on top of Xft */
 static cairo_t *panel_cairo(void)
@@ -1234,6 +1237,28 @@ static void draw_panel(void)
 	XCopyArea(dpy, buf, panel, DefaultGC(dpy, scr), 0, 0, sw, panel_h, 0, 0);
 }
 
+/*
+ * The screen reader (my-reader, 0.9.7) can't ask the Start menu what is
+ * highlighted (it is not a GTK program, so no AT-SPI): we tell it. The
+ * label goes into the property _MY_READER_TEXT of the root window, which
+ * my-reader watches. Only when it changes; NULL forgets the last one.
+ */
+static void reader_say(const char *label)
+{
+	static char last[64];
+	Atom prop = XInternAtom(dpy, "_MY_READER_TEXT", False);
+
+	if (!label) {
+		last[0] = '\0';
+		return;
+	}
+	if (strcmp(label, last) == 0)
+		return;
+	snprintf(last, sizeof last, "%s", label);
+	XChangeProperty(dpy, root, prop, XInternAtom(dpy, "UTF8_STRING", False), 8,
+	                PropModeReplace, (unsigned char *)last, strlen(last));
+}
+
 static void draw_menu(void)
 {
 	XftDrawRect(menu_draw, &c_bg, 0, 0, menu_w, menu_h);
@@ -1262,6 +1287,7 @@ static void draw_menu(void)
 	XftDrawRect(menu_draw, &c_accent, 0, 0, menu_w, 1);
 	XftDrawRect(menu_draw, &c_accent, 0, 0, 1, menu_h);
 	XftDrawRect(menu_draw, &c_accent, menu_w - 1, 0, 1, menu_h);
+	reader_say(menu_hover >= 0 ? items[menu_hover].label : NULL);
 }
 
 static void add_item(const char *label, const char *cmd, const char *icon)
@@ -1394,6 +1420,26 @@ static void size_menu_window(void)
 	menu_buf = XCreatePixmap(dpy, menu, menu_w, menu_h, DefaultDepth(dpy, scr));
 	menu_draw = XftDrawCreate(dpy, menu_buf, vis, cmap);
 	XSetWindowBackgroundPixmap(dpy, menu, menu_buf);
+}
+
+/*
+ * Starts a program from the Start menu. 0.9.7: through my-run, which
+ * applies the program's permissions (camera, microphone, home folder;
+ * Settings, Permissions) with a sandbox, and simply starts it when it has
+ * all of them (the default).
+ */
+static void run_app(const char *cmd)
+{
+	if (access("/usr/bin/my-run", X_OK) != 0) {
+		run(cmd);
+		return;
+	}
+	if (fork() == 0) {
+		setsid();
+		signal(SIGCHLD, SIG_DFL);         /* see run() */
+		execl("/usr/bin/my-run", "my-run", "--menu", cmd, (char *)NULL);
+		_exit(127);
+	}
 }
 
 static void run(const char *cmd)
@@ -1940,7 +1986,12 @@ static void handle(XEvent *e)
 			case Button5: set_volume(vol_pct - VOLUME_STEP, -1); break;
 			case Button1: set_volume(vol_pct, !vol_on); break;
 			case Button3:
-				run("xterm -name alsamixer -T Volume -geometry 100x26 -e alsamixer");
+				/* the Sound window (outputs, a volume per program;
+				 * 0.9.7, needs PipeWire), else ALSA's mixer */
+				if (access("/usr/bin/pipewire", X_OK) == 0)
+					run("my-sound");
+				else
+					run("xterm -name alsamixer -T Volume -geometry 100x26 -e alsamixer");
 				break;
 			}
 			if (read_volume())
@@ -1979,7 +2030,7 @@ static void handle(XEvent *e)
 			i = menu_item_at(e->xbutton.x, e->xbutton.y);
 			if (i >= 0) {
 				close_menu();
-				run(items[i].cmd);
+				run_app(items[i].cmd);
 				draw_panel();
 			}
 		}
@@ -2007,7 +2058,7 @@ static void handle(XEvent *e)
 		} else if ((key == XK_Return || key == XK_KP_Enter) && menu_hover >= 0) {
 			i = menu_hover;
 			close_menu();
-			run(items[i].cmd);
+			run_app(items[i].cmd);
 			draw_panel();
 		}
 		break;

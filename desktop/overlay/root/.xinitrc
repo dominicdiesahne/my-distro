@@ -10,8 +10,9 @@ export LANG=en_US.UTF-8
 # Your language and proxy (Settings app)
 . /usr/lib/my-distro/session-env
 
-# GTK apps (the file manager) look for an accessibility service we don't have.
-export NO_AT_BRIDGE=1
+# GTK apps tell the accessibility bus (AT-SPI) what they show, for the
+# screen reader my-reader (0.9.7; until 0.9.6 this was switched off with
+# NO_AT_BRIDGE=1).
 
 # The session D-Bus: programs of this session talk over it, e.g. to show
 # notifications (my-notifyd). It ends with the session.

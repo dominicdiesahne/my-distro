@@ -21,9 +21,11 @@ Magnifier|my-zoom|zoom-in
 -
 Wi-Fi|my-wifi|network-wireless
 Bluetooth|my-bluetooth|my-bluetooth
+Sound|my-sound|audio-volume-high
 VPN|my-vpn|network-vpn
 Printers|my-printers|printer
 Network share|my-share|folder-remote
+Sharing|my-sharing|folder-publicshare
 Eject USB stick|my-eject|media-eject
 Settings|my-settings|preferences-desktop
 Users and system|my-setup|system-users

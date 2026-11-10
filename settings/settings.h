@@ -56,6 +56,7 @@ struct settings {
 	int lock_minutes;      /* lock the screen after this long without use; 0 = never */
 	int scale;             /* text and icons in percent: 100-200 (Xft.dpi = 96 * scale) */
 	int cursor_size;       /* mouse pointer in pixels: 24 (normal) - 96 */
+	int screen_reader;     /* 1: my-reader starts at login (0.9.7) */
 
 	/* Read by /usr/lib/my-distro/session-env at login, for the session: */
 	char language[32];     /* LANG, e.g. "de_DE.UTF-8"; "" = the system's */

@@ -1,0 +1,83 @@
+#!/bin/sh
+# my-run [--menu "COMMAND"] | [PROGRAM ARGS...]: starts a program with the
+# permissions you gave it in Settings, Permissions (0.9.7). The Start menu
+# starts everything through it.
+#
+# ~/.config/my-distro/permissions has one line per program:
+#     PROGRAM camera=yes|no microphone=yes|no home=full|read|downloads|none
+# A program without a line (the default) has all of them and starts
+# normally, as before 0.9.7. Otherwise it runs in a sandbox (bubblewrap,
+# like my-sandbox) that leaves out what it may not have:
+#   camera=no       no webcams (/dev/video*)
+#   microphone=no   no sound devices and no sound server: the program can't
+#                   record, and can't play sound either (PipeWire can't
+#                   give a program one without the other)
+#   home=read       your home folder read-only, except ~/Downloads
+#   home=downloads  only ~/Downloads; its own settings live in
+#                   ~/.local/share/my-sandbox/PROGRAM
+#   home=none       only that folder of its own
+# The rest of the system is read-only in the sandbox; the network, the
+# screen (X11) and the session D-Bus stay.
+CONF="$HOME/.config/my-distro/permissions"
+
+if [ "$1" = --menu ]; then
+	cmd=$2
+	set -- sh -c "$cmd"
+	# the program: the command's first word ("netsurf-gtk3", "mpv ...")
+	prog=$(basename "${cmd%% *}")
+else
+	[ $# -gt 0 ] || { echo "usage: my-run [--menu COMMAND] | PROGRAM [ARGS]" >&2; exit 2; }
+	prog=$(basename "$1")
+fi
+
+line=$(awk -v p="$prog" '$1 == p { print; exit }' "$CONF" 2>/dev/null)
+get() { printf '%s\n' "$line" | tr ' ' '\n' | sed -n "s/^$1=//p" | head -n 1; }
+camera=$(get camera) mic=$(get microphone) home=$(get home)
+[ -n "$camera" ] || camera=yes
+[ -n "$mic" ] || mic=yes
+[ -n "$home" ] || home=full
+if [ "$camera" = yes ] && [ "$mic" = yes ] && [ "$home" = full ] || ! command -v bwrap >/dev/null; then
+	exec "$@"
+fi
+
+box="$HOME/.local/share/my-sandbox/$prog"
+mkdir -p "$box" "$HOME/Downloads"
+case "$home" in
+read)      home_args="--ro-bind $HOME $HOME --bind $HOME/Downloads $HOME/Downloads" ;;
+downloads) home_args="--bind $box $HOME --bind $HOME/Downloads $HOME/Downloads" ;;
+none)      home_args="--bind $box $HOME" ;;
+*)         home_args="--bind $HOME $HOME" ;;
+esac
+
+devs=""
+[ -e /dev/dri ] && devs="--dev-bind /dev/dri /dev/dri"
+if [ "$camera" = yes ]; then
+	for d in /dev/video*; do
+		[ -e "$d" ] && devs="$devs --dev-bind $d $d"
+	done
+fi
+sound=""
+if [ "$mic" = yes ]; then
+	[ -e /dev/snd ] && devs="$devs --dev-bind /dev/snd /dev/snd"
+	# PipeWire's and its PulseAudio part's sockets
+	if [ -n "$XDG_RUNTIME_DIR" ]; then
+		for s in pipewire-0 pulse; do
+			[ -e "$XDG_RUNTIME_DIR/$s" ] && sound="$sound --bind $XDG_RUNTIME_DIR/$s $XDG_RUNTIME_DIR/$s"
+		done
+	fi
+fi
+
+# shellcheck disable=SC2086 # the lists above are meant to be split
+exec bwrap \
+	--ro-bind /usr /usr --ro-bind /bin /bin --ro-bind /sbin /sbin \
+	--ro-bind /lib /lib --symlink lib /lib64 \
+	--ro-bind /etc /etc --ro-bind /var /var \
+	--proc /proc --dev /dev $devs \
+	--tmpfs /tmp --ro-bind-try /tmp/.X11-unix /tmp/.X11-unix \
+	--tmpfs /run --dir "${XDG_RUNTIME_DIR:-/run/user}" $sound \
+	--tmpfs /media --tmpfs /mnt --tmpfs /home --tmpfs /root \
+	$home_args \
+	--unshare-user-try --unshare-pid --unshare-ipc --unshare-uts --unshare-cgroup-try \
+	--share-net --die-with-parent \
+	--setenv HOME "$HOME" --chdir "$HOME" \
+	"$@"

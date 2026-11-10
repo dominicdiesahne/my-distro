@@ -47,6 +47,13 @@ devs=""
 for d in /dev/snd /dev/dri; do
 	[ -e "$d" ] && devs="$devs --dev-bind $d $d"
 done
+# Sound through PipeWire (0.9.7): its sockets in the session folder
+sound=""
+if [ -n "$XDG_RUNTIME_DIR" ]; then
+	for s in pipewire-0 pulse; do
+		[ -e "$XDG_RUNTIME_DIR/$s" ] && sound="$sound --bind $XDG_RUNTIME_DIR/$s $XDG_RUNTIME_DIR/$s"
+	done
+fi
 
 # shellcheck disable=SC2086 # the lists above are meant to be split
 exec bwrap \
@@ -55,7 +62,8 @@ exec bwrap \
 	--ro-bind /etc /etc --ro-bind /var /var \
 	--proc /proc --dev /dev $devs \
 	--tmpfs /tmp --ro-bind-try /tmp/.X11-unix /tmp/.X11-unix \
-	--tmpfs /run --tmpfs /media --tmpfs /mnt --tmpfs /home --tmpfs /root \
+	--tmpfs /run --dir "${XDG_RUNTIME_DIR:-/run/user}" $sound \
+	--tmpfs /media --tmpfs /mnt --tmpfs /home --tmpfs /root \
 	$home_args \
 	--unshare-user-try --unshare-pid --unshare-ipc --unshare-uts --unshare-cgroup-try \
 	$net --die-with-parent \

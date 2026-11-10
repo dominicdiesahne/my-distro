@@ -16,3 +16,5 @@ my-ide=/usr/lib/nvim/share/icons/hicolor/128x128/apps/nvim.png
 xvkbd=input-keyboard
 XVkbd=input-keyboard
 my-zoom=zoom-in
+my-sound=audio-volume-high
+my-sharing=folder-publicshare
