@@ -40,9 +40,10 @@ the taskbar, the login screen, the file history daemon and the search indexer.
   the root password) downloads it, checks its signature and installs it;
   your files, users and settings stay. See [System updates](#system-updates).
 - **Software app and package manager** (`settings/my-software.c`, `my-pkg`):
-  install and remove about 30 more programs without a new image: a PDF
+  install and remove about 35 more programs without a new image: a PDF
   viewer, an image viewer, a second web browser, Vim, tmux, Ruby,
-  PHP, Perl, games and more, by category or search, with what each needs.
+  PHP, Perl, Node.js, a C compiler, Docker, a virus scanner, Samba, games
+  and more, by category or search, with what each needs.
   They appear in the Start menu, stay after system updates (in the version
   for the new system) and go with a factory reset. See [Software](#software).
 - **Graphical login** (`login/my-login.c`): checks passwords against
@@ -87,12 +88,14 @@ the taskbar, the login screen, the file history daemon and the search indexer.
   are left out).
 - **Installer** (`my-install`): copies the live system onto a hard disk with
   GRUB for BIOS and UEFI, so your files and settings survive a reboot.
-- **Sound**: a speaker in the taskbar shows the volume. Scroll on it for
-  louder/quieter, click to mute, right-click for all controls (alsamixer).
-  The volume keys work too (`my-volume up|down|mute`). Your volume is
-  remembered for the next login. Drivers for the sound chips of most PCs
-  (Intel HD Audio with Realtek, Conexant, Cirrus, IDT, VIA codecs, HDMI)
-  and USB headsets.
+- **Sound** (PipeWire with WirePlumber): a speaker in the taskbar shows the
+  volume. Scroll on it for louder/quieter, click to mute, right-click for
+  the **Sound** window (`settings/my-sound.c`): which output plays
+  (speakers, headphones, HDMI, Bluetooth), the microphone, and every program
+  that plays with its own volume and output. The volume keys work too
+  (`my-volume up|down|mute`). ALSA and PulseAudio programs play through
+  PipeWire. Drivers for the sound chips of most PCs (Intel HD Audio with
+  Realtek, Conexant, Cirrus, IDT, VIA codecs, HDMI) and USB headsets.
 - **Notifications** (`settings/my-notifyd.c`): small boxes in the corner
   next to the taskbar, in the colors of your theme. Any program can send one
   over the standard freedesktop D-Bus interface; from a script:
@@ -154,9 +157,8 @@ the taskbar, the login screen, the file history daemon and the search indexer.
   device wants one), connect, disconnect, forget. Keyboards, mice,
   headphones and speakers. BlueZ underneath; drivers and firmware for
   Intel, Realtek, MediaTek, Qualcomm and Broadcom chips and USB dongles.
-  Headphones get the sound through bluez-alsa (no sound server): while they
-  are connected, programs you start play there (see
-  [Limitations](#limitations)).
+  Headphones get the sound through PipeWire: when they connect they become
+  the default output, and programs that are playing move there.
 - **Printing** (`settings/my-printers.c`, Start menu *Printers*): CUPS with
   driverless printing (IPP Everywhere / AirPrint: nearly every network
   printer since ~2015 needs no driver), Gutenprint and HPLIP for older
@@ -167,11 +169,12 @@ the taskbar, the login screen, the file history daemon and the search indexer.
   (`http://localhost:631`).
 - **Scanning**: *Scan…* in the Printers window (SANE, with sane-airscan for
   network scanners and all-in-one printers); pictures go to `~/Pictures`.
-- **3D graphics**: Mesa with real drivers: AMD (radeonsi, r600; Vulkan:
+- **3D graphics**: Mesa with real drivers: Intel (iris since 2015, crocus
+  for 2006-2014, i915 older; Vulkan: anv), AMD (radeonsi, r600; Vulkan:
   radv), VMware/VirtualBox (svga), QEMU (virgl), and llvmpipe (fast
-  software 3D on the CPU) on any other computer, Intel included. Xorg
-  draws with the graphics chip (glamor). `glxinfo -B` shows the renderer,
-  `glxgears` is a quick test.
+  software 3D on the CPU) on any other computer. Xorg draws with the
+  graphics chip (glamor). `glxinfo -B` shows the renderer, `glxgears` is a
+  quick test.
 - **Disks** (`settings/my-disks.c`, Start menu *Disks*): the disks and
   partitions; format a USB stick, SD card or partition as FAT32, exFAT,
   ext4 or NTFS, and check and repair a filesystem. It asks for the root
@@ -186,9 +189,10 @@ the taskbar, the login screen, the file history daemon and the search indexer.
 - **Accessibility** (Settings, *Accessibility*): high-contrast themes (dark
   and light, also in the first-boot setup), size of text and icons, a
   bigger mouse pointer, a magnifier (Super+Z, `panel/my-zoom.c`), reading
-  the selected text aloud (Super+R, eSpeak, `panel/my-speak.c`) and an
-  on-screen keyboard (Super+K, Start menu, and the *Keyboard* button on
-  the login screen).
+  the selected text aloud (Super+R, eSpeak, `panel/my-speak.c`), a
+  **screen reader** (Super+Alt+S, `panel/my-reader.c`, see
+  [Screen reader](#screen-reader)) and an on-screen keyboard (Super+K,
+  Start menu, and the *Keyboard* button on the login screen).
 - **Scheduled tasks**: BusyBox `crond` runs under `my-keepalive`; every user
   edits their own timetable with `crontab -e` (nano). The timetables are in
   `/etc/cron/crontabs` and system updates keep them.
@@ -205,25 +209,43 @@ the taskbar, the login screen, the file history daemon and the search indexer.
   logs*, *Crashes* shows which program, the signal and a backtrace (gdb).
   Core dumps are not kept, the log stays under ~512 KB.
 - **Developer tools**: gdb, strace, ltrace, perf; KVM in the kernel, so
-  virtual machines run at full speed if you add QEMU.
+  virtual machines run at full speed if you add QEMU. In the Software app:
+  a C compiler (Tiny C Compiler: `tcc hello.c -o hello`), Node.js and
+  **Docker** (`sudo docker run hello-world`).
 - **Sandbox** (`my-sandbox PROGRAM`, bubblewrap): the program sees the system
   read-only, its own home folder and your `~/Downloads` only. Start menu,
-  *Web browser (sandbox)*. Kernel hardening (Yama ptrace scope, Landlock,
+  *Web browser (sandbox)*. **App permissions** (Settings, *Permissions*):
+  per program, whether it may use the camera and the microphone and how
+  much of your home folder it sees; the Start menu starts it through
+  `my-run`, which puts it into such a sandbox when it lacks one of them. Kernel hardening (Yama ptrace scope, Landlock,
   hidden kernel addresses, protected links in `/tmp`) and an **audit log**
   (auditd: changes to users, passwords, sudo rules, every sudo; *System
   logs*, *Audit*, as root).
 - **Proxy** (Settings, *Network*): for the whole session (web browser,
   system updates, pip, git). **Windows shares** (Start menu, *Network share*,
   `my-share`): opens a shared folder of a PC or NAS (SMB) in the file
-  manager. Sharing from this PC stays off.
+  manager. **Sharing** (Start menu, `settings/my-sharing.c`): shares a
+  folder of your home and the printers with the other computers of your
+  network (Samba, installed from the Software app when you first switch it
+  on); off by default, and the firewall opens only while it is on, only for
+  local networks.
 - **Switch user**: Start menu or lock screen; another person logs in on a
   second screen while your desktop stays locked (Ctrl+Alt+F7 goes back).
 - **Parental controls** (*Users and system*, *Parental controls…*): the hours
   a user may use the computer and minutes per day; the login screen enforces
   them and warns 5 minutes before the end.
-- **Languages**: my-distro's own programs in English and German (gettext,
-  `po/de.po`). Choose in the setup (for everyone), in *Users and system*,
-  or per user in Settings, *Language*.
+- **Languages**: my-distro's own programs in English, German, French,
+  Spanish, Italian, Polish, Romanian and Turkish (gettext, `po/*.po`).
+  Choose in the setup (for everyone), in *Users and system*, or per user in
+  Settings, *Language*.
+- **Firmware updates** (*Users and system*, *Firmware*; `fwupdmgr`): fwupd
+  asks the LVFS for new firmware of the computer's parts (UEFI, disks,
+  docks, ...) and installs one only after you confirm it.
+- **Secure Boot**: the ISO and installed systems start with Secure Boot on,
+  through Debian's Microsoft-signed shim, once my-distro's key is enrolled
+  (see [Secure Boot](#secure-boot)).
+- **Videos**: H.264, H.265, VP9 and AV1 (dav1d), decoded with the graphics
+  chip where VA-API can (Intel up to ~2019's chips, AMD), else on the CPU.
 
 ## Try it
 
@@ -271,7 +293,8 @@ the optical drive. Display: graphics controller *VMSVGA*. Start.
 3 GB is more comfortable. An installed system needs much less.)
 
 **VMware:** new VM from the ISO, *Other Linux 6.x kernel 64-bit*, 2 GB RAM.
-**Hyper-V:** Generation 2 VM, 2048 MB RAM, **Secure Boot off**, ISO in the DVD drive.
+**Hyper-V:** Generation 2 VM, 2048 MB RAM, Secure Boot template *Microsoft
+UEFI Certificate Authority* (or Secure Boot off), ISO in the DVD drive.
 
 In the boot menu, *safe graphics* helps if the screen stays black.
 
@@ -287,12 +310,14 @@ deleted**):
   another disk).
 
 Then start the PC from the stick (the boot menu key is usually F12, F11, F8
-or Esc). In the firmware settings, **Secure Boot must be off**: my-distro's
-boot loader is not signed. The live system runs from RAM and changes nothing
+or Esc). **Secure Boot** can stay on: the first time, a blue screen
+(MokManager) appears because the PC doesn't know my-distro's key yet;
+enroll it once (see [Secure Boot](#secure-boot)), or switch Secure Boot off
+in the firmware settings. The live system runs from RAM and changes nothing
 on the PC's disk unless you run *Install to disk*.
 
 What works: Intel and AMD graphics (the screen's resolution, several
-monitors; 3D with the graphics chip on AMD, with llvmpipe on Intel), wired
+monitors, 3D with the graphics chip), wired
 network with Intel or Realtek cards,
 Wi-Fi (below), Bluetooth, laptop touchpads (I2C) and USB keyboards and
 mice, NVMe, SATA and USB disks, Intel HD Audio, printers (network and
@@ -393,12 +418,13 @@ The keyboard layout is German (`desktop/overlay/etc/X11/xorg.conf.d/00-keyboard.
    `S00reset` (a factory reset, if one was asked for),
    `S02sysctl` (kernel settings, crash reports), `S03audit` (audit log),
    udev, `S20zram` (compressed swap), the system D-Bus, `S35firewall`,
-   `S40bluetoothd` and `S41bluealsa` (Bluetooth and its sound), network
+   `S40bluetoothd` (Bluetooth), network
    (DHCP), `S45sound`, `S46power` (lid switch, CPU speed, swap file),
    `S48time` (clock from the internet), `S49packages` (Software app
    programs after an update), `S50avahi-daemon` (finds printers),
-   `S50crond` (scheduled tasks), `S50history` (file history), `S81cupsd`
-   (printing), `S90desktop`. Daemons run under
+   `S50crond` (scheduled tasks), `S50history` (file history), `S60docker`
+   (if Docker is installed), `S81cupsd` (printing), `S90desktop`,
+   `S91sharing` (if Sharing is on). Daemons run under
    `my-keepalive`, which starts them again if they crash.
 4. `S90desktop` starts the X server with **`my-login`** as its only client.
 5. After login, `my-login` drops root rights and runs `~/.xinitrc` as you,
@@ -479,10 +505,27 @@ bluetoothd's *agent*: bluetoothd asks it "does the device show 123456?" or
 "which PIN?", and it asks you. Paired devices are *trusted*, so they
 connect by themselves later; pairings are kept in `/var/lib/bluetooth`.
 
-Sound: `bluealsad` (bluez-alsa) makes a connected headphone an ALSA
-device. `my-bluetooth --watch` (started at login) sees it connect and
-writes a few marked lines into `~/.asoundrc` that make it the default
-output; they go again when it disconnects.
+Sound: PipeWire's Bluetooth part makes a connected headphone a sound
+output. `my-bluetooth --watch` (started at login) sees it connect and makes
+it the default output (`/usr/lib/my-distro/sound bluetooth`, wpctl);
+PipeWire moves the programs that are playing there. (Until 0.9.6
+bluez-alsa did this with lines in `~/.asoundrc`.)
+
+### Sound
+
+PipeWire (the sound server), WirePlumber (its session manager: finds the
+sound cards and Bluetooth headphones, remembers volumes and the chosen
+output) and pipewire-pulse start in every session
+(`/usr/lib/my-distro/autostart`), with their socket in the session folder
+`/run/user/UID` that `my-login` makes. pipewire-alsa makes PipeWire ALSA's
+`default`, so ALSA programs (mpv, aplay, SDL games, eSpeak) play through
+it; PulseAudio programs talk to pipewire-pulse. The taskbar's speaker uses
+ALSA's `default` mixer, which is the default output's volume. The Sound
+window (`my-sound`) and `my-bluetooth` ask PipeWire through
+`/usr/lib/my-distro/sound` (pw-dump, wpctl, pw-metadata). WirePlumber needs
+Lua 5.4 and the image has LuaJIT (mpv), which Buildroot can't have
+together with Lua: `desktop/package/my-wireplumber` builds WirePlumber
+with its own static Lua (`desktop/package/my-lua54`).
 
 ### Printing
 
@@ -509,6 +552,59 @@ password and runs it through `my-admin`) the settings that system updates
 keep go to `system/` too. FAT and exFAT can't hold hard links or
 permissions: there each backup is a full copy (format the stick as ext4
 in *Disks* for incremental backups; ext4 sticks made there belong to you).
+
+### Screen reader
+
+`my-reader` (Super+Alt+S, or Settings, *Accessibility*) speaks with eSpeak
+in the session's language:
+
+- the title of the window that comes to the front (every program: the
+  window manager names it in `_NET_ACTIVE_WINDOW`)
+- in GTK programs, what gets the keyboard focus: buttons, check boxes
+  (ticked or not), text fields with their text (never passwords), sliders
+  with their value, list rows, tabs and menu items, and each letter you
+  type. GTK programs tell the accessibility bus (AT-SPI, at-spi2-core)
+  about it; my-reader listens there (`libatspi`). That covers the file
+  manager, the web browser's window and all of my-distro's own windows.
+- the highlighted entry of the Start menu (the taskbar is not GTK: it puts
+  the entry into the root window's `_MY_READER_TEXT`)
+
+It is not Orca (which needs Python bindings Buildroot doesn't have): it
+doesn't read terminals, web page contents in NetSurf, the login and lock
+screens, or windows that run as root (Users and system, Disks), and it has
+no commands to read a whole window or move a review cursor. Tab and the
+arrow keys move the focus; what gets it is spoken. `MY_READER_LOG=FILE`
+also writes everything it says into FILE.
+
+### Sharing
+
+The Sharing window shares one folder of your home folder, read-only or
+not, and if you like the printers (CUPS through Samba's `[printers]`),
+with the other computers of your network. They log in with your user name
+and a separate sharing password (Samba's own, in `/var/lib/samba`). Samba
+is a package of the Software app (~60 MB); the window offers to install it.
+`/usr/lib/my-distro/sharing` (run through `my-admin`) writes
+`/etc/samba/smb.conf` from `/etc/my-distro/sharing`, starts `smbd`
+(SMB 2 and 3, port 445 only, no NetBIOS) and adds the port to the
+firewall's set `sharing_tcp`, which only lets in addresses of local
+networks (`10/8`, `172.16/12`, `192.168/16`, link-local, IPv6 ULA and
+link-local). Off by default; `/etc/init.d/S91sharing` starts it at boot
+only when it is on. Windows: `\\ADDRESS\FOLDER`; Mac and Linux:
+`smb://ADDRESS/FOLDER`.
+
+### Permissions
+
+`~/.config/my-distro/permissions` (Settings, *Permissions*) has a line per
+program that lacks a permission: `mpv camera=no microphone=yes home=read`.
+The Start menu starts programs through `my-run`; a program with a line runs
+in a bubblewrap sandbox like `my-sandbox`: without `/dev/video*` (camera),
+without the sound devices and PipeWire's sockets (microphone: PipeWire
+can't give a program playback without recording, so a program without the
+microphone has no sound at all), and with the home folder read-only, only
+`~/Downloads`, or nothing (its own settings then live in
+`~/.local/share/my-sandbox/PROGRAM`). Programs without a line start
+normally. Programs started another way (a terminal, the file manager) are
+not affected.
 
 ## IDE (LazyVim)
 
@@ -577,6 +673,70 @@ says that a new ISO is out. Systems before 0.8 have no updater: install the
 From a terminal: `my-update check --notes`, and as root `my-update install`
 or `my-update rollback`.
 
+## Secure Boot
+
+With Secure Boot on, a PC only starts boot loaders signed by Microsoft.
+my-distro starts through **shim**, Debian's (signed by Microsoft), with its
+MokManager, unchanged from Debian's archive (`desktop/package/my-secureboot`;
+the version and SHA-256 sums are in `my-secureboot.hash` and were checked
+against Debian's signed package list, see `desktop/secureboot/README`).
+shim starts GRUB, and GRUB the kernel, only if they are signed with a key
+the PC's owner enrolled once as a *Machine Owner Key* (MOK): my-distro's
+Secure Boot key. Its certificate is
+`desktop/secureboot/my-distro-secureboot.crt` (also
+`EFI/BOOT/my-distro-secureboot.cer` on the ISO and the EFI partition).
+
+**Enrolling the key** (once per PC):
+
+- From the ISO or USB stick with Secure Boot on: shim can't check GRUB yet
+  and starts MokManager (a blue screen). Choose *Enroll key from disk*, the
+  volume, `EFI/BOOT/my-distro-secureboot.cer`, *Continue*, *Yes*, then
+  *Reboot*. From now on it starts.
+- From a running my-distro (installed, or the live system with Secure Boot
+  off): *Users and system*, *Secure Boot*, *Prepare for Secure Boot…*
+  (`my-secureboot prepare`) asks for a one-time password (mokutil
+  `--import`). At the next start MokManager asks: *Enroll MOK*,
+  *Continue*, *Yes*, the password, *Reboot*. Then switch Secure Boot on in
+  the firmware settings. Systems installed before 0.9.7 are switched to
+  shim by the same command (the old GRUB stays as
+  `EFI/BOOT/grub-before-shim.efi`).
+
+The installer puts shim (`EFI/BOOT/BOOTX64.EFI`), GRUB (`grubx64.efi`, one
+file with all its modules: with Secure Boot on GRUB loads nothing else),
+MokManager and a `grub.cfg` that says where the boot menu is onto the EFI
+partition. GRUB checks the kernel through shim (shim_lock); the initramfs of
+encrypted systems is not checked (as on other distributions). Updates bring
+the new GRUB and kernel; `installed-fixups` copies them to the EFI partition.
+Without Secure Boot everything starts as before (shim doesn't check then).
+
+**Kernel lockdown:** with Secure Boot on, the kernel locks itself down
+(integrity mode): only signed kernel modules load (they are signed while
+the kernel is built), no `/dev/mem`, no writing to kernel memory, and **no
+hibernation**: Linux can't check a memory image that sat on the disk while
+the computer was off. *Hibernate* then says so; suspend works.
+
+**The key** stays outside the repository. Make it once:
+
+```bash
+make secureboot-key SB_BACKUP=/somewhere/safe   # ~/my-distro-secureboot-key/, plus a copy
+make desktop-secureboot                         # make desktop, with GRUB, kernel and fwupd's
+                                                # UEFI program signed (osslsigncode)
+```
+
+`make desktop` without the key builds the same image unsigned: it starts
+with Secure Boot off only.
+
+## Firmware updates
+
+*Users and system*, *Firmware*, *Look for firmware updates* asks the LVFS
+(fwupd.org) through fwupd for new firmware of this computer's parts and
+lists what can be updated; *Install…* asks first, then installs it
+(`/usr/lib/my-distro/firmware`). UEFI firmware (capsules) is written to the
+EFI partition and installed while the computer restarts; fwupd's UEFI
+program is signed for Secure Boot too. In a terminal: `fwupdmgr
+get-devices`, `fwupdmgr refresh`, `fwupdmgr get-updates`, and as root
+`fwupdmgr update` (asks too).
+
 ## Software
 
 **Software** in the Start menu lists the programs that are not in the image,
@@ -603,7 +763,9 @@ From a terminal: `my-pkg search pdf`, `my-pkg info vim`, `my-pkg list`
 | ImageMagick | Graphics | | 7-Zip, zip, Bash, Zsh, neofetch | Tools |
 | Dillo (web browser) | Internet | | LBreakout2, LTris | Games |
 | Lynx, irssi, OpenSSH client | Internet | | Doom (shareware), OpenTyrian, sl | Games |
-| Vim | Programming | | | |
+| Vim | Programming | | Node.js, C compiler (tcc) | Programming |
+| Docker | Tools | | Virus scanner (ClamAV) | Tools |
+| Samba (sharing) | Internet | | | |
 
 ### How it works
 
@@ -696,6 +858,14 @@ http.server`, and in the VM put `url = http://10.0.2.2:8000/` into
 | `desktop/overlay/usr/bin/my-pkg`, `settings/my-software.c` | Package manager and the Software app; `settings/my-pick-file.c` asks for a file for Start menu entries like the PDF viewer |
 | `desktop/overlay/usr/lib/my-distro/mydistro.py` | What `my-update` and `my-pkg` share: downloads, versions, the signature check |
 | `desktop/packages.fragment`, `desktop/packages.catalog`, `desktop/make-packages.py` | The programs `make packages` builds, how the Software app shows them, and how they are cut out of the build |
+| `settings/my-sound.c`, `desktop/overlay/usr/lib/my-distro/sound` | The Sound window and what it asks PipeWire |
+| `settings/my-sharing.c`, `desktop/overlay/usr/lib/my-distro/sharing`, `etc/init.d/S91sharing` | Sharing (Samba) |
+| `panel/my-reader.c` | Screen reader |
+| `desktop/overlay/usr/bin/my-run` | Starts Start menu programs with their permissions |
+| `desktop/overlay/usr/sbin/my-secureboot`, `desktop/package/my-secureboot`, `desktop/secureboot/` | Secure Boot: enrolling the key, shim, the certificate, GRUB's SBAT |
+| `desktop/overlay/usr/lib/my-distro/firmware`, `esp-mount` | Firmware updates (fwupd); mounting the EFI partition |
+| `desktop/package/my-wireplumber`, `my-lua54`, `tinycc`, `osslsigncode` | WirePlumber with its own Lua, the C compiler package, the signing tool |
+| `tests/` | QEMU tests (live system, installer, packages, Secure Boot) |
 | `desktop/overlay/etc/my-distro/version` | The version number (the welcome text and `my-update` read it) |
 | `panel/` | Taskbar `my-panel` (with volume and battery), `my-screenshot`, `my-clipd` (keeps copied text) |
 | `settings/my-notifyd.c`, `settings/my-notify.c` | Notifications: the daemon that shows them, and the command that sends one |
@@ -789,24 +959,22 @@ make run    # boots in the terminal; quit with Ctrl-A, then X
 - VPN: WireGuard only (no OpenVPN). When you change networks while a VPN
   with "all traffic" is connected, disconnect and connect it again.
 - Screen recordings have no sound.
-- Sound plays on one card at a time (ALSA, no sound server). The digital
-  microphones of some new laptops (Intel SOF) don't work yet.
-- Bluetooth headphones: programs started while they are connected play
-  there; ones that were already playing keep the old output until you start
-  them again (no sound server moves them). The taskbar's speaker and the
-  volume keys change the computer's own sound card, not the headphones
-  (use the headphones' buttons). Headset microphones (HFP) are untested.
-- 3D on Intel graphics runs on the CPU (llvmpipe): Mesa's iris, crocus and
-  anv drivers need clang and libclc in the build, which are not in yet.
-- Accessibility: there is no full screen reader yet (Orca needs AT-SPI's
-  Python bindings, which Buildroot doesn't have); read aloud speaks the
-  selected text only, with an English voice by default.
-- mpv decodes videos on the CPU (no graphics acceleration): HD video is
-  fine on most PCs, 4K is too much.
-- Secure Boot must be off: the boot loader is not signed (no shim). Firmware
-  updates (fwupd) are not in.
-- Containers: bubblewrap only; no podman/docker (they need Go and Rust and
-  about 100 MB).
+- The digital microphones of some new laptops (Intel SOF) don't work yet.
+  Bluetooth headset microphones (HFP) and Bluetooth audio in general are
+  untested on real hardware.
+- The screen reader is small (see [Screen reader](#screen-reader)): no
+  terminals, web page contents, login screen or root windows.
+- App permissions apply to programs started from the Start menu; a program
+  without the microphone gets no sound at all.
+- Video decoding with the graphics chip: Intel's newer driver (iHD, for
+  chips since ~2019 at its best) is not in (big); those decode on the CPU.
+- Secure Boot needs the key enrolled once per PC (MokManager); with Secure
+  Boot on, hibernation is off (kernel lockdown).
+- Firmware updates were only tried in a VM (which has no updatable
+  firmware): listing devices and asking the LVFS work there; installing a
+  UEFI capsule is untried.
+- Docker: for administrators (sudo); rootless containers and podman are not
+  in.
 - Shares open through `mount.cifs` (Network share), not as `smb://` in the
   file manager (that needs gvfs with Samba, too big).
 
