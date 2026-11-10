@@ -362,7 +362,9 @@ CONFIG_USER_NS=y
 #    still work, attaching to a running program needs sudo)
 #  - Landlock: programs can lock themselves out of files they don't need
 #  - Lockdown is built in but off: its "integrity" mode would also switch
-#    off hibernation; switch it on with lockdown=integrity on the kernel line
+#    off hibernation; switch it on with lockdown=integrity on the kernel line.
+#    0.9.7: it switches itself on when the computer starts with Secure Boot
+#    (see the end of this file)
 #  - hardened copies between kernel and programs, randomised and checked
 #    kernel memory lists
 CONFIG_SECURITY=y
@@ -389,3 +391,68 @@ CONFIG_CIFS=m
 CONFIG_KPROBES=y
 CONFIG_UPROBE_EVENTS=y
 CONFIG_FTRACE=y
+
+# --- 0.9.7 -------------------------------------------------------------------
+
+# Secure Boot: with it on, the kernel locks itself down ("integrity"):
+# only signed modules load (they are signed while the kernel is built), no
+# writing to kernel memory, /dev/mem or MSRs, and no hibernation (a resumed
+# memory image can't be checked). Without Secure Boot nothing changes.
+CONFIG_LOCK_DOWN_IN_EFI_SECURE_BOOT=y
+# mokutil (enrolling my-distro's key) and fwupd read and write UEFI variables
+CONFIG_EFIVAR_FS=y
+
+# Docker (a Software app package): control groups v2 with the controllers
+# containers are limited by, namespaces, seccomp, overlayfs for the image
+# layers, and the network: a bridge with virtual cables (veth) and NAT
+# through iptables (its nftables variant, iptables-nft)
+CONFIG_CGROUPS=y
+CONFIG_MEMCG=y
+CONFIG_BLK_CGROUP=y
+CONFIG_CGROUP_SCHED=y
+CONFIG_FAIR_GROUP_SCHED=y
+CONFIG_CFS_BANDWIDTH=y
+CONFIG_CGROUP_PIDS=y
+CONFIG_CGROUP_FREEZER=y
+CONFIG_CPUSETS=y
+CONFIG_CGROUP_DEVICE=y
+CONFIG_CGROUP_CPUACCT=y
+CONFIG_CGROUP_BPF=y
+CONFIG_BPF_SYSCALL=y
+CONFIG_NAMESPACES=y
+CONFIG_UTS_NS=y
+CONFIG_IPC_NS=y
+CONFIG_PID_NS=y
+CONFIG_NET_NS=y
+CONFIG_POSIX_MQUEUE=y
+CONFIG_SECCOMP=y
+CONFIG_SECCOMP_FILTER=y
+CONFIG_KEYS=y
+CONFIG_OVERLAY_FS=y
+CONFIG_BRIDGE=y
+CONFIG_BRIDGE_NETFILTER=y
+CONFIG_VETH=y
+CONFIG_NETFILTER_ADVANCED=y
+CONFIG_NF_NAT=y
+CONFIG_NFT_NAT=y
+CONFIG_NFT_MASQ=y
+CONFIG_NFT_COMPAT=y
+CONFIG_NETFILTER_XTABLES=y
+CONFIG_NETFILTER_XT_MARK=y
+CONFIG_NETFILTER_XT_NAT=y
+CONFIG_NETFILTER_XT_TARGET_MASQUERADE=y
+CONFIG_NETFILTER_XT_MATCH_ADDRTYPE=y
+CONFIG_NETFILTER_XT_MATCH_CONNTRACK=y
+CONFIG_NETFILTER_XT_MATCH_MULTIPORT=y
+CONFIG_IP_NF_IPTABLES=y
+CONFIG_IP_NF_FILTER=y
+CONFIG_IP_NF_NAT=y
+CONFIG_IP_NF_TARGET_MASQUERADE=y
+CONFIG_IP_NF_MANGLE=y
+CONFIG_IP_NF_RAW=y
+CONFIG_IP6_NF_IPTABLES=y
+CONFIG_IP6_NF_FILTER=y
+CONFIG_IP6_NF_NAT=y
+CONFIG_IP6_NF_TARGET_MASQUERADE=y
+CONFIG_IP6_NF_MANGLE=y
+CONFIG_IP6_NF_RAW=y

@@ -38,12 +38,13 @@ BR2_TARGET_LOCALTIME="Europe/Vienna"
 
 # UTF-8 locale and glibc's character converters. Without them Openbox can't
 # decode window titles and shows every window as "Unnamed Window".
-BR2_GENERATE_LOCALE="en_US.UTF-8 de_DE.UTF-8 de_AT.UTF-8"
+# (0.9.7: French, Spanish, Italian, Turkish, Polish and Romanian, see the end)
+BR2_GENERATE_LOCALE="en_US.UTF-8 de_DE.UTF-8 de_AT.UTF-8 fr_FR.UTF-8 es_ES.UTF-8 it_IT.UTF-8 tr_TR.UTF-8 pl_PL.UTF-8 ro_RO.UTF-8"
 BR2_TOOLCHAIN_GLIBC_GCONV_LIBS_COPY=y
 # Keep Xlib's UTF-8 locale too (its folder is called en_US.UTF-8); without it
 # X programs like xterm fall back to plain ASCII and show icons as garbage.
 # (0.9.5: German added, see the end of this file)
-BR2_ENABLE_LOCALE_WHITELIST="C en_US en_US.UTF-8 de de_DE de_DE.UTF-8 de_AT de_AT.UTF-8 locale.alias locale.dir compose.dir"
+BR2_ENABLE_LOCALE_WHITELIST="C en_US en_US.UTF-8 de de_DE de_DE.UTF-8 de_AT de_AT.UTF-8 fr fr_FR fr_FR.UTF-8 es es_ES es_ES.UTF-8 it it_IT it_IT.UTF-8 tr tr_TR tr_TR.UTF-8 pl pl_PL pl_PL.UTF-8 ro ro_RO ro_RO.UTF-8 locale.alias locale.dir compose.dir"
 
 # Bootable ISO (images/rootfs.iso9660): GRUB for BIOS and UEFI, the whole
 # root filesystem is loaded into RAM as an initrd (a live system)
@@ -266,11 +267,8 @@ BR2_PACKAGE_BLUEZ5_UTILS_CLIENT=y
 BR2_PACKAGE_BLUEZ5_UTILS_PLUGINS_AUDIO=y
 BR2_PACKAGE_BLUEZ5_UTILS_PLUGINS_HID=y
 BR2_PACKAGE_BLUEZ5_UTILS_PLUGINS_HOG=y
-# Sound to Bluetooth headphones without a sound server: bluez-alsa is the
-# go-between (bluetoothd <-> ALSA). Its daemon (/etc/init.d/S41bluealsa)
-# makes every connected headphone an ALSA device; the Bluetooth window makes
-# it your default sound output while it is connected (~/.asoundrc).
-BR2_PACKAGE_BLUEZ_ALSA=y
+# (Sound to Bluetooth headphones went through bluez-alsa until 0.9.6; since
+# 0.9.7 PipeWire does it, see the end of this file.)
 # Firmware of the Bluetooth chips (most come together with a Wi-Fi chip):
 # Intel, Realtek, MediaTek, Qualcomm. Broadcom's is not in linux-firmware;
 # their chips work without it, with the firmware they start with.
@@ -396,3 +394,62 @@ BR2_PACKAGE_CIFS_UTILS=y
 # German next to English are further up.
 BR2_SYSTEM_ENABLE_NLS=y
 BR2_PACKAGE_MY_LOCALE=y
+
+# --- 0.9.7 -------------------------------------------------------------------
+
+# Sound server: PipeWire with its session manager WirePlumber, started in
+# every session (/usr/lib/my-distro/autostart). ALSA programs play through
+# it (pipewire-alsa makes it ALSA's "default"), PulseAudio programs too
+# (pipewire-pulse), and its Bluetooth part replaces bluez-alsa: headphones
+# get the sound of programs that are already playing, and the Sound window
+# (my-sound) moves programs between outputs and sets a volume per program.
+# WirePlumber needs Lua 5.3/5.4, but the image has LuaJIT (5.1, mpv's
+# on-screen controls) and Buildroot allows only one Lua: my-wireplumber is
+# Buildroot's WirePlumber with its own copy of Lua 5.4 built in
+# (desktop/package/my-wireplumber, my-lua54).
+BR2_PACKAGE_PIPEWIRE=y
+BR2_PACKAGE_MY_WIREPLUMBER=y
+
+# 3D on Intel graphics: Mesa's iris (Intel since 2015, Broadwell), crocus
+# (2006-2014) and i915 (older still), and the Vulkan driver anv. Mesa
+# compiles some of their shaders while it is built, with its OpenCL
+# compiler on the build machine (host clang and libclc): only the build
+# gets bigger, the image just gets the drivers.
+BR2_PACKAGE_MESA3D_GALLIUM_DRIVER_IRIS=y
+BR2_PACKAGE_MESA3D_GALLIUM_DRIVER_CROCUS=y
+BR2_PACKAGE_MESA3D_GALLIUM_DRIVER_I915=y
+BR2_PACKAGE_MESA3D_VULKAN_DRIVER_INTEL=y
+
+# Videos: AV1 with dav1d (FFmpeg has H.264, H.265 and VP9 itself), and
+# decoding with the graphics chip (VA-API): Mesa's driver for AMD
+# (radeonsi) and Intel's older driver (i965, up to ~2019's chips). mpv
+# uses it when it works (hwdec=auto-safe in /etc/mpv/mpv.conf).
+BR2_PACKAGE_DAV1D=y
+BR2_PACKAGE_LIBVA=y
+BR2_PACKAGE_LIBVA_UTILS=y
+BR2_PACKAGE_MESA3D_GALLIUM_VA=y
+BR2_PACKAGE_LIBVA_INTEL_DRIVER=y
+
+# Firmware updates: fwupd (fwupdmgr) asks the LVFS (fwupd.org) for new
+# firmware of this computer's parts; UEFI capsules go through fwupd-efi.
+# The System update window shows them and asks before applying one.
+BR2_PACKAGE_FWUPD=y
+BR2_PACKAGE_FWUPD_EFI=y
+# LVFS metadata comes as .xz, firmware as cabinet files (libarchive),
+# signatures are checked with GnuTLS
+BR2_PACKAGE_LIBARCHIVE=y
+
+# Secure Boot: Debian's Microsoft-signed shim and MokManager, GRUB and the
+# kernel signed with my-distro's own key (desktop/package/my-secureboot,
+# make desktop-secureboot), mokutil to enroll that key once
+BR2_PACKAGE_MY_SECUREBOOT=y
+BR2_PACKAGE_MOKUTIL=y
+
+# Screen reader (my-reader, panel/my-reader.c): speaks what has the focus
+# in GTK programs through AT-SPI (at-spi2-core, in the image already for
+# GTK) and eSpeak. Nothing new to build.
+
+# Docker (a Software app package) needs runc, whose containerd wants
+# util-linux's pivot_root: util-linux is in the image, so its option has
+# to be here (make packages may not change the image's packages)
+BR2_PACKAGE_UTIL_LINUX_PIVOT_ROOT=y
