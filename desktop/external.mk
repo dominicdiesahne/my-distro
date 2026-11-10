@@ -23,6 +23,11 @@ NETSURF_POST_PATCH_HOOKS += NETSURF_ICON_AS_PNG
 XSERVER_XORG_SERVER_CONF_ENV += LDFLAGS="$(TARGET_LDFLAGS) -Wl,-z,lazy"
 XDRIVER_XF86_VIDEO_FBDEV_CONF_ENV += LDFLAGS="$(TARGET_LDFLAGS) -Wl,-z,lazy"
 
+# Mesa's compiler for Intel's shaders (host-mesa3d, 0.9.7: iris, crocus,
+# anv) links against the build machine's LLVM, which Buildroot builds
+# without RTTI; Mesa refuses to configure unless it does the same.
+HOST_MESA3D_CONF_OPTS += -Dcpp_rtti=false
+
 # PrBoom (Doom, a package of the Software app) is from 2008 and defines its
 # own "false" and "true", which C23 (GCC 15's default) made keywords: build
 # it as C17.
