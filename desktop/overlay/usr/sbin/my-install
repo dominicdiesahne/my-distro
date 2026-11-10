@@ -345,24 +345,30 @@ set timeout="3"
 insmod all_video
 set gfxpayload="1280x800,1024x768,auto"
 
+# Secure Boot: GRUB started by shim with Secure Boot on is locked down
+# (\$lockdown); then the kernel locks itself down too
+if [ "\$lockdown" = "y" ]; then
+	set sb_args="lockdown=integrity"
+fi
+
 menuentry "my-distro" {
-	linux $KERNEL $ARGS console=tty1 quiet
+	linux $KERNEL $ARGS console=tty1 quiet \$sb_args
 	$INITRD
 }
 
 menuentry "my-distro (safe graphics)" {
-	linux $KERNEL $ARGS console=tty1 nomodeset
+	linux $KERNEL $ARGS console=tty1 nomodeset \$sb_args
 	$INITRD
 }
 
 menuentry "my-distro (show boot messages)" {
-	linux $KERNEL $ARGS console=ttyS0,115200 console=tty1
+	linux $KERNEL $ARGS console=ttyS0,115200 console=tty1 \$sb_args
 	$INITRD
 }
 
 # Text console only, no desktop: to undo an update or reset the system
 menuentry "my-distro (recovery mode)" {
-	linux $KERNEL $ARGS console=tty1 my-recovery
+	linux $KERNEL $ARGS console=tty1 my-recovery \$sb_args
 	$INITRD
 }
 EOF
