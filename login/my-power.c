@@ -95,6 +95,20 @@ static int hibernate(int check_only)
 	}
 	read_line("/sys/power/state", states, sizeof states);
 	read_line("/sys/power/resume", dev, sizeof dev);
+	/* 0.9.7: started with Secure Boot, the kernel locks itself down, and
+	 * that switches off hibernation (a memory image on the disk could be
+	 * changed while the computer is off, and Linux can't check it) */
+	{
+		char lock[128];
+
+		read_line("/sys/kernel/security/lockdown", lock, sizeof lock);
+		if (!strstr(states, "disk") && (strstr(lock, "[integrity]") ||
+		                                 strstr(lock, "[confidentiality]"))) {
+			fprintf(stderr, "Hibernate is not possible while Secure Boot is on "
+			        "(the kernel's lockdown forbids it). Suspend still works.\n");
+			return 1;
+		}
+	}
 	if (!strstr(states, "disk")) {
 		fprintf(stderr, "This computer can't hibernate (the kernel doesn't offer it).\n");
 		return 1;

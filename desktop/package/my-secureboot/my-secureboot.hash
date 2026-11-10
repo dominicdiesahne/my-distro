@@ -1,0 +1,7 @@
+# From Debian 13 (trixie) main/binary-amd64/Packages.xz, whose own checksum
+# is in https://deb.debian.org/debian/dists/trixie/InRelease (Debian 13.7,
+# 2026-09-12), signed by "Debian Stable Release Key (13/trixie)"
+# 41587F7DB8C774BCCF131416762F67A0B2C39DE4; checked with gpgv against
+# debian-archive-keyring on 2026-11-10. See desktop/secureboot/README.
+sha256  3c802fa303c0e6bf126adee74028d1042e3120360d159c2c05181dc9b2f61005  shim-signed_1.51~1+deb13u1+16.1-2~deb13u1_amd64.deb
+sha256  7e950d75d5a40ecc0a99f727452ce35780b47a04d9a2cc3b1ff7c2bb316c033e  shim-helpers-amd64-signed_1+16.1+2~deb13u1_amd64.deb

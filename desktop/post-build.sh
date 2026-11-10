@@ -105,3 +105,67 @@ rm -f "$T/etc/init.d/S82cups-browsed"
 # The live system starts without /etc/my-distro/setup-done, so the setup runs.
 rm -f "$T/etc/my-distro/setup-done"
 # (The copy for the factory reset is made later, in post-fakeroot.sh.)
+
+# --- 0.9.7 -------------------------------------------------------------------
+
+# Bluetooth sound moved from bluez-alsa to PipeWire. Buildroot doesn't take
+# a package's files out of the root filesystem when it is no longer chosen,
+# so a build folder from before 0.9.7 still has bluez-alsa's daemon and ALSA
+# plugin (both would fight PipeWire over the headphones).
+rm -f "$T/usr/bin/bluealsad" "$T/usr/bin/bluealsa" "$T/usr/bin/bluealsa-aplay" \
+      "$T/usr/bin/bluealsactl" "$T/usr/bin/bluealsa-cli" "$T/usr/bin/bluealsa-rfcomm" \
+      "$T/etc/init.d/S41bluealsa" "$T/etc/dbus-1/system.d/bluealsa.conf" \
+      "$T/etc/dbus-1/system.d/org.bluealsa.conf" \
+      "$T"/usr/share/alsa/alsa.conf.d/20-bluealsa.conf \
+      "$T"/usr/lib/alsa-lib/libasound_module_*bluealsa*.so
+
+# PipeWire is started in each session (/usr/lib/my-distro/autostart), not
+# as a system service, and finds its devices with udev itself.
+rm -f "$T/etc/init.d/S50pipewire" "$T/etc/init.d/S51wireplumber"
+
+# Samba (a Software app package): its own start script would start the
+# server at every boot; S91sharing starts it only when Sharing is on.
+rm -f "$T/etc/init.d/S91smb"
+
+# UEFI GRUB for shim (Secure Boot): one file with every module it needs
+# built in (with Secure Boot on, GRUB loads no modules from the disk), and
+# the SBAT data shim checks (desktop/secureboot/grub-sbat.csv). The ISO's
+# boot image (Makefile) and my-install take it from /usr/lib/my-distro/efi.
+D=$(dirname "$0")
+G=$(ls -d "$BUILD_DIR"/grub2-[0-9]*/build-x86_64-efi/grub-core 2>/dev/null | head -n 1)
+if [ -n "$G" ] && [ -d "$T/usr/lib/my-distro/efi" ]; then
+	"$HOST_DIR/bin/grub-mkimage" -d "$G" -O x86_64-efi -p /boot/grub \
+		-c "$D/grub-efi-embedded.cfg" --sbat "$D/secureboot/grub-sbat.csv" \
+		-o "$T/usr/lib/my-distro/efi/grubx64.efi" \
+		boot linux normal configfile iso9660 fat ext2 part_msdos part_gpt \
+		all_video efi_gop efi_uga video_bochs video_cirrus gfxterm \
+		search search_fs_file search_fs_uuid search_label \
+		echo test true sleep reboot halt ls cat loadenv minicmd gzio regexp probe
+fi
+
+# make desktop-secureboot: sign GRUB, the kernel (the one in the image for
+# my-install and the one GRUB starts from the ISO) and fwupd's UEFI program
+# with my-distro's Secure Boot key (MY_SB_KEY; the key stays outside the
+# image and the repository). Files signed with it already are left alone.
+CERT="$D/secureboot/my-distro-secureboot.crt"
+sb_sign() {
+	[ -f "$1" ] || return 0
+	"$HOST_DIR/bin/osslsigncode" verify -in "$1" -CAfile "$CERT" >/dev/null 2>&1 && return 0
+	"$HOST_DIR/bin/osslsigncode" sign -h sha256 -certs "$CERT" -key "$MY_SB_KEY" \
+		-in "$1" -out "$1.signed" >/dev/null &&
+		mv "$1.signed" "$1" &&
+		"$HOST_DIR/bin/osslsigncode" verify -in "$1" -CAfile "$CERT" >/dev/null ||
+		{ echo "post-build: signing $1 failed"; exit 1; }
+	echo "post-build: signed $1 for Secure Boot"
+}
+if [ -n "$MY_SB_KEY" ]; then
+	sb_sign "$T/usr/lib/my-distro/efi/grubx64.efi"
+	sb_sign "$T/boot/bzImage"
+	sb_sign "$BINARIES_DIR/bzImage"
+	# fwupd starts its UEFI program through shim and takes the .signed one
+	F="$T/usr/libexec/fwupd/efi/fwupdx64.efi"
+	if [ -f "$F" ]; then
+		cp "$F" "$F.signed"
+		sb_sign "$F.signed"
+	fi
+fi

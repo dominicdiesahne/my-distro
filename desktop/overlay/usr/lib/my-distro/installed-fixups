@@ -69,6 +69,13 @@ if [ -f "$R/etc/my-distro/crypt" ] && [ -x "$R/usr/sbin/my-mkinitramfs" ]; then
 	"$R/usr/sbin/my-mkinitramfs" "$R" || echo "installed-fixups: my-mkinitramfs failed" >&2
 fi
 
+# Secure Boot (0.9.7): an installation that starts through shim gets the
+# new version's shim and GRUB on its EFI partition (after an update, not
+# while my-install runs: that put them there itself)
+if [ "$R" = / ] && [ -x /usr/sbin/my-secureboot ]; then
+	/usr/sbin/my-secureboot refresh || echo "installed-fixups: my-secureboot refresh failed" >&2
+fi
+
 # Hibernate in the Start menu when there is a swap file for it (my-install
 # makes one from 0.9.6 on) and the kernel knows where it is: resume= in the
 # boot menu, or the initramfs of an encrypted system tells it
@@ -103,6 +110,10 @@ fi\
 		sed -i '/^export LANG=/a\
 # Your language and proxy (Settings app); added by the 0.9.6 update\
 . /usr/lib/my-distro/session-env' "$x"
+	fi
+	# 0.9.7: GTK programs talk to the accessibility bus (screen reader)
+	if [ -f "$x" ] && grep -q '^export NO_AT_BRIDGE=1' "$x"; then
+		sed -i 's|^export NO_AT_BRIDGE=1|# (0.9.7: the screen reader my-reader needs the accessibility bus)|' "$x"
 	fi
 	a="$h/.config/openbox/autostart"
 	if [ -f "$a" ] && ! grep -q '/usr/lib/my-distro/autostart' "$a"; then

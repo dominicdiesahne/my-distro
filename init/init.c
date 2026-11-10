@@ -182,6 +182,10 @@ int main(void)
 	mount_fs("sysfs", "/sys", "sysfs");
 	/* Which security modules run (cat /sys/kernel/security/lsm) */
 	mount_fs("securityfs", "/sys/kernel/security", "securityfs");
+	/* UEFI variables (0.9.7): Secure Boot (mokutil) and firmware updates
+	 * (fwupd) read and write them. Only on PCs started with UEFI. */
+	if (access("/sys/firmware/efi/efivars", F_OK) == 0)
+		mount_fs("efivarfs", "/sys/firmware/efi/efivars", "efivarfs");
 	mount_fs("devtmpfs", "/dev", "devtmpfs");
 	mount_fs("devpts", "/dev/pts", "devpts");
 	mount_fs("tmpfs", "/tmp", "tmpfs");

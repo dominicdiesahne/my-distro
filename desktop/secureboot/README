@@ -1,0 +1,39 @@
+Secure Boot files of my-distro (0.9.7). See "Secure Boot" in README.md.
+
+my-distro-secureboot.crt
+    The certificate of my-distro's Secure Boot key (RSA 2048, SHA-256,
+    CN=my-distro Secure Boot 2026, valid until 2036-11-07). PCs enroll it
+    as a Machine Owner Key; GRUB, the kernel and fwupd's UEFI program are
+    signed with the key. SHA-256 fingerprint:
+    9E:13:F8:79:99:DF:15:C7:9B:74:A9:49:7E:FE:0E:8F:08:07:55:DA:DD:C1:D1:26:BE:CF:FA:D2:7D:3E:73:A2
+    The private key is NOT here: `make secureboot-key` made it once, in
+    ~/my-distro-secureboot-key/ on the build machine (and a backup copy);
+    only `make desktop-secureboot` uses it.
+
+grub-sbat.csv
+    The SBAT data in GRUB (grub-mkimage --sbat). shim refuses programs
+    whose SBAT generation is lower than its revocation list; "grub,5" is
+    the generation of GRUB 2.14 with the fixes for the CVEs that led to
+    the earlier revocations. "grub.my-distro,1" is ours: raise it to
+    revoke our own older GRUBs.
+
+shim (desktop/package/my-secureboot)
+    Debian 13 (trixie) packages, unchanged, downloaded from
+    https://deb.debian.org/debian/pool/main/s/:
+      shim-signed_1.51~1+deb13u1+16.1-2~deb13u1_amd64.deb   shimx64.efi (shim 16.1,
+          signed by Microsoft's third-party UEFI CA) -> BOOTX64.EFI
+          sha256 3c802fa303c0e6bf126adee74028d1042e3120360d159c2c05181dc9b2f61005
+      shim-helpers-amd64-signed_1+16.1+2~deb13u1_amd64.deb  mmx64.efi (MokManager,
+          signed with Debian's key that shim trusts)
+          sha256 7e950d75d5a40ecc0a99f727452ce35780b47a04d9a2cc3b1ff7c2bb316c033e
+    How the sums were checked (2026-11-10):
+      1. https://deb.debian.org/debian/dists/trixie/InRelease (Debian 13.7,
+         Date: Sat, 12 Sep 2026 07:55:41 UTC) verified with
+         gpgv --keyring /usr/share/keyrings/debian-archive-keyring.gpg:
+         Good signature from "Debian Stable Release Key (13/trixie)",
+         EDDSA key 41587F7DB8C774BCCF131416762F67A0B2C39DE4
+      2. the SHA-256 of main/binary-amd64/Packages.xz from that file
+         (7778d3e3f303b7ddb8ce0fe7c8d57473a076c6bf2e8f241f75421d2396352498)
+         matched the downloaded Packages.xz
+      3. the sums above are the SHA256 fields of the two packages in it;
+         Buildroot checks every download against my-secureboot.hash.

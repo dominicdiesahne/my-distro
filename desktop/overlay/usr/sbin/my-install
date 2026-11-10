@@ -281,10 +281,24 @@ fi
 # BIOS: GRUB's first stage goes into the disk's first sector, the rest into
 # the BIOS boot partition.
 run grub-install --target=i386-pc --boot-directory="$GRUB_DIR" "$DISK"
-# UEFI: --removable puts GRUB at EFI/BOOT/BOOTX64.EFI, the path every UEFI
-# firmware starts by itself, so no boot entry in the firmware is needed.
-run grub-install --target=x86_64-efi --efi-directory="$T/boot/efi" \
-	--boot-directory="$GRUB_DIR" --removable --no-nvram
+# UEFI: EFI/BOOT/BOOTX64.EFI is the path every UEFI firmware starts by
+# itself, so no boot entry in the firmware is needed. Since 0.9.7 that is
+# shim (signed by Microsoft), which starts GRUB (grubx64.efi, signed with
+# my-distro's Secure Boot key), so the PC can also start with Secure Boot
+# on, once the key is enrolled (Settings: my-secureboot). That GRUB has all
+# its modules built in; grub.cfg next to it says where the boot menu is.
+# Without those files: GRUB alone, as before.
+E=/usr/lib/my-distro/efi
+if [ -f "$E/BOOTX64.EFI" ] && [ -f "$E/grubx64.efi" ]; then
+	SHIM=1
+	mkdir -p "$T/boot/efi/EFI/BOOT"
+	run cp "$E/BOOTX64.EFI" "$E/grubx64.efi" "$E/mmx64.efi" "$E/my-distro-secureboot.cer" \
+		"$T/boot/efi/EFI/BOOT/"
+else
+	SHIM=0
+	run grub-install --target=x86_64-efi --efi-directory="$T/boot/efi" \
+		--boot-directory="$GRUB_DIR" --removable --no-nvram
+fi
 
 # The kernel finds its root filesystem by the partition's unique ID, so it
 # doesn't matter whether the disk is called sda, vda or nvme0n1 at boot.
@@ -351,6 +365,30 @@ menuentry "my-distro (recovery mode)" {
 	$INITRD
 }
 EOF
+
+# UEFI GRUB (shim's, see above): where the boot menu is. The ext4 system
+# filesystem's /boot/grub, or (encrypted) the EFI partition's /grub. By
+# filesystem ID, like the BIOS GRUB that grub-install made.
+if [ "$SHIM" = 1 ]; then
+	if [ "$ENCRYPT" = 1 ]; then
+		FSUUID=$(blkid -s UUID -o value "$ESP")
+		GPREFIX=/grub
+	else
+		FSUUID=$(blkid -s UUID -o value "$FS_DEV")
+		GPREFIX=/boot/grub
+	fi
+	[ -n "$FSUUID" ] || die "could not read the filesystem ID for GRUB"
+	cat >"$T/boot/efi/EFI/BOOT/grub.cfg" <<EOF
+# Read by my-distro's UEFI GRUB (grubx64.efi, started by shim): where the
+# boot menu is. Written by my-install.
+search --no-floppy --fs-uuid --set=root $FSUUID
+set prefix=(\$root)$GPREFIX
+EOF
+fi
+# The EFI partition's ID, for firmware updates and Secure Boot
+# (/usr/lib/my-distro/esp-mount; encrypted systems have it in crypt)
+printf '# The EFI system partition (my-install)\nesp_partuuid = %s\n' \
+	"$(sfdisk --part-uuid "$DISK" 2)" >"$T/etc/my-distro/esp"
 
 # Again, now that the swap file is there: Hibernate in the Start menu
 run /usr/lib/my-distro/installed-fixups "$T"

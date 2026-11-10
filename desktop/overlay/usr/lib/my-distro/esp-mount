@@ -1,0 +1,33 @@
+#!/bin/sh
+# esp-mount: mounts the EFI system partition of an installed my-distro at
+# /boot/efi (if it isn't already) and prints that path. Firmware updates
+# (UEFI capsules) and Secure Boot (my-secureboot) put files there. 0.9.7.
+#
+# Which partition: the one my-install wrote down (/etc/my-distro/crypt for
+# encrypted systems, /etc/my-distro/esp since 0.9.7), else the partition
+# my-install named "efi" (all versions) on the disk the system runs from.
+# Exit code 1 (and nothing printed) when there is none: the live system,
+# or a PC started without UEFI.
+PATH=/usr/sbin:/usr/bin:/sbin:/bin
+D=/boot/efi
+
+grep -q " $D vfat " /proc/mounts && { echo "$D"; exit 0; }
+[ "$(id -u)" = 0 ] || exit 1
+grep -q "rdinit=" /proc/cmdline && exit 1      # the live system has none
+
+uuid=$(sed -n 's/^[[:space:]]*esp_partuuid[[:space:]]*=[[:space:]]*//p' \
+	/etc/my-distro/crypt /etc/my-distro/esp 2>/dev/null | head -n 1 | tr 'A-F' 'a-f')
+dev=""
+[ -n "$uuid" ] && dev=$(blkid -t PARTUUID="$uuid" -o device 2>/dev/null | head -n 1)
+if [ -z "$dev" ]; then
+	# the disk of / (or of the encrypted volume's partition): sda3 -> sda
+	root=$(awk '$2 == "/" { print $1 }' /proc/mounts | tail -n 1)
+	for d in $(blkid -t PARTLABEL=efi -o device 2>/dev/null); do
+		case "$root" in "${d%[0-9]}"*|"${d%p[0-9]}"*) dev=$d; break ;; esac
+		[ -z "$dev" ] && dev=$d
+	done
+fi
+[ -n "$dev" ] || exit 1
+mkdir -p "$D"
+mount -t vfat -o umask=0077 "$dev" "$D" 2>/dev/null || exit 1
+echo "$D"

@@ -6,6 +6,9 @@
 #   make desktop       build the desktop system with Buildroot (Xorg + Openbox),
 #                      the bootable ISO out/my-distro.iso and the update package
 #   make release-files sign the update package for a GitHub release
+#   make secureboot-key     make my-distro's Secure Boot key (once, outside the repository)
+#   make desktop-secureboot the same as make desktop, with GRUB and the kernel
+#                      signed with that key, so it starts with Secure Boot on
 #   make packages      build the extra programs of the Software app (my-pkg):
 #                      out/packages/, one .tar.xz each and the package list
 #   make release-packages  sign that package list for the same release
@@ -50,19 +53,30 @@ BR_SRC := $(BUILD)/desktop-src
 BR_OUT := $(BUILD)/desktop-out
 # Buildroot refuses to run when PATH contains spaces, and WSL adds Windows
 # folders like "C:\Program Files" to PATH, so give it a clean one.
+# MY_SB_KEY: the Secure Boot key that desktop/post-build.sh signs GRUB and
+# the kernel with (only make desktop-secureboot sets it)
 BR_MAKE := env PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+	MY_SB_KEY=$(MY_SB_KEY) \
 	$(MAKE) -C $(BR_DIR) O=$(BR_OUT) BR2_EXTERNAL=$(BR_SRC)/desktop
 
 # Use hardware acceleration if this user can open /dev/kvm.
 KVM := $(shell [ -w /dev/kvm ] && echo -enable-kvm)
 
 .PHONY: all run desktop release-files packages release-packages run-desktop run-iso \
-	run-install run-disk clean distclean
+	run-install run-disk clean distclean secureboot-key desktop-secureboot
 
 UPDATE      := out/my-distro-update.tar.xz
 # The files Buildroot put on its ISO (kernel, initrd, GRUB, boot menu)
 ISO_FILES   := $(BR_OUT)/build/buildroot-fs/rootfs.iso9660.tmp
 SIGNING_KEY ?= $(HOME)/.config/my-distro/update-signing-key.pem
+# Secure Boot (make secureboot-key, make desktop-secureboot): the private
+# key stays on this machine, outside the repository (SB_BACKUP=folder: a
+# second copy); only the certificate is in the repository.
+SB_KEY_DIR ?= $(HOME)/my-distro-secureboot-key
+SB_KEY     := $(SB_KEY_DIR)/my-distro-secureboot.key
+SB_CERT    := desktop/secureboot/my-distro-secureboot.crt
+SB_BACKUP  ?=
+MY_SB_KEY  ?=
 
 # The Software app's packages (make packages)
 PKG_OUT   := out/packages
@@ -207,13 +221,16 @@ desktop: $(BR_DIR)/Makefile
 > # they need, Bluetooth firmware, fsck.fat, JPEG for imlib2): build these
 > # again when their BR2_PACKAGE_*_ lines differ from the last build (or
 > # there is no record of it yet).
-> for p in wpa_supplicant:WPA_SUPPLICANT ffmpeg:FFMPEG libdrm:LIBDRM mesa3d:MESA3D \
->          linux-firmware:LINUX_FIRMWARE dosfstools:DOSFSTOOLS imlib2:IMLIB2; do \
->   n=$${p%%:*}; v=$${p##*:}; \
+> # 0.9.7: FFmpeg and mpv also when AV1 (dav1d), VA-API or PipeWire come
+> # or go: they look for them only while they are built.
+> for p in wpa_supplicant:WPA_SUPPLICANT_ 'ffmpeg:(FFMPEG_|DAV1D=|LIBVA=)' libdrm:LIBDRM_ \
+>          mesa3d:MESA3D_ linux-firmware:LINUX_FIRMWARE_ dosfstools:DOSFSTOOLS_ \
+>          imlib2:IMLIB2_ 'mpv:(MPV_|LIBVA=|PIPEWIRE=)'; do \
+>   n=$${p%%:*}; v=$${p#*:}; \
 >   ls -d $(BR_OUT)/build/$$n-[0-9]* >/dev/null 2>&1 || continue; \
 >   if [ ! -f $(BR_OUT)/.config.last ] || \
->      ! cmp -s <(grep "^BR2_PACKAGE_$${v}_" $(BR_OUT)/.config) \
->               <(grep "^BR2_PACKAGE_$${v}_" $(BR_OUT)/.config.last); then \
+>      ! cmp -s <(grep -E "^BR2_PACKAGE_$${v}" $(BR_OUT)/.config) \
+>               <(grep -E "^BR2_PACKAGE_$${v}" $(BR_OUT)/.config.last); then \
 >     $(BR_MAKE) $$n-dirclean; fi; \
 > done
 > $(BR_MAKE)
@@ -235,6 +252,18 @@ desktop: $(BR_DIR)/Makefile
 >     -c desktop/grub-bios-embedded.cfg -o $(BR_OUT)/build/my-distro-core.img \
 >     boot linux normal iso9660 biosdisk part_msdos part_gpt all_video search search_fs_file && \
 >   cat $$G/cdboot.img $(BR_OUT)/build/my-distro-core.img > $(ISO_FILES)/boot/grub/grub-eltorito.img
+> # UEFI (0.9.7): the boot image the firmware reads (a small FAT image in
+> # the ISO, also a partition on a USB stick) gets shim as BOOTX64.EFI,
+> # which starts GRUB (grubx64.efi, signed for Secure Boot by make
+> # desktop-secureboot), MokManager and the certificate to enroll
+> # (all from /usr/lib/my-distro/efi, see desktop/package/my-secureboot).
+> E=$(BR_OUT)/target/usr/lib/my-distro/efi; F=$(ISO_FILES)/boot/fat.efi; \
+>   M=$$(ls $(BR_OUT)/host/sbin/mkfs.fat $(BR_OUT)/host/bin/mkfs.fat 2>/dev/null | head -1); \
+>   [ -f $$E/grubx64.efi ] && [ -n "$$M" ] || { echo "UEFI boot files or mkfs.fat missing"; exit 1; }; \
+>   rm -f $$F && $$M -C -n MY_DISTRO $$F 8192 >/dev/null && \
+>   $(BR_OUT)/host/bin/mmd -i $$F ::/EFI ::/EFI/BOOT && \
+>   $(BR_OUT)/host/bin/mcopy -i $$F $$E/BOOTX64.EFI $$E/grubx64.efi $$E/mmx64.efi \
+>     $$E/my-distro-secureboot.cer ::/EFI/BOOT/
 > rm -f out/my-distro.iso
 > $(BR_OUT)/host/bin/xorriso -as mkisofs -o out/my-distro.iso -J -R -V MY_DISTRO \
 >   -b boot/grub/grub-eltorito.img -no-emul-boot -boot-load-size 4 -boot-info-table \
@@ -261,6 +290,38 @@ release-files:
 > openssl pkeyutl -verify -pubin -inkey desktop/overlay/etc/my-distro/update-key.pem \
 >   -rawin -in $(UPDATE).sha256 -sigfile $(UPDATE).sha256.sig
 > @echo "Upload to the release: out/my-distro.iso $(UPDATE) $(UPDATE).sha256 $(UPDATE).sha256.sig"
+
+# --- Secure Boot --------------------------------------------------------------
+#
+# my-distro starts with Secure Boot on through Debian's shim (signed by
+# Microsoft), which starts GRUB if it is signed with a key the PC's owner
+# enrolled once (MokManager). secureboot-key makes that key: an RSA key and
+# its certificate. The key stays in SB_KEY_DIR (outside the repository) and
+# is used only by desktop-secureboot; the certificate goes into the
+# repository and onto the ISO (desktop/package/my-secureboot).
+secureboot-key:
+> [ ! -e $(SB_KEY) ] || { echo "$(SB_KEY) exists already; keep using it"; exit 1; }
+> mkdir -p -m 700 $(SB_KEY_DIR)
+> umask 077 && openssl req -new -x509 -newkey rsa:2048 -nodes -sha256 -days 3650 \
+>   -subj "/CN=my-distro Secure Boot 2026/" \
+>   -addext "basicConstraints=critical,CA:FALSE" -addext "keyUsage=digitalSignature" \
+>   -addext "extendedKeyUsage=codeSigning" \
+>   -keyout $(SB_KEY) -out $(SB_KEY_DIR)/my-distro-secureboot.crt 2>/dev/null
+> mkdir -p $(dir $(SB_CERT))
+> cp $(SB_KEY_DIR)/my-distro-secureboot.crt $(SB_CERT)
+> if [ -n "$(SB_BACKUP)" ]; then mkdir -p "$(SB_BACKUP)" && \
+>   cp $(SB_KEY) $(SB_KEY_DIR)/my-distro-secureboot.crt "$(SB_BACKUP)/"; fi
+> @echo "Key: $(SB_KEY) (keep it private, and a copy somewhere safe). Certificate: $(SB_CERT)"
+
+# make desktop, with GRUB, the kernel and fwupd's UEFI program signed with
+# the Secure Boot key (desktop/post-build.sh signs them before the images
+# are made)
+desktop-secureboot:
+> [ -f $(SB_KEY) ] || { echo "No Secure Boot key $(SB_KEY): make secureboot-key"; exit 1; }
+> openssl x509 -in $(SB_CERT) -noout -pubkey | cmp -s - <(openssl pkey -in $(SB_KEY) -pubout) || \
+>   { echo "$(SB_KEY) does not belong to $(SB_CERT)"; exit 1; }
+> # (BUILD again: this Makefile keeps it from sub-makes, see MAKEOVERRIDES)
+> $(MAKE) desktop BUILD=$(BUILD) MY_SB_KEY=$(SB_KEY)
 
 # --- Software app packages (my-pkg) -------------------------------------------
 #

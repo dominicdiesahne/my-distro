@@ -1,0 +1,129 @@
+#!/bin/sh
+# my-secureboot status | prepare | refresh: Secure Boot for my-distro (0.9.7).
+#
+# With Secure Boot on, a PC only starts what Microsoft signed. my-distro
+# starts through shim (Debian's, signed by Microsoft), which starts GRUB
+# and the kernel only if they are signed with a key the PC's owner trusts:
+# my-distro's Secure Boot key. Its certificate
+# (/usr/lib/my-distro/efi/my-distro-secureboot.cer) is enrolled once, as a
+# "Machine Owner Key" (MOK), with shim's MokManager:
+#
+#   status    Secure Boot on or off, whether my-distro's key is enrolled,
+#             whether this installation starts through shim, kernel lockdown
+#   prepare   (root) makes an installation from before 0.9.7 start through
+#             shim, and asks shim to enroll the key at the next start
+#             (mokutil --import: you choose a one-time password here).
+#             Then restart: a blue MokManager screen appears; choose
+#             "Enroll MOK", "Continue", "Yes", type that password, "Reboot".
+#             Now Secure Boot can be switched on in the firmware settings.
+#   refresh   (root, installed-fixups runs it after updates) puts the new
+#             shim and GRUB onto the EFI partition if it starts through shim
+#
+# Without "prepare": start with Secure Boot on; shim can't check GRUB yet
+# and starts MokManager by itself: "Enroll key from disk", then
+# EFI/BOOT/my-distro-secureboot.cer on the ISO or the EFI partition.
+#
+# With Secure Boot on, the kernel locks itself down (integrity mode): only
+# signed kernel modules, no hibernation (Linux can't check a saved memory
+# image), no /dev/mem. Everything else works as before.
+PATH=/usr/sbin:/usr/bin:/sbin:/bin
+E=/usr/lib/my-distro/efi
+CER=$E/my-distro-secureboot.cer
+
+efivars() {
+	[ -d /sys/firmware/efi ] || return 1
+	grep -q " /sys/firmware/efi/efivars " /proc/mounts ||
+		mount -t efivarfs efivarfs /sys/firmware/efi/efivars 2>/dev/null
+	return 0
+}
+
+sb_state() {
+	efivars || { echo unsupported; return; }
+	if mokutil --sb-state 2>/dev/null | grep -qi "enabled"; then echo on; else echo off; fi
+}
+
+# The installation's EFI partition, if it starts through shim already
+shim_dir() {
+	esp=$(/usr/lib/my-distro/esp-mount 2>/dev/null) || return 1
+	[ -f "$esp/EFI/BOOT/my-distro-secureboot.cer" ] || return 1
+	echo "$esp/EFI/BOOT"
+}
+
+case "$1" in
+status)
+	echo "secureboot = $(sb_state)"
+	if efivars && [ -f "$CER" ]; then
+		if mokutil --test-key "$CER" 2>/dev/null | grep -qi "already enrolled"; then
+			echo "enrolled = yes"
+		elif mokutil --list-new 2>/dev/null | grep -q "my-distro"; then
+			echo "enrolled = next start"
+		else
+			echo "enrolled = no"
+		fi
+	else
+		echo "enrolled = unknown"
+	fi
+	if grep -q "rdinit=" /proc/cmdline; then
+		echo "installation = live"
+	elif [ "$(id -u)" = 0 ]; then
+		shim_dir >/dev/null && echo "installation = shim" || echo "installation = grub"
+	else
+		echo "installation = unknown"
+	fi
+	echo "lockdown = $(sed -n 's/.*\[\(.*\)\].*/\1/p' /sys/kernel/security/lockdown 2>/dev/null)"
+	;;
+prepare)
+	[ "$(id -u)" = 0 ] || { echo "my-secureboot: needs root"; exit 1; }
+	efivars || { echo "This computer was started without UEFI: Secure Boot doesn't apply."; exit 1; }
+	[ -f "$CER" ] && [ -f "$E/grubx64.efi" ] || { echo "my-secureboot: $E is incomplete"; exit 1; }
+	# 1. An installation from before 0.9.7: GRUB alone on the EFI partition
+	if ! grep -q "rdinit=" /proc/cmdline && ! shim_dir >/dev/null; then
+		esp=$(/usr/lib/my-distro/esp-mount) || { echo "No EFI partition found."; exit 1; }
+		B=$esp/EFI/BOOT
+		if [ -f /etc/my-distro/crypt ]; then
+			uuid=$(blkid -s UUID -o value "$(awk -v d="$esp" '$2 == d { print $1 }' /proc/mounts)")
+			prefix=/grub
+		else
+			uuid=$(blkid -s UUID -o value "$(awk '$2 == "/" { print $1 }' /proc/mounts | tail -n 1)")
+			prefix=/boot/grub
+		fi
+		[ -n "$uuid" ] || { echo "Could not find the filesystem with GRUB's boot menu."; exit 1; }
+		mkdir -p "$B"
+		[ -f "$B/BOOTX64.EFI" ] && cp "$B/BOOTX64.EFI" "$B/grub-before-shim.efi"
+		printf '# Read by my-distro'"'"'s UEFI GRUB (my-secureboot prepare)\nsearch --no-floppy --fs-uuid --set=root %s\nset prefix=($root)%s\n' \
+			"$uuid" "$prefix" >"$B/grub.cfg"
+		cp "$E/grubx64.efi" "$E/mmx64.efi" "$CER" "$B/" &&
+			cp "$E/BOOTX64.EFI" "$B/BOOTX64.EFI.new" && mv "$B/BOOTX64.EFI.new" "$B/BOOTX64.EFI" ||
+			{ echo "Could not write to the EFI partition."; exit 1; }
+		sync
+		echo "This installation now starts through shim (the old GRUB is EFI/BOOT/grub-before-shim.efi)."
+	fi
+	# 2. The key, for MokManager at the next start
+	if mokutil --test-key "$CER" 2>/dev/null | grep -qi "already enrolled"; then
+		echo "my-distro's key is enrolled already: switch on Secure Boot in the firmware settings."
+		exit 0
+	fi
+	echo
+	echo "Choose a one-time password (you type it once more at the next start, in"
+	echo "MokManager, to confirm that you, the owner of this PC, want this key):"
+	mokutil --import "$CER" || { echo "mokutil --import did not work."; exit 1; }
+	echo
+	echo "Done. Restart now. A blue screen (MokManager) appears: choose \"Enroll MOK\","
+	echo "\"Continue\", \"Yes\", type the password, then \"Reboot\". Then switch on Secure"
+	echo "Boot in the firmware settings (F2/Del at the start)."
+	;;
+refresh)
+	[ "$(id -u)" = 0 ] || exit 1
+	B=$(shim_dir) || exit 0
+	for f in BOOTX64.EFI grubx64.efi mmx64.efi my-distro-secureboot.cer; do
+		[ -f "$E/$f" ] || continue
+		cmp -s "$E/$f" "$B/$f" && continue
+		cp "$E/$f" "$B/$f.new" && mv "$B/$f.new" "$B/$f"
+	done
+	sync
+	;;
+*)
+	echo "usage: my-secureboot status | prepare | refresh" >&2
+	exit 2
+	;;
+esac

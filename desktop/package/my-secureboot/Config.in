@@ -1,0 +1,9 @@
+config BR2_PACKAGE_MY_SECUREBOOT
+	bool "my-secureboot"
+	depends on BR2_x86_64
+	help
+	  Secure Boot for my-distro: Debian's shim (signed by Microsoft)
+	  and MokManager, and my-distro's public Secure Boot certificate,
+	  in /usr/lib/my-distro/efi for the ISO and the installer. GRUB
+	  and the kernel are signed with my-distro's key by
+	  `make desktop-secureboot` (desktop/post-build.sh).
