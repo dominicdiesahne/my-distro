@@ -127,6 +127,16 @@ rm -f "$T/etc/init.d/S50pipewire" "$T/etc/init.d/S51wireplumber"
 # server at every boot; S91sharing starts it only when Sharing is on.
 rm -f "$T/etc/init.d/S91smb"
 
+# Intel's 3D drivers make Buildroot build Mesa's OpenCL part, which puts
+# clang, libclc and the SPIR-V translator into the image (~160 MB). Mesa
+# only needs them while it is built (its shaders for Intel are compiled
+# then, on the build machine); nothing in the image links them (checked
+# with readelf for 0.9.7). Without RustiCL there is no OpenCL to use them.
+rm -rf "$T"/usr/lib/libclang*.so* "$T"/usr/lib/libLLVMSPIRVLib.so* "$T/usr/share/clc" \
+       "$T/usr/lib/clang" "$T"/usr/bin/clang* "$T/usr/bin/diagtool" "$T/usr/bin/llvm-spirv" \
+       "$T"/usr/bin/clang-* "$T/usr/bin/c-index-test" "$T/usr/bin/hmaptool" \
+       "$T"/usr/bin/scan-* "$T/usr/libexec/c++-analyzer" "$T/usr/libexec/ccc-analyzer"
+
 # UEFI GRUB for shim (Secure Boot): one file with every module it needs
 # built in (with Secure Boot on, GRUB loads no modules from the disk), and
 # the SBAT data shim checks (desktop/secureboot/grub-sbat.csv). The ISO's
