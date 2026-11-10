@@ -180,6 +180,8 @@ int main(void)
 	printf("init: mounting filesystems\n");
 	mount_fs("proc", "/proc", "proc");
 	mount_fs("sysfs", "/sys", "sysfs");
+	/* Which security modules run (cat /sys/kernel/security/lsm) */
+	mount_fs("securityfs", "/sys/kernel/security", "securityfs");
 	mount_fs("devtmpfs", "/dev", "devtmpfs");
 	mount_fs("devpts", "/dev/pts", "devpts");
 	mount_fs("tmpfs", "/tmp", "tmpfs");

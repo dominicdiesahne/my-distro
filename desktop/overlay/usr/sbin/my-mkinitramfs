@@ -23,7 +23,9 @@ CONF="$R/etc/my-distro/crypt"
 [ "$(id -u)" = 0 ] || { echo "my-mkinitramfs: needs root" >&2; exit 1; }
 
 conf() { sed -n "s/^[[:space:]]*$1[[:space:]]*=[[:space:]]*//p" "$CONF" | tail -n 1; }
-ESP_UUID=$(conf esp_partuuid)
+# (my-install writes it as sfdisk prints it, in capitals; blkid -t only
+# finds it in small letters, so after updates the EFI partition was "not found")
+ESP_UUID=$(conf esp_partuuid | tr 'A-F' 'a-f')
 LAYOUT=$(conf keyboard)
 
 W=$(mktemp -d /tmp/initramfs.XXXXXX) || exit 1
@@ -50,10 +52,17 @@ copy() {
 }
 
 mkdir -p "$W/bin" "$W/dev" "$W/proc" "$W/sys" "$W/run" "$W/newroot" "$W/etc"
+# /lib64 -> lib and /usr/lib64 -> lib, as on the system: the linker looks
+# for libraries only there (the initramfs has no ld.so.cache). First,
+# before copy(): it copies the linker to /lib64 (the path programs name),
+# which would otherwise make /lib64 a real directory with only the linker
+# in it, and nothing was found (BusyBox: "libresolv.so.2: cannot open
+# shared object file", and the kernel panicked at the start).
+mkdir -p "$W/usr"
+[ -L "$R/lib64" ] && ln -s lib "$W/lib64"
+[ -L "$R/usr/lib64" ] && ln -s lib "$W/usr/lib64"
 copy /bin/busybox
 copy /usr/sbin/cryptsetup
-# /lib64 -> /lib, where the linker is
-[ -L "$R/lib64" ] && ln -s lib "$W/lib64"
 for app in sh mount umount switch_root sleep cat ls mkdir loadkmap echo; do
 	ln -s busybox "$W/bin/$app"
 done

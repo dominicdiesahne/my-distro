@@ -10,6 +10,11 @@ CONFIG_NTPD=y
 CONFIG_FEATURE_ADDUSER_TO_GROUP=y
 CONFIG_FEATURE_DEL_USER_FROM_GROUP=y
 
+# "timeout 20 unzip ..." / "timeout 20 pdftotext ...": the search index reads
+# office files and PDFs this way (a broken file can't hang it), and the crash
+# reports stop gdb after 30 seconds. Without it no document text was indexed.
+CONFIG_TIMEOUT=y
+
 # "cpio -o" packs the small start-up system (initramfs) that asks for the
 # disk's passphrase on encrypted installations (my-mkinitramfs)
 CONFIG_FEATURE_CPIO_O=y

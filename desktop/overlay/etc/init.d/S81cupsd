@@ -15,7 +15,7 @@ start)
 	# The live system's root filesystem in RAM reports no free space, and
 	# CUPS then refuses every job ("Request Entity Too Large"): give it a
 	# RAM disk of its own there. (Installed systems spool on the disk.)
-	if ! df -k /var/spool/cups 2>/dev/null | awk 'NR == 2 && $4 > 0 { ok = 1 } END { exit !ok }'; then
+	if ! df -k /var/spool/cups 2>/dev/null | awk 'END { exit !(NR > 1 && $(NF - 2) > 0) }'; then
 		mount -t tmpfs -o mode=0710,size=256m tmpfs /var/spool/cups
 		chgrp lp /var/spool/cups 2>/dev/null
 	fi

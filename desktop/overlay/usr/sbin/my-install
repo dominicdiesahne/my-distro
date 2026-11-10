@@ -246,7 +246,10 @@ ram_mb=$(awk '/^MemTotal:/ { print int($2 / 1024) }' /proc/meminfo)
 swap_mb=$((ram_mb / 2))
 [ "$swap_mb" -lt 1024 ] && swap_mb=1024
 [ "$swap_mb" -gt 8192 ] && swap_mb=8192
-free_mb=$(df -m "$T" | awk 'NR == 2 { print $4 }')
+# (the last line, counted from the right: a long device name such as
+# /dev/mapper/my-distro-root gets a line of its own, the numbers go below)
+free_mb=$(df -m "$T" | awk 'END { print $(NF - 2) }')
+case "$free_mb" in ''|*[!0-9]*) free_mb=0 ;; esac
 if [ "$free_mb" -gt $((swap_mb + 3072)) ]; then
 	echo "      Swap file for hibernation ($swap_mb MB)"
 	run dd if=/dev/zero of="$T/swapfile" bs=1M count="$swap_mb"

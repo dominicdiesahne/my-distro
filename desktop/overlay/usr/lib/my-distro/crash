@@ -48,7 +48,7 @@ fi
 # Backtrace: gdb reads the program and its core dump (at most 256 MB of it;
 # bigger ones are skipped, there is no room to keep them anyway)
 bt=""
-if command -v gdb >/dev/null && [ -n "$exe" ] && [ "$(df -m "$D" | awk 'NR == 2 { print $4 }')" -gt 1024 ]; then
+if command -v gdb >/dev/null && [ -n "$exe" ] && [ "$(df -m "$D" | awk 'END { print $(NF - 2) + 0 }')" -gt 1024 ]; then
 	core=$(mktemp "$D/core.XXXXXX")
 	head -c 268435456 >"$core"
 	cat >/dev/null                         # the rest, if it was bigger
