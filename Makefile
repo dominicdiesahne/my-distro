@@ -222,10 +222,11 @@ desktop: $(BR_DIR)/Makefile
 > # again when their BR2_PACKAGE_*_ lines differ from the last build (or
 > # there is no record of it yet).
 > # 0.9.7: FFmpeg and mpv also when AV1 (dav1d), VA-API or PipeWire come
-> # or go: they look for them only while they are built.
+> # or go: they look for them only while they are built. The build
+> # machine's Python when its modules change (fwupd-efi needs its lzma).
 > for p in wpa_supplicant:WPA_SUPPLICANT_ 'ffmpeg:(FFMPEG_|DAV1D=|LIBVA=)' libdrm:LIBDRM_ \
 >          mesa3d:MESA3D_ linux-firmware:LINUX_FIRMWARE_ dosfstools:DOSFSTOOLS_ \
->          imlib2:IMLIB2_ 'mpv:(MPV_|LIBVA=|PIPEWIRE=)'; do \
+>          imlib2:IMLIB2_ 'mpv:(MPV_|LIBVA=|PIPEWIRE=)' host-python3:HOST_PYTHON3_; do \
 >   n=$${p%%:*}; v=$${p#*:}; \
 >   ls -d $(BR_OUT)/build/$$n-[0-9]* >/dev/null 2>&1 || continue; \
 >   if [ ! -f $(BR_OUT)/.config.last ] || \
