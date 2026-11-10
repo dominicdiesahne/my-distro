@@ -1,0 +1,15 @@
+[Desktop Entry]
+Type=Application
+Name=Sharing
+Name[de]=Freigabe
+Name[fr]=Partage
+Name[es]=Compartir
+Name[it]=Condivisione
+Name[tr]=Paylaşım
+Name[pl]=Udostępnianie
+Name[ro]=Partajare
+Comment=Share a folder and the printers with other computers (Samba)
+Icon=folder-publicshare
+Exec=my-sharing
+Terminal=false
+Categories=Settings;Network;

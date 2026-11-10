@@ -1,0 +1,178 @@
+#!/bin/sh
+# sharing: file and printer sharing with other computers (Samba), 0.9.7.
+# The Sharing window (my-sharing) runs it through my-admin, as root.
+#
+#   sharing status      what is set (anyone may ask): installed, on, user,
+#                       folder, readonly, printers, and this computer's
+#                       addresses
+#   sharing on USER FOLDER ro|rw printers|noprinters
+#                       share FOLDER (in USER's home) as USER: other
+#                       computers log in with USER and the sharing password,
+#                       read on the first line of the input (empty: keep the
+#                       one set before). printers: also every printer of this
+#                       computer (CUPS).
+#   sharing off         stop sharing (the settings stay for next time)
+#   sharing start       at boot (/etc/init.d/S91sharing): starts it if it is on
+#   sharing firewall    opens the firewall again if it is on (after
+#                       /etc/init.d/S35firewall restart)
+#
+# Off by default. Samba is a Software app package (samba4); without it only
+# "status" works. The settings are in /etc/my-distro/sharing (kept by system
+# updates); /etc/samba/smb.conf is written from them at every start. The
+# passwords are Samba's own (/var/lib/samba/private), not the login ones.
+# The firewall lets in Samba's port (445) only from local networks
+# (10.x, 172.16-31.x, 192.168.x, IPv6 fc00::/7, fe80::/10), only while it is on.
+PATH=/usr/sbin:/usr/bin:/sbin:/bin
+CONF=/etc/my-distro/sharing
+SMBCONF=/etc/samba/smb.conf
+PIDFILE=/run/my-sharing.pid
+LOG=/var/log/samba/smbd.log
+
+conf() { sed -n "s/^[[:space:]]*$1[[:space:]]*=[[:space:]]*//p" "$CONF" 2>/dev/null | tail -n 1; }
+have_samba() { [ -x /usr/sbin/smbd ] || [ -x /usr/bin/smbd ]; }
+smbd_bin() { command -v smbd; }
+die() { echo "ERROR: $*"; exit 1; }
+
+# The firewall's sets for open ports (/etc/nftables.conf)
+firewall() {
+	nft list set inet my-firewall sharing_tcp >/dev/null 2>&1 || return 0
+	if [ "$1" = open ]; then
+		nft add element inet my-firewall sharing_tcp '{ 445 }'
+	else
+		nft flush set inet my-firewall sharing_tcp
+	fi
+}
+
+stop_smbd() {
+	[ -f "$PIDFILE" ] && kill "$(cat "$PIDFILE")" 2>/dev/null
+	rm -f "$PIDFILE"
+	killall smbd 2>/dev/null
+}
+
+# smb.conf from the settings
+write_smbconf() {
+	user=$(conf user) folder=$(conf folder)
+	ro=yes; [ "$(conf readonly)" = no ] && ro=no
+	printers=no; [ "$(conf printers)" = yes ] && printers=yes
+	# the share's name: the folder's name, letters, digits, - and _ only
+	name=$(printf '%s' "$(basename "$folder")" | tr -c 'A-Za-z0-9_-' '_' | cut -c1-24)
+	[ -n "$name" ] || name=share
+	mkdir -p /etc/samba /var/lib/samba/private /var/cache/samba /var/log/samba \
+		/run/samba /var/spool/samba
+	chmod 1777 /var/spool/samba
+	chmod 700 /var/lib/samba/private
+	cat >"$SMBCONF" <<EOF
+# Written by my-distro's Sharing window (/usr/lib/my-distro/sharing) from
+# /etc/my-distro/sharing: changes here are replaced at the next start.
+[global]
+	server string = my-distro
+	workgroup = WORKGROUP
+	server role = standalone server
+	security = user
+	map to guest = never
+	server min protocol = SMB2_10
+	disable netbios = yes
+	smb ports = 445
+	log file = /var/log/samba/%m.log
+	max log size = 200
+	load printers = $printers
+	printing = cups
+	printcap name = cups
+
+[$name]
+	path = $folder
+	read only = $ro
+	valid users = $user
+	force user = $user
+	browseable = yes
+EOF
+	if [ "$printers" = yes ]; then
+		cat >>"$SMBCONF" <<EOF
+
+[printers]
+	comment = Printers of this computer
+	path = /var/spool/samba
+	printable = yes
+	valid users = $user
+	browseable = no
+EOF
+	fi
+}
+
+start_smbd() {
+	have_samba || die "Samba is not installed (Software app: Samba)."
+	write_smbconf
+	stop_smbd
+	/usr/bin/my-keepalive "$(smbd_bin)" --foreground --no-process-group \
+		</dev/null >>"$LOG" 2>&1 &
+	echo $! >"$PIDFILE"
+	firewall open
+}
+
+case "$1" in
+status)
+	have_samba && echo "installed = yes" || echo "installed = no"
+	on=no
+	[ "$(conf enabled)" = yes ] && on=yes
+	echo "on = $on"
+	echo "running = $( [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null && echo yes || echo no)"
+	for k in user folder readonly printers; do
+		echo "$k = $(conf $k)"
+	done
+	echo "addresses = $(ip -4 -o addr show scope global 2>/dev/null | awk '{ sub("/.*", "", $4); printf "%s ", $4 }')"
+	;;
+on)
+	[ "$(id -u)" = 0 ] || die "needs root"
+	user=$2 folder=$3 mode=$4 printers=$5
+	home=$(awk -F: -v u="$user" '$1 == u { print $6 }' /etc/passwd)
+	[ -n "$user" ] && [ -n "$home" ] || die "No such user: $user"
+	case "$mode" in ro|rw) ;; *) die "ro or rw" ;; esac
+	case "$printers" in printers|noprinters) ;; *) die "printers or noprinters" ;; esac
+	folder=$(readlink -f "$folder")
+	# only folders in the user's own home (not /etc, not someone else's)
+	case "$folder/" in "$home"/*) ;; *) die "The folder must be in your home folder." ;; esac
+	[ -d "$folder" ] || die "No such folder: $folder"
+	have_samba || die "Samba is not installed (Software app: Samba)."
+	IFS= read -r pw || pw=""
+	if [ -n "$pw" ]; then
+		[ ${#pw} -ge 6 ] || die "The password needs at least 6 characters."
+		printf '%s\n%s\n' "$pw" "$pw" | smbpasswd -s -a "$user" >/dev/null ||
+			die "Could not set the sharing password."
+	elif ! pdbedit -L 2>/dev/null | grep -q "^$user:"; then
+		die "Choose a password for sharing."
+	fi
+	pw=
+	ro=yes; [ "$mode" = rw ] && ro=no
+	pr=no; [ "$printers" = printers ] && pr=yes
+	cat >"$CONF" <<EOF
+# File and printer sharing (Samba), set in the Sharing window. Off by
+# default; /usr/lib/my-distro/sharing writes /etc/samba/smb.conf from this.
+enabled = yes
+user = $user
+folder = $folder
+readonly = $ro
+printers = $pr
+EOF
+	chmod 644 "$CONF"
+	start_smbd
+	echo "DONE: sharing is on"
+	;;
+off)
+	[ "$(id -u)" = 0 ] || die "needs root"
+	[ -f "$CONF" ] && sed -i 's/^enabled = .*/enabled = no/' "$CONF"
+	stop_smbd
+	firewall close
+	echo "DONE: sharing is off"
+	;;
+start)
+	[ "$(conf enabled)" = yes ] && have_samba && start_smbd
+	;;
+firewall)
+	if [ "$(conf enabled)" = yes ] && [ -f "$PIDFILE" ]; then firewall open; fi
+	;;
+*)
+	echo "usage: sharing status | on USER FOLDER ro|rw printers|noprinters | off | start | firewall" >&2
+	exit 2
+	;;
+esac
+exit 0

@@ -1,0 +1,20 @@
+#!/bin/sh
+# File and printer sharing (Samba, 0.9.7): starts it at boot only when it was
+# switched on in the Sharing window and Samba is installed (Software app).
+# Everything else is in /usr/lib/my-distro/sharing.
+
+case "$1" in
+start)
+	grep -qs '^enabled = yes' /etc/my-distro/sharing || exit 0
+	printf "Starting file sharing: "
+	/usr/lib/my-distro/sharing start >/dev/null 2>&1 && echo "OK" || echo "FAIL"
+	;;
+stop)
+	[ -f /run/my-sharing.pid ] && kill "$(cat /run/my-sharing.pid)" 2>/dev/null
+	killall smbd 2>/dev/null
+	;;
+*)
+	echo "Usage: $0 {start|stop}"
+	exit 1
+	;;
+esac

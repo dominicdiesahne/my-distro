@@ -10,6 +10,8 @@ start|restart|reload)
 	printf "Starting firewall: "
 	if nft -f /etc/nftables.conf >/var/log/firewall.log 2>&1; then
 		echo "OK"
+		# file sharing's port, if it is on (the rules above start closed)
+		[ "$1" = start ] || /usr/lib/my-distro/sharing firewall
 	else
 		echo "FAILED (see /var/log/firewall.log)"
 		exit 1

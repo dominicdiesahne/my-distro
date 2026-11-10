@@ -15,6 +15,12 @@
  *                                                     settings, see my-backup)
  *   my-admin --pkg install|remove|upgrade [--with-dependents] NAME...
  *                            my-pkg with that command (the Software app)
+ *   my-admin --sharing ARGS  /usr/lib/my-distro/sharing ARGS (Sharing window)
+ *   my-admin --firmware ARGS /usr/lib/my-distro/firmware ARGS (Firmware
+ *                            updates in System update)
+ *   my-admin --secureboot ARGS  my-secureboot ARGS (Settings, Secure Boot)
+ *                            (0.9.7; the arguments are checked like --backup's,
+ *                            letters beyond ASCII allowed: folder names)
  *
  * It can only start these programs, with a clean environment (only the
  * session's language and proxy are passed on, checked). For --backup
@@ -71,6 +77,25 @@ static int valid_arg(const char *s)
 		return 0;
 	for (; *s; s++)
 		if (!isalnum((unsigned char)*s) && !strchr("/-_.: +", *s))
+			return 0;
+	return 1;
+}
+
+/* The root helpers of 0.9.7's windows, and their arguments: like
+ * valid_arg, but also letters beyond ASCII (UTF-8, a folder "Öffentlich"),
+ * and never starting with "-" (no options) */
+static const struct { const char *mode, *prog; } helpers[] = {
+	{ "--sharing", "/usr/lib/my-distro/sharing" },
+	{ "--firmware", "/usr/lib/my-distro/firmware" },
+	{ "--secureboot", "/usr/sbin/my-secureboot" },
+};
+
+static int valid_helper_arg(const char *s)
+{
+	if (!*s || *s == '-' || strlen(s) > 400 || strstr(s, ".."))
+		return 0;
+	for (; *s; s++)
+		if (!isalnum((unsigned char)*s) && !strchr("/-_.: +", *s) && (unsigned char)*s < 0x80)
 			return 0;
 	return 1;
 }
@@ -150,7 +175,17 @@ int main(int argc, char **argv)
 		fprintf(stderr, "usage: my-admin --pkg install|remove|upgrade [--with-dependents] NAME...\n");
 		return 1;
 	}
+	for (size_t h = 0; h < sizeof helpers / sizeof *helpers; h++)
+		if (strcmp(mode, helpers[h].mode) == 0)
+			for (int i = 2; i < argc; i++)
+				if (!valid_helper_arg(argv[i])) {
+					fprintf(stderr, "my-admin: odd argument\n");
+					return 1;
+				}
 
+	/* Only the first line is ours: unbuffered, so the rest of the input
+	 * (the sharing password for --sharing) is left for the program */
+	setvbuf(stdin, NULL, _IONBF, 0);
 	if (!fgets(pass, sizeof pass, stdin))
 		pass[0] = '\0';
 	pass[strcspn(pass, "\n")] = '\0';
@@ -190,9 +225,18 @@ int main(int argc, char **argv)
 	else if (strcmp(mode, "--backup") == 0) {
 		argv[1] = "my-backup";
 		execv("/usr/bin/my-backup", argv + 1);
-	} else if (strcmp(mode, "--pkg") == 0)
+	} else if (strcmp(mode, "--pkg") == 0) {
 		execv(MY_PKG, pkg_argv);
-	else
+	} else {
+		for (size_t h = 0; h < sizeof helpers / sizeof *helpers; h++)
+			if (strcmp(mode, helpers[h].mode) == 0) {
+				argv[1] = (char *)helpers[h].prog;
+				execv(helpers[h].prog, argv + 1);
+				return 1;
+			}
+	}
+	if (strcmp(mode, "--update") && strcmp(mode, "--disks") && strcmp(mode, "--backup") &&
+	    strcmp(mode, "--pkg"))
 		execl("/usr/bin/my-setup", "my-setup", "--manage", (char *)NULL);
 	return 1;
 }
