@@ -983,6 +983,9 @@ msgstr "Abrir carpeta"
 msgid "Open in"
 msgstr "Abrir en"
 
+msgid "Open the Sound window"
+msgstr "Abrir la ventana Sonido"
+
 msgid "Open the magnifier"
 msgstr "Abrir la lupa"
 
@@ -1006,6 +1009,9 @@ msgstr "Los demás solo pueden leer los archivos"
 
 msgid "Output"
 msgstr "Salida"
+
+msgid "Outputs and programs"
+msgstr "Salidas y programas"
 
 msgid "Own accent color"
 msgstr "Color de acento propio"
@@ -1657,6 +1663,9 @@ msgstr "Bienvenido a my-distro"
 
 msgid "What each program may use, the next time you start it from the Start menu. A program without the microphone gets no sound at all (the sound server can't give it one without the other). Without the whole home folder it sees only Downloads (or nothing) and keeps its own settings separately."
 msgstr "Lo que cada programa puede usar, la próxima vez que lo inicies desde el menú Inicio. Un programa sin micrófono no tiene ningún sonido (el servidor de sonido no puede darle uno sin el otro). Sin toda la carpeta personal solo ve Descargas (o nada) y guarda sus propios ajustes aparte."
+
+msgid "Where the sound plays (speakers, headphones, HDMI, Bluetooth), the microphone, and a volume for every program that plays: the Sound window. The speaker in the taskbar: scroll for louder or quieter, click to mute, right-click for the Sound window."
+msgstr "Dónde suena el sonido (altavoces, auriculares, HDMI, Bluetooth), el micrófono y un volumen para cada programa que suena: la ventana Sonido. El altavoz de la barra de tareas: desplaza para subir o bajar, haz clic para silenciar, clic derecho para la ventana Sonido."
 
 msgid "Wi-Fi"
 msgstr "Wi-Fi"

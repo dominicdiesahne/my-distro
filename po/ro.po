@@ -985,6 +985,9 @@ msgstr "Deschide dosarul"
 msgid "Open in"
 msgstr "Deschide în"
 
+msgid "Open the Sound window"
+msgstr "Deschide fereastra Sunet"
+
 msgid "Open the magnifier"
 msgstr "Deschide lupa"
 
@@ -1008,6 +1011,9 @@ msgstr "Ceilalți pot doar să citească fișierele"
 
 msgid "Output"
 msgstr "Ieșire"
+
+msgid "Outputs and programs"
+msgstr "Ieșiri și programe"
 
 msgid "Own accent color"
 msgstr "Culoare de accent proprie"
@@ -1659,6 +1665,9 @@ msgstr "Bun venit în my-distro"
 
 msgid "What each program may use, the next time you start it from the Start menu. A program without the microphone gets no sound at all (the sound server can't give it one without the other). Without the whole home folder it sees only Downloads (or nothing) and keeps its own settings separately."
 msgstr "Ce poate folosi fiecare program, data viitoare când îl pornești din meniul Start. Un program fără microfon nu are deloc sunet (serverul de sunet nu îi poate da unul fără celălalt). Fără tot dosarul personal vede doar Descărcări (sau nimic) și își ține setările separat."
+
+msgid "Where the sound plays (speakers, headphones, HDMI, Bluetooth), the microphone, and a volume for every program that plays: the Sound window. The speaker in the taskbar: scroll for louder or quieter, click to mute, right-click for the Sound window."
+msgstr "Unde se aude sunetul (difuzoare, căști, HDMI, Bluetooth), microfonul și un volum pentru fiecare program care redă: fereastra Sunet. Difuzorul din bara de activități: derulează pentru mai tare sau mai încet, clic ca să oprești sunetul, clic dreapta pentru fereastra Sunet."
 
 msgid "Wi-Fi"
 msgstr "Wi-Fi"

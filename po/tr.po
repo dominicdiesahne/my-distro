@@ -983,6 +983,9 @@ msgstr "Klasörü aç"
 msgid "Open in"
 msgstr "Şununla aç"
 
+msgid "Open the Sound window"
+msgstr "Ses penceresini aç"
+
 msgid "Open the magnifier"
 msgstr "Büyüteci aç"
 
@@ -1006,6 +1009,9 @@ msgstr "Diğerleri dosyaları yalnızca okuyabilir"
 
 msgid "Output"
 msgstr "Çıkış"
+
+msgid "Outputs and programs"
+msgstr "Çıkışlar ve programlar"
 
 msgid "Own accent color"
 msgstr "Kendi vurgu rengi"
@@ -1657,6 +1663,9 @@ msgstr "my-distro'ya hoş geldiniz"
 
 msgid "What each program may use, the next time you start it from the Start menu. A program without the microphone gets no sound at all (the sound server can't give it one without the other). Without the whole home folder it sees only Downloads (or nothing) and keeps its own settings separately."
 msgstr "Her programın, Başlat menüsünden bir sonraki başlatılışında neleri kullanabileceği. Mikrofonu olmayan bir program hiç ses alamaz (ses sunucusu birini diğeri olmadan veremez). Ev klasörünün tamamı olmadan yalnızca İndirilenler'i (ya da hiçbir şeyi) görür ve kendi ayarlarını ayrı tutar."
+
+msgid "Where the sound plays (speakers, headphones, HDMI, Bluetooth), the microphone, and a volume for every program that plays: the Sound window. The speaker in the taskbar: scroll for louder or quieter, click to mute, right-click for the Sound window."
+msgstr "Sesin nereden çıktığı (hoparlörler, kulaklık, HDMI, Bluetooth), mikrofon ve çalan her program için bir ses düzeyi: Ses penceresi. Görev çubuğundaki hoparlör: sesi açmak ya da kısmak için kaydırın, sessize almak için tıklayın, Ses penceresi için sağ tıklayın."
 
 msgid "Wi-Fi"
 msgstr "Wi-Fi"

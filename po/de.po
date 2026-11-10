@@ -1,6 +1,7 @@
 # German translation of my-distro's own programs.
 # The texts are C strings: keep %s, %d and \n exactly as in msgid.
 # Compiled by desktop/package/my-locale into /usr/share/locale/de/LC_MESSAGES.
+# Also used for Austria (de_AT) through LANGUAGE=de_AT:de.
 msgid ""
 msgstr ""
 "Project-Id-Version: my-distro\n"
@@ -983,6 +984,9 @@ msgstr "Ordner öffnen"
 msgid "Open in"
 msgstr "Geöffnet in"
 
+msgid "Open the Sound window"
+msgstr "Das Ton-Fenster öffnen"
+
 msgid "Open the magnifier"
 msgstr "Lupe öffnen"
 
@@ -1006,6 +1010,9 @@ msgstr "Andere dürfen die Dateien nur lesen"
 
 msgid "Output"
 msgstr "Ausgabe"
+
+msgid "Outputs and programs"
+msgstr "Ausgaben und Programme"
 
 msgid "Own accent color"
 msgstr "Eigene Akzentfarbe"
@@ -1657,6 +1664,9 @@ msgstr "Willkommen bei my-distro"
 
 msgid "What each program may use, the next time you start it from the Start menu. A program without the microphone gets no sound at all (the sound server can't give it one without the other). Without the whole home folder it sees only Downloads (or nothing) and keeps its own settings separately."
 msgstr "Was jedes Programm benutzen darf, beim nächsten Start aus dem Startmenü. Ein Programm ohne Mikrofon bekommt gar keinen Ton (der Sound-Server kann ihm nicht das eine ohne das andere geben). Ohne den ganzen persönlichen Ordner sieht es nur Downloads (oder nichts) und hat eigene Einstellungen."
+
+msgid "Where the sound plays (speakers, headphones, HDMI, Bluetooth), the microphone, and a volume for every program that plays: the Sound window. The speaker in the taskbar: scroll for louder or quieter, click to mute, right-click for the Sound window."
+msgstr "Wo der Ton spielt (Lautsprecher, Kopfhörer, HDMI, Bluetooth), das Mikrofon und eine Lautstärke für jedes Programm, das spielt: das Ton-Fenster. Der Lautsprecher in der Taskleiste: scrollen für lauter oder leiser, klicken zum Stummschalten, Rechtsklick für das Ton-Fenster."
 
 msgid "Wi-Fi"
 msgstr "WLAN"

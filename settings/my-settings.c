@@ -1092,6 +1092,27 @@ static void build_access(GtkWidget *stack)
 	gtk_grid_attach(GTK_GRID(g), l, 0, y, 2, 1);
 }
 
+/* --- Sound (0.9.7): the Sound window has it all ------------------------------- */
+
+static void build_sound(GtkWidget *stack)
+{
+	GtkWidget *g = page(stack, "sound", _("Sound"));
+	GtkWidget *b = gtk_button_new_with_label(_("Open the Sound window"));
+	GtkWidget *l = gtk_label_new(_("Where the sound plays (speakers, headphones, HDMI, "
+		"Bluetooth), the microphone, and a volume for every program that plays: the Sound "
+		"window. The speaker in the taskbar: scroll for louder or quieter, click to mute, "
+		"right-click for the Sound window."));
+
+	heading(g, 0, _("Sound"));
+	g_signal_connect(b, "clicked", G_CALLBACK(on_run), "my-sound");
+	row(g, 1, _("Outputs and programs"), b);
+	gtk_label_set_line_wrap(GTK_LABEL(l), TRUE);
+	gtk_label_set_xalign(GTK_LABEL(l), 0);
+	gtk_label_set_max_width_chars(GTK_LABEL(l), 60);
+	gtk_style_context_add_class(gtk_widget_get_style_context(l), "dim-label");
+	gtk_grid_attach(GTK_GRID(g), l, 0, 2, 2, 1);
+}
+
 /* --- Permissions (0.9.7) ---------------------------------------------------- */
 /*
  * Per program: may it use the camera, the microphone, and how much of the
@@ -1538,6 +1559,7 @@ int main(int argc, char **argv)
 	build_taskbar(stack);
 	build_display(stack);
 	build_lock(stack);
+	build_sound(stack);
 	build_access(stack);
 	build_permissions(stack);
 	build_language(stack);
