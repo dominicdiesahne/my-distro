@@ -15,9 +15,9 @@
 #
 ################################################################################
 
-# The development branch: the last release (0.9.27) is from 2017 and
-# doesn't know newer glibc headers
-TINYCC_VERSION = mob
+# The development branch ("mob", as of 2026-11-10): the last release
+# (0.9.27) is from 2017 and doesn't know newer glibc headers
+TINYCC_VERSION = aade7bafb59641660bc9a0e21ad0a9a4a1ed346e
 TINYCC_SITE = https://repo.or.cz/tinycc.git
 TINYCC_SITE_METHOD = git
 TINYCC_LICENSE = LGPL-2.1+
