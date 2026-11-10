@@ -16,6 +16,8 @@
 #include <gtk/gtk.h>
 
 #include "i18n.h"
+#include <errno.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -165,15 +167,23 @@ static int run_admin(const char **args, const char *more_input)
 	g_free(input);
 	g_free(pw);
 	gtk_label_set_text(GTK_LABEL(status_label), _("Working…"));
-	/* read its output while keeping the window alive */
+	gtk_widget_set_sensitive(stack, FALSE);       /* one thing at a time */
+	/* read its output while keeping the window alive (installing Samba
+	 * takes a minute) */
+	fcntl(outfd, F_SETFL, O_NONBLOCK);
 	while ((r = read(outfd, buf, sizeof buf)) != 0) {
 		if (r > 0)
 			g_string_append_len(all, buf, r);
+		else if (errno != EAGAIN && errno != EINTR)
+			break;
 		while (gtk_events_pending())
 			gtk_main_iteration();
+		if (r < 0)
+			g_usleep(50000);
 	}
 	close(outfd);
 	waitpid(pid, &st, 0);
+	gtk_widget_set_sensitive(stack, TRUE);
 	g_spawn_close_pid(pid);
 	out = all->str;
 	{
