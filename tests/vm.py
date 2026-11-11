@@ -85,7 +85,9 @@ class VM:
     def run(self, cmd, timeout=300, prompt=r'\n[^\n]*[#$] $'):
         """Runs a shell command on the serial console; returns its output."""
         mark = 'END%d' % int(time.time() * 1000)
-        self.send(cmd + '; echo ' + mark + ' $?\n')
+        # a command ending in "&" can't be followed by ";" (syntax error)
+        sep = '\n' if cmd.rstrip().endswith('&') else '; '
+        self.send(cmd + sep + 'echo ' + mark + ' $?\n')
         out = self.expect(mark + r' (\d+)', timeout)
         return out
 
