@@ -180,6 +180,12 @@ if [ -n "$MY_SB_KEY" ]; then
 	sb_sign "$T/usr/lib/my-distro/efi/grubx64.efi"
 	sb_sign "$T/boot/bzImage"
 	sb_sign "$BINARIES_DIR/bzImage"
+	# Buildroot copies the ISO's kernel from the kernel build folder, not from
+	# images/: sign that one too (the ISO started GRUB but not the kernel with
+	# Secure Boot on: "bad shim loader signature")
+	for k in "$BUILD_DIR"/linux-[0-9]*/arch/x86/boot/bzImage; do
+		sb_sign "$k"
+	done
 	# fwupd starts its UEFI program through shim and takes the .signed one
 	F="$T/usr/libexec/fwupd/efi/fwupdx64.efi"
 	if [ -f "$F" ]; then
