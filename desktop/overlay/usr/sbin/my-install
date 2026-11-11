@@ -394,6 +394,16 @@ if [ "$SHIM" = 1 ]; then
 search --no-floppy --fs-uuid --set=root $FSUUID
 set prefix=(\$root)$GPREFIX
 EOF
+	# The embedded config of that GRUB (desktop/grub-efi-embedded.cfg) runs
+	# line by line before GRUB's script parser exists, so in the end the
+	# boot menu is /boot/grub/grub.cfg on the filesystem that has
+	# /boot/bzImage; with an encrypted system that is nothing, and GRUB looks
+	# on the EFI partition itself: send it on to the menu in /grub.
+	if [ "$ENCRYPT" = 1 ]; then
+		mkdir -p "$T/boot/efi/boot/grub"
+		printf '# Written by my-install: the boot menu of an encrypted system is /grub/grub.cfg\nconfigfile /grub/grub.cfg\n' \
+			>"$T/boot/efi/boot/grub/grub.cfg"
+	fi
 fi
 # The EFI partition's ID, for firmware updates and Secure Boot
 # (/usr/lib/my-distro/esp-mount; encrypted systems have it in crypt)

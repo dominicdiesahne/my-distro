@@ -94,6 +94,12 @@ prepare)
 		[ -f "$B/BOOTX64.EFI" ] && cp "$B/BOOTX64.EFI" "$B/grub-before-shim.efi"
 		printf '# Read by my-distro'"'"'s UEFI GRUB (my-secureboot prepare)\nsearch --no-floppy --fs-uuid --set=root %s\nset prefix=($root)%s\n' \
 			"$uuid" "$prefix" >"$B/grub.cfg"
+		# shim's GRUB ends up at /boot/grub/grub.cfg of the EFI partition when
+		# it finds no /boot/bzImage (see my-install): send it on to /grub
+		if [ "$prefix" = /grub ]; then
+			mkdir -p "$esp/boot/grub"
+			printf 'configfile /grub/grub.cfg\n' >"$esp/boot/grub/grub.cfg"
+		fi
 		cp "$E/grubx64.efi" "$E/mmx64.efi" "$CER" "$B/" &&
 			cp "$E/BOOTX64.EFI" "$B/BOOTX64.EFI.new" && mv "$B/BOOTX64.EFI.new" "$B/BOOTX64.EFI" ||
 			{ echo "Could not write to the EFI partition."; exit 1; }
