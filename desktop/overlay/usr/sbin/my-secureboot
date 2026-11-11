@@ -87,6 +87,8 @@ prepare)
 			uuid=$(blkid -s UUID -o value "$(awk '$2 == "/" { print $1 }' /proc/mounts | tail -n 1)")
 			prefix=/boot/grub
 		fi
+		# GRUB writes a FAT ID in lower case and compares it exactly
+		uuid=$(printf %s "$uuid" | tr A-F a-f)
 		[ -n "$uuid" ] || { echo "Could not find the filesystem with GRUB's boot menu."; exit 1; }
 		mkdir -p "$B"
 		[ -f "$B/BOOTX64.EFI" ] && cp "$B/BOOTX64.EFI" "$B/grub-before-shim.efi"

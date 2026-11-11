@@ -385,6 +385,9 @@ if [ "$SHIM" = 1 ]; then
 		GPREFIX=/boot/grub
 	fi
 	[ -n "$FSUUID" ] || die "could not read the filesystem ID for GRUB"
+	# GRUB writes a FAT ID (the EFI partition, encrypted systems) in lower case
+	# and compares it exactly
+	FSUUID=$(printf %s "$FSUUID" | tr A-F a-f)
 	cat >"$T/boot/efi/EFI/BOOT/grub.cfg" <<EOF
 # Read by my-distro's UEFI GRUB (grubx64.efi, started by shim): where the
 # boot menu is. Written by my-install.
