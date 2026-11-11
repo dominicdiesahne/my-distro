@@ -74,6 +74,7 @@ if SB_OFF:
 elif steps:
     keys(steps)
 else:
+    keys('ret', 4); shot('error-ok')              # shim: Verification failed (GRUB is not trusted yet), OK
     keys('ret', 4); shot('mok-menu')
     keys('down,ret', 4); shot('volumes')          # Enroll key from disk -> the volumes
     keys('ret', 4); shot('volume-root')           # the FAT image of the ISO
