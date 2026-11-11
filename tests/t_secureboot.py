@@ -80,7 +80,7 @@ else:
     keys('ret', 4); shot('volume-root')           # the FAT image of the ISO
     keys('down,ret', 4); shot('efi')              # EFI/
     keys('down,ret', 4); shot('boot')             # BOOT/
-    keys('end,ret', 4); shot('key')               # the last file: my-distro-secureboot.cer
+    keys('down,down,down,down,ret', 4); shot('key')  # BOOT/ lists ../, BOOTX64.EFI, grubx64.efi, mmx64.efi, my-distro-secureboot.cer (End does not work here)
     keys('down,ret', 4); shot('enroll')           # Continue
     keys('down,ret', 4); shot('confirm')          # Yes
     keys('ret', 4); shot('reboot')                # Reboot
