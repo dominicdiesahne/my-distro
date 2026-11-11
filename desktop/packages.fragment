@@ -104,3 +104,9 @@ BR2_PACKAGE_DOOM_WAD=y
 BR2_PACKAGE_OPENTYRIAN=y
 BR2_PACKAGE_SL=y
 
+
+# Docker needs a Go compiler on the build machine. The image's configuration
+# has the default (pre-built, host-go-bin); say so, so that make packages
+# doesn't switch to host-go-src (which would count as a change of the image).
+BR2_PACKAGE_HOST_GO=y
+BR2_PACKAGE_HOST_GO_BIN=y

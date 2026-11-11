@@ -453,3 +453,9 @@ BR2_PACKAGE_MOKUTIL=y
 # util-linux's pivot_root: util-linux is in the image, so its option has
 # to be here (make packages may not change the image's packages)
 BR2_PACKAGE_UTIL_LINUX_PIVOT_ROOT=y
+
+# util-linux's mount and mountpoint: the Docker packages (containerd) select
+# them, and make packages must not change the image's options, so they are in
+# the image (a few hundred KB).
+BR2_PACKAGE_UTIL_LINUX_MOUNT=y
+BR2_PACKAGE_UTIL_LINUX_MOUNTPOINT=y
