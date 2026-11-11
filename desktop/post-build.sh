@@ -118,6 +118,14 @@ rm -f "$T/usr/bin/bluealsad" "$T/usr/bin/bluealsa" "$T/usr/bin/bluealsa-aplay" \
       "$T/etc/dbus-1/system.d/org.bluealsa.conf" \
       "$T"/usr/share/alsa/alsa.conf.d/20-bluealsa.conf \
       "$T"/usr/lib/alsa-lib/libasound_module_*bluealsa*.so
+rm -f "$T"/etc/alsa/conf.d/20-bluealsa.conf
+
+# This alsa-lib reads /etc/alsa/conf.d, not /usr/share/alsa/alsa.conf.d where
+# pipewire-alsa installs its files: link them, so that "default" is PipeWire.
+mkdir -p "$T/etc/alsa/conf.d"
+for f in 50-pipewire.conf 99-pipewire-default.conf; do
+	ln -sf "../../../usr/share/alsa/alsa.conf.d/$f" "$T/etc/alsa/conf.d/$f"
+done
 
 # PipeWire is started in each session (/usr/lib/my-distro/autostart), not
 # as a system service, and finds its devices with udev itself.
