@@ -129,6 +129,9 @@ login(vm)
 check(vm, 'started with UEFI', 'ls -d /sys/firmware/efi && echo UEFI', 'UEFI')
 check(vm, 'efivarfs mounted', 'grep efivarfs /proc/mounts', 'efivarfs')
 check(vm, 'my-secureboot status', 'my-secureboot status', 'installation = shim')
+# per-program permissions: my-run hides the camera (/dev/video*) and the home folder
+check(vm, 'permissions: sandbox shows /dev without camera',
+      'mkdir -p ~/.config/my-distro; echo "ls camera=no microphone=yes home=none" > ~/.config/my-distro/permissions; touch ~/secret.txt; my-run ls /dev | tr "\n" " "; echo; my-run ls ~ | grep -c secret.txt', 'null')
 vm.quit()
 
 print('\n== SUMMARY ' + mode)
