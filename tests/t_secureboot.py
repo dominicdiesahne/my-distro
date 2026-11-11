@@ -60,6 +60,8 @@ def grub_last_entry(secs=50):
         time.sleep(2)
     shot('grub')
     vm.keys('ret')
+    for t in (6, 20, 60):          # what GRUB or the kernel says right after Enter
+        time.sleep(t); shot('after-enter')
 
 # --- 1. first start: MokManager ------------------------------------------------
 vm = VM('sb', args)
