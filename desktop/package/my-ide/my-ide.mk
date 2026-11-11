@@ -50,11 +50,20 @@ define MY_IDE_BUILD_CMDS
 	printf '#!/bin/sh\nexec %s "$$@"\n' "$(TARGET_CC)" > $(@D)/tools/cc
 	chmod 755 $(@D)/tools/cc
 	# 1. LazyVim and its plugins, at the versions in lazy-lock.json if there is one
+	# a network glitch (failed git clone) once left nvim hanging for hours:
+	# 15 minutes per try, up to 3 tries
 	if [ -f $(MY_IDE_CONFIG)/lazy-lock.json ]; then \
-		$(MY_IDE_NVIM) "+Lazy! restore" +qa; \
+		lazycmd="Lazy! restore"; \
 	else \
-		$(MY_IDE_NVIM) "+Lazy! sync" +qa; \
-	fi
+		lazycmd="Lazy! sync"; \
+	fi; \
+	ok=; \
+	for try in 1 2 3; do \
+		if timeout -k 30 900 $(MY_IDE_NVIM) "+$$lazycmd" +qa; then ok=1; break; fi; \
+		echo "my-ide: $$lazycmd failed or timed out (try $$try of 3)"; \
+		sleep 10; \
+	done; \
+	test -n "$$ok"
 	# 2. tree-sitter parsers
 	$(MY_IDE_NVIM) -c "luafile $(MY_IDE_PKGDIR)/parsers.lua"
 	# 3. nvim-treesitter links each language's queries (what to color) with
