@@ -72,6 +72,8 @@ try:
     check('install docker-engine', 'my-pkg install docker-engine 2>&1 | tail -3', 'docker', timeout=1200)
     vm.run('/etc/init.d/S60docker start; sleep 30', 120)
     check('dockerd runs', 'docker info 2>&1 | grep -E "Server Version|Storage Driver|Cgroup"', 'Server Version')
+    # the first pull right after dockerd started can time out: try again
+    vm.run('for i in 1 2 3 4; do docker pull hello-world >/dev/null 2>&1 && break; sleep 15; done; docker pull busybox >/dev/null 2>&1; docker images', 900)
     check('docker run hello-world', 'docker run --rm hello-world 2>&1 | head -5', 'Hello from Docker', timeout=900)
     check('container reaches the internet', 'docker run --rm busybox wget -q -O /dev/null -T 20 '
           "http://example.com && echo NET''OK", 'NETOK', timeout=900)
