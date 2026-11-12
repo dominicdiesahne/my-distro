@@ -25,7 +25,20 @@ def check(name, cmd, want, timeout=600):
     print(('PASS ' if ok else 'FAIL ') + name + '\n    ' + body.strip()[-600:].replace('\n', '\n    '), flush=True)
     return body
 
-server = subprocess.Popen(['python3', '-m', 'http.server', '8000', '--directory', PKGS],
+# The release's package list is signed with the maintainer's key (make
+# release-packages), which tests don't have: sign the list with a throw-away
+# key, and put its public half into the VM (the real key is never touched).
+import shutil
+SERVE = '/tmp/pkg-serve'
+shutil.rmtree(SERVE, ignore_errors=True); os.makedirs(SERVE)
+for n in os.listdir(PKGS):
+    if not n.endswith('.sig'):
+        os.symlink(os.path.join(PKGS, n), os.path.join(SERVE, n))
+subprocess.run(['openssl', 'genpkey', '-algorithm', 'ed25519', '-out', '/tmp/pkg-test-priv.pem'], check=True)
+subprocess.run(['openssl', 'pkey', '-in', '/tmp/pkg-test-priv.pem', '-pubout', '-out', SERVE + '/test-key.pem'], check=True)
+subprocess.run(['openssl', 'pkeyutl', '-sign', '-rawin', '-inkey', '/tmp/pkg-test-priv.pem',
+                '-in', PKGS + '/my-pkg-index.json', '-out', SERVE + '/my-pkg-index.json.sig'], check=True)
+server = subprocess.Popen(['python3', '-m', 'http.server', '8000', '--directory', SERVE],
                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 vm = VM('pkg', ['-m', '4096', '-smp', '4', '-kernel', O + '/bzImage', '-initrd', O + '/rootfs.cpio.gz',
                 '-append', 'rdinit=/sbin/my-init initramfs_options=size=90% console=tty1 console=ttyS0,115200',
@@ -36,6 +49,8 @@ try:
     vm.send('stty cols 200; export PS1="# "\n'); vm.expect(r'# ', 30)
     vm.run("sed -i 's|^url *=.*|url = http://10.0.2.2:8000/|' /etc/my-distro/pkg.conf; "
            "grep -q '^url' /etc/my-distro/pkg.conf || echo 'url = http://10.0.2.2:8000/' >> /etc/my-distro/pkg.conf", 30)
+    vm.run("python3 -c \"import urllib.request as u; open('/etc/my-distro/update-key.pem','wb')"
+           ".write(u.urlopen('http://10.0.2.2:8000/test-key.pem').read())\"", 60)
     check('package list', 'my-pkg list | head -50', 'tinycc')
 
     # 10. a C compiler
