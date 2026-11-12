@@ -23,16 +23,17 @@ TINYCC_SITE_METHOD = git
 TINYCC_LICENSE = LGPL-2.1+
 TINYCC_LICENSE_FILES = COPYING
 
-TINYCC_DIR = /usr/share/tcc
+# (not TINYCC_DIR: Buildroot uses that name for the build folder)
+TINYCC_TCCDIR = /usr/share/tcc
 
-# {B} is tcc's own folder (TINYCC_DIR). tcc's predefined macros are read
+# {B} is tcc's own folder (TINYCC_TCCDIR). tcc's predefined macros are read
 # from tccdefs.h at run time (config-predefs=no): making them while building
 # would run the new compiler here.
 # No bounds checker (bcheck.o is compiled with tcc itself, option -bt, which
 # the cross compiler does not know).
 define TINYCC_CONFIGURE_CMDS
 	cd $(@D) && $(TARGET_MAKE_ENV) ./configure \
-		--prefix=/usr --tccdir=$(TINYCC_DIR) \
+		--prefix=/usr --tccdir=$(TINYCC_TCCDIR) \
 		--cc="$(TARGET_CC)" --ar="$(TARGET_AR)" --cpu=x86_64 \
 		--triplet= --config-predefs=no --config-bcheck=no \
 		--sysincludepaths="{B}/include:{B}/sysinclude" \
@@ -50,17 +51,17 @@ endef
 
 define TINYCC_INSTALL_TARGET_CMDS
 	$(INSTALL) -D -m 0755 $(@D)/tcc $(TARGET_DIR)/usr/bin/tcc
-	$(INSTALL) -D -m 0644 $(@D)/libtcc1.a $(TARGET_DIR)$(TINYCC_DIR)/libtcc1.a
-	mkdir -p $(TARGET_DIR)$(TINYCC_DIR)/include $(TARGET_DIR)$(TINYCC_DIR)/sysinclude \
-		$(TARGET_DIR)$(TINYCC_DIR)/lib
-	cp -a $(@D)/include/. $(TARGET_DIR)$(TINYCC_DIR)/include/
+	$(INSTALL) -D -m 0644 $(@D)/libtcc1.a $(TARGET_DIR)$(TINYCC_TCCDIR)/libtcc1.a
+	mkdir -p $(TARGET_DIR)$(TINYCC_TCCDIR)/include $(TARGET_DIR)$(TINYCC_TCCDIR)/sysinclude \
+		$(TARGET_DIR)$(TINYCC_TCCDIR)/lib
+	cp -a $(@D)/include/. $(TARGET_DIR)$(TINYCC_TCCDIR)/include/
 	S=$$($(TARGET_CC) -print-sysroot) && \
-		cp -a $$S/usr/include/. $(TARGET_DIR)$(TINYCC_DIR)/sysinclude/ && \
+		cp -a $$S/usr/include/. $(TARGET_DIR)$(TINYCC_TCCDIR)/sysinclude/ && \
 		cp $$S/usr/lib/crt1.o $$S/usr/lib/crti.o $$S/usr/lib/crtn.o \
-			$$S/usr/lib/libc_nonshared.a $(TARGET_DIR)$(TINYCC_DIR)/lib/
-	printf '%s\n' "GROUP ( /lib/libc.so.6 $(TINYCC_DIR)/lib/libc_nonshared.a AS_NEEDED ( /lib/ld-linux-x86-64.so.2 ) )" \
-		>$(TARGET_DIR)$(TINYCC_DIR)/lib/libc.so
-	printf '%s\n' "INPUT ( /lib/libm.so.6 )" >$(TARGET_DIR)$(TINYCC_DIR)/lib/libm.so
+			$$S/usr/lib/libc_nonshared.a $(TARGET_DIR)$(TINYCC_TCCDIR)/lib/
+	printf '%s\n' "GROUP ( /lib/libc.so.6 $(TINYCC_TCCDIR)/lib/libc_nonshared.a AS_NEEDED ( /lib/ld-linux-x86-64.so.2 ) )" \
+		>$(TARGET_DIR)$(TINYCC_TCCDIR)/lib/libc.so
+	printf '%s\n' "INPUT ( /lib/libm.so.6 )" >$(TARGET_DIR)$(TINYCC_TCCDIR)/lib/libm.so
 endef
 
 $(eval $(generic-package))
