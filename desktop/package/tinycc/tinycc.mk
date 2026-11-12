@@ -28,11 +28,13 @@ TINYCC_DIR = /usr/share/tcc
 # {B} is tcc's own folder (TINYCC_DIR). tcc's predefined macros are read
 # from tccdefs.h at run time (config-predefs=no): making them while building
 # would run the new compiler here.
+# No bounds checker (bcheck.o is compiled with tcc itself, option -bt, which
+# the cross compiler does not know).
 define TINYCC_CONFIGURE_CMDS
 	cd $(@D) && $(TARGET_MAKE_ENV) ./configure \
 		--prefix=/usr --tccdir=$(TINYCC_DIR) \
 		--cc="$(TARGET_CC)" --ar="$(TARGET_AR)" --cpu=x86_64 \
-		--triplet= --config-predefs=no \
+		--triplet= --config-predefs=no --config-bcheck=no \
 		--sysincludepaths="{B}/include:{B}/sysinclude" \
 		--libpaths="{B}/lib:{B}:/usr/lib:/lib" \
 		--crtprefix="{B}/lib" \
