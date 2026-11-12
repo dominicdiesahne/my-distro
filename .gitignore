@@ -1,2 +1,6 @@
 # Build output: the ISO and test screenshots. Rebuild with `make desktop`.
 out/
+
+# Python byte code
+__pycache__/
+*.pyc

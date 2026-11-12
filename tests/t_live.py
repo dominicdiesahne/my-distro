@@ -43,7 +43,7 @@ vm.send('root\n'); vm.expect('Password: ', 60); vm.send('root\n')
 vm.expect(r'# ', 120)
 vm.send('stty cols 200; export PS1="# "\n'); vm.expect(r'# ', 30)
 
-check('version 0.9.7', 'cat /etc/my-distro/version', '0.9.7')
+check('version 0.9.8', 'cat /etc/my-distro/version', '0.9.8')
 for _ in range(120):
     if 'my-setup' in vm.run('ps | grep -v grep | grep my-setup || true', 30): break
     time.sleep(10)
