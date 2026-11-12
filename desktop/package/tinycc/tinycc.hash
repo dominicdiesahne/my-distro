@@ -1,0 +1,4 @@
+# Locally calculated: the tarball Buildroot makes from commit aade7baf of
+# repo.or.cz/tinycc (git; the same value twice, from a clean clone), and COPYING at that commit
+sha256  3534d19c73391d3e23fa08b551fb73840432c32f5e39c7fc1c837ac29fc0ffd1  tinycc-aade7bafb59641660bc9a0e21ad0a9a4a1ed346e-git4.tar.gz
+sha256  512d2d21b6b3384ba64781abb0208a1b87740bc31e2df48e2b206ddb7e4d5779  COPYING
