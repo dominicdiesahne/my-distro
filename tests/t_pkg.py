@@ -74,7 +74,7 @@ try:
     check('dockerd runs', 'docker info 2>&1 | grep -E "Server Version|Storage Driver|Cgroup"', 'Server Version')
     check('docker run hello-world', 'docker run --rm hello-world 2>&1 | head -5', 'Hello from Docker', timeout=900)
     check('container reaches the internet', 'docker run --rm busybox wget -q -O /dev/null -T 20 '
-          'http://example.com && echo NETOK', 'NETOK', timeout=900)
+          "http://example.com && echo NET''OK", 'NETOK', timeout=900)
 
     # 2. Samba sharing
     check('install samba4', 'my-pkg install samba4 2>&1 | tail -3', 'samba', timeout=1200)
@@ -101,7 +101,7 @@ try:
     check('clamscan finds the test file (own signature)', 'clamscan --no-summary -d /tmp/t.ndb /tmp/eicar.com', 'FOUND')
     check('freshclam reaches the signature mirror', "mkdir -p /tmp/cdb; printf 'DatabaseDirectory /tmp/cdb\\nDatabaseMirror "
           "database.clamav.net\\nDatabaseOwner root\\n' > /tmp/fc.conf; timeout 900 freshclam --config-file=/tmp/fc.conf "
-          "--stdout 2>&1 | tail -4", 'daily', timeout=1000)
+          "--stdout 2>&1 | grep -q 'cvd updated' && echo FRESH''OK", 'FRESHOK', timeout=1000)
     check('clamscan with the real signatures', 'clamscan --no-summary -d /tmp/cdb /tmp/eicar.com 2>&1 | tail -2', 'FOUND',
           timeout=900)
     check('remove packages again', 'my-pkg remove tinycc 2>&1 | tail -2; command -v tcc || echo GONE', 'GONE')

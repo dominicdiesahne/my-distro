@@ -52,6 +52,8 @@ endef
 define TINYCC_INSTALL_TARGET_CMDS
 	$(INSTALL) -D -m 0755 $(@D)/tcc $(TARGET_DIR)/usr/bin/tcc
 	$(INSTALL) -D -m 0644 $(@D)/libtcc1.a $(TARGET_DIR)$(TINYCC_TCCDIR)/libtcc1.a
+	# tcc -run and backtraces (-bt) link these in
+	$(INSTALL) -m 0644 $(@D)/runmain.o $(@D)/bt-exe.o $(@D)/bt-log.o $(TARGET_DIR)$(TINYCC_TCCDIR)/
 	mkdir -p $(TARGET_DIR)$(TINYCC_TCCDIR)/include $(TARGET_DIR)$(TINYCC_TCCDIR)/sysinclude \
 		$(TARGET_DIR)$(TINYCC_TCCDIR)/lib
 	cp -a $(@D)/include/. $(TARGET_DIR)$(TINYCC_TCCDIR)/include/

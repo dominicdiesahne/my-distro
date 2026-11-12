@@ -148,7 +148,7 @@ description = Reads, filters and changes JSON on the command line. Example:
 [docker-engine]
 title = Docker (containers)
 category = Tools
-needs = docker-cli
+needs = docker-cli containerd runc tini iptables cgroupfs-v2-mount
 description = Runs programs in containers: docker run hello-world downloads a
   small image from Docker Hub and starts it. Administrators only (sudo docker
   ...). The engine starts with the computer (right after installing: sudo

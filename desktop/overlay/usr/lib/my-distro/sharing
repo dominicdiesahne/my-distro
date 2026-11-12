@@ -133,15 +133,7 @@ on)
 	case "$folder/" in "$home"/*) ;; *) die "The folder must be in your home folder." ;; esac
 	[ -d "$folder" ] || die "No such folder: $folder"
 	have_samba || die "Samba is not installed (Software app: Samba)."
-	IFS= read -r pw || pw=""
-	if [ -n "$pw" ]; then
-		[ ${#pw} -ge 6 ] || die "The password needs at least 6 characters."
-		printf '%s\n%s\n' "$pw" "$pw" | smbpasswd -s -a "$user" >/dev/null ||
-			die "Could not set the sharing password."
-	elif ! pdbedit -L 2>/dev/null | grep -q "^$user:"; then
-		die "Choose a password for sharing."
-	fi
-	pw=
+	# the settings and smb.conf first: smbpasswd reads smb.conf
 	ro=yes; [ "$mode" = rw ] && ro=no
 	pr=no; [ "$printers" = printers ] && pr=yes
 	cat >"$CONF" <<EOF
@@ -154,6 +146,16 @@ readonly = $ro
 printers = $pr
 EOF
 	chmod 644 "$CONF"
+	write_smbconf
+	IFS= read -r pw || pw=""
+	if [ -n "$pw" ]; then
+		[ ${#pw} -ge 6 ] || { sed -i 's/^enabled = .*/enabled = no/' "$CONF"; die "The password needs at least 6 characters."; }
+		printf '%s\n%s\n' "$pw" "$pw" | smbpasswd -s -a "$user" >/dev/null ||
+			{ sed -i 's/^enabled = .*/enabled = no/' "$CONF"; die "Could not set the sharing password."; }
+	elif ! pdbedit -L 2>/dev/null | grep -q "^$user:"; then
+		{ sed -i 's/^enabled = .*/enabled = no/' "$CONF"; die "Choose a password for sharing."; }
+	fi
+	pw=
 	start_smbd
 	echo "DONE: sharing is on"
 	;;
