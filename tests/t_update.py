@@ -33,7 +33,8 @@ results = []
 
 def check(vm, name, cmd, want, timeout=300, absent=None):
     out = vm.run(cmd, timeout)
-    body = out.split('\n', 1)[1] if '\n' in out else out
+    out = out.replace(chr(13), '')
+    body = out.split(chr(10), 1)[1] if chr(10) in out else out
     ok = (want in body) if want is not None else True
     if absent is not None:
         ok = ok and absent not in body
@@ -174,10 +175,10 @@ try:
                 print('no password prompt:', e, flush=True)
             time.sleep(10); vm.send('\n'); vm.expect(r'# ', 120)
             check(vm, 'my-secureboot prepare: EFI layout is shim now',
-                  'mount /dev/vda2 /mnt/e 2>/dev/null; ls /mnt/e/EFI/BOOT/; cat /mnt/e/EFI/BOOT/grub.cfg; ls /mnt/e/boot/grub 2>&1; umount /mnt/e',
+                  'E=$(/usr/lib/my-distro/esp-mount); ls $E/EFI/BOOT/; cat $E/EFI/BOOT/grub.cfg; ls $E/boot/grub 2>&1',
                   'grub-before-shim.efi')
             check(vm, 'my-secureboot prepare: shim, MokManager, certificate there',
-                  'mount /dev/vda2 /mnt/e; ls /mnt/e/EFI/BOOT/; umount /mnt/e', 'mmx64.efi')
+                  'E=$(/usr/lib/my-distro/esp-mount); ls $E/EFI/BOOT/', 'mmx64.efi')
             check(vm, 'my-secureboot status (after prepare)', 'my-secureboot status', 'installation = shim')
             vm.send('poweroff\n'); time.sleep(25); vm.quit()
             # boot through shim (Secure Boot off): the box must still start

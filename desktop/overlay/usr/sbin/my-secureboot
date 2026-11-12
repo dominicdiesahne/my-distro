@@ -84,7 +84,19 @@ prepare)
 			uuid=$(blkid -s UUID -o value "$(awk -v d="$esp" '$2 == d { print $1 }' /proc/mounts)")
 			prefix=/grub
 		else
-			uuid=$(blkid -s UUID -o value "$(awk '$2 == "/" { print $1 }' /proc/mounts | tail -n 1)")
+			# (a system started with root=PARTUUID=... shows /dev/root in /proc/mounts,
+			# which blkid doesn't know: take the partition from the kernel command line)
+			rootdev=$(awk '$2 == "/" { print $1 }' /proc/mounts | tail -n 1)
+			uuid=$(blkid -s UUID -o value "$rootdev" 2>/dev/null)
+			if [ -z "$uuid" ]; then
+				r=$(grep -o 'root=[^ ]*' /proc/cmdline | head -n 1 | cut -d= -f2-)
+				case "$r" in
+				PARTUUID=*) rootdev=$(blkid -t "PARTUUID=${r#PARTUUID=}" -o device | head -n 1) ;;
+				UUID=*)     rootdev=$(blkid -t "UUID=${r#UUID=}" -o device | head -n 1) ;;
+				/dev/*)     rootdev=$r ;;
+				esac
+				[ -n "$rootdev" ] && uuid=$(blkid -s UUID -o value "$rootdev")
+			fi
 			prefix=/boot/grub
 		fi
 		# GRUB writes a FAT ID in lower case and compares it exactly
