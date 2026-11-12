@@ -89,9 +89,9 @@ prepare)
 			rootdev=$(awk '$2 == "/" { print $1 }' /proc/mounts | tail -n 1)
 			uuid=$(blkid -s UUID -o value "$rootdev" 2>/dev/null)
 			if [ -z "$uuid" ]; then
-				r=$(grep -o 'root=[^ ]*' /proc/cmdline | head -n 1 | cut -d= -f2- | tr A-F a-f)   # blkid shows IDs in lower case
+				r=$(grep -o 'root=[^ ]*' /proc/cmdline | head -n 1 | cut -d= -f2-)
 				case "$r" in
-				PARTUUID=*) rootdev=$(blkid -t "PARTUUID=${r#PARTUUID=}" -o device | head -n 1) ;;
+				PARTUUID=*) rootdev=$(blkid -t "PARTUUID=$(printf %s "${r#PARTUUID=}" | tr A-F a-f)" -o device | head -n 1) ;;   # blkid has it in lower case
 				UUID=*)     rootdev=$(blkid -t "UUID=${r#UUID=}" -o device | head -n 1) ;;
 				/dev/*)     rootdev=$r ;;
 				esac
