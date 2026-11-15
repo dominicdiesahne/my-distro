@@ -120,7 +120,7 @@ prepare)
 		mkdir -p "$B"
 		[ -f "$B/BOOTX64.EFI" ] && cp "$B/BOOTX64.EFI" "$B/grub-before-shim.efi"
 		# (this installation's filesystem by its ID, then its boot menu: see
-		# grub_cfg_fix below and my-install)
+		# grub_cfg_fix above and my-install)
 		printf '# Read by my-distro'"'"'s UEFI GRUB (my-secureboot prepare)\nsearch --no-floppy --fs-uuid --set=root %s\nset prefix=($root)%s\nconfigfile $prefix/grub.cfg\n' \
 			"$uuid" "$prefix" >"$B/grub.cfg"
 		# shim's GRUB ends up at /boot/grub/grub.cfg of the EFI partition when
