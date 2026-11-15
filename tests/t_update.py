@@ -42,6 +42,17 @@ def check(vm, name, cmd, want, timeout=300, absent=None):
     print(('PASS ' if ok else 'FAIL ') + name + '\n    ' + body.strip()[-600:].replace('\n', '\n    '), flush=True)
     return body
 
+def poweroff(vm):
+    """a clean power-off before QEMU quits (the next VM reads this disk):
+    wait for it instead of killing QEMU after 20 s"""
+    vm.run('sync', 60)
+    vm.send('poweroff\n')
+    try:
+        vm.proc.wait(180)
+    except subprocess.TimeoutExpired:
+        pass
+    vm.quit()
+
 def login(vm, timeout=2400):
     vm.expect(r'login: ', timeout)
     vm.send('root\n'); vm.expect('Password: ', 60); vm.send('root\n'); vm.expect(r'# ', 120)
@@ -115,7 +126,7 @@ try:
         vm.run('mkdir -p /mnt/r; mount /dev/vda3 /mnt/r; '
                "sed -i 's/console=tty1 quiet/console=tty1 console=ttyS0,115200/' /mnt/r/boot/grub/grub.cfg; "
                'umount /mnt/r', 120)
-    vm.send('poweroff\n'); time.sleep(20); vm.quit()
+    poweroff(vm)
 
     # --- 2. 0.9.6 with UEFI, files that must survive ----------------------------------
     fresh_vars()
@@ -136,7 +147,7 @@ try:
     check(vm, 'my-update sees 0.9.8', 'my-update check', '0.9.8', 300)
     out = check(vm, 'my-update install', 'my-update install 2>&1 | tail -12', 'is installed', 5400)
     check(vm, 'version is 0.9.8 right after the update', 'cat /etc/my-distro/version', '0.9.8')
-    vm.send('poweroff\n'); time.sleep(25); vm.quit()
+    poweroff(vm)
 
     # --- 4. the updated system, UEFI then BIOS -------------------------------------------
     for tag, args in (('uefi', None), ('bios', None)):
@@ -180,13 +191,13 @@ try:
             check(vm, 'my-secureboot prepare: shim, MokManager, certificate there',
                   'E=$(/usr/lib/my-distro/esp-mount); ls $E/EFI/BOOT/', 'mmx64.efi')
             check(vm, 'my-secureboot status (after prepare)', 'my-secureboot status', 'installation = shim')
-            vm.send('poweroff\n'); time.sleep(25); vm.quit()
+            poweroff(vm)
             # boot through shim (Secure Boot off): the box must still start
             fresh_vars()
             vm = boot('new-shim', uefi + common)
             check(vm, 'starts through shim -> GRUB -> kernel', 'cat /etc/my-distro/version; ls -d /sys/firmware/efi', '0.9.8')
             check(vm, 'my files still there through shim', 'cat /root/keepme.txt', 'mine')
-        vm.send('poweroff\n'); time.sleep(25); vm.quit()
+        poweroff(vm)
 finally:
     server.terminate()
 
