@@ -15,8 +15,9 @@ ISO's BIOS GRUB did the same as its UEFI one).
    partition's grub.cfg is put back to how 0.9.7/0.9.8 wrote it (no
    configfile) and installed-fixups runs as after an update: the line is
    back (old installations get the fix by themselves)
-3. UEFI, the ISO first: the live system starts
-4. BIOS, the ISO first: the live system starts
+3. UEFI, the ISO first (as a CD, and as a USB stick: a second hard disk):
+   the live system starts
+4. BIOS, the ISO first (CD and USB stick): the live system starts
 5. BIOS, the installed disk first: the installed system starts
 
 Which system started: the kernel command line on the serial line (rdinit=
@@ -72,14 +73,17 @@ base = ['-m', '2048', '-smp', '4', '-vga', 'std', '-nic', 'user,model=e1000']
 uefi = ['-drive', 'if=pflash,format=raw,readonly=on,file=/usr/share/OVMF/OVMF_CODE_4M.fd',
         '-drive', 'if=pflash,format=raw,file=' + VARS]
 
-def drives(disk_first):
-    """the installed disk (virtio) and the ISO (IDE CD-ROM); bootindex
-    gives the firmware's boot order (OVMF and SeaBIOS both follow it)"""
+def drives(disk_first, usb=False):
+    """the installed disk (virtio) and the ISO: an IDE CD-ROM, or (usb) a
+    second hard disk, as the ISO written to a USB stick is; bootindex gives
+    the firmware's boot order (OVMF and SeaBIOS both follow it)"""
     d, c = (1, 2) if disk_first else (2, 1)
+    iso = (['-drive', 'file=%s,if=none,id=cd0,readonly=on,format=raw' % ISO,
+            '-device', 'virtio-blk-pci,drive=cd0,bootindex=%d' % c] if usb else
+           ['-drive', 'file=%s,if=none,id=cd0,media=cdrom,readonly=on,format=raw' % ISO,
+            '-device', 'ide-cd,drive=cd0,bootindex=%d' % c])
     return ['-drive', 'file=%s,if=none,id=hd0,format=raw' % DISK,
-            '-device', 'virtio-blk-pci,drive=hd0,bootindex=%d' % d,
-            '-drive', 'file=%s,if=none,id=cd0,media=cdrom,readonly=on,format=raw' % ISO,
-            '-device', 'ide-cd,drive=cd0,bootindex=%d' % c]
+            '-device', 'virtio-blk-pci,drive=hd0,bootindex=%d' % d] + iso
 
 def start(tag, args, want):
     """boots, picks GRUB's last entry, returns (vm, the kernel command line);
@@ -170,7 +174,9 @@ else:
 
 # --- 3.-5. -------------------------------------------------------------------------
 for tag, args, want in (('uefi-iso-first', uefi + base + drives(False), 'live'),
+                        ('uefi-usb-first', uefi + base + drives(False, usb=True), 'live'),
                         ('bios-iso-first', base + drives(False), 'live'),
+                        ('bios-usb-first', base + drives(False, usb=True), 'live'),
                         ('bios-disk-first', base + drives(True), 'installed')):
     vm, line = start(tag, args, want)
     vm.quit()
