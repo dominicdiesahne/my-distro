@@ -15,6 +15,7 @@
 #define _GNU_SOURCE
 #include <errno.h>
 #include <fcntl.h>
+#include <linux/magic.h>
 #include <signal.h>
 #include <stdio.h>
 #include <string.h>
@@ -22,6 +23,7 @@
 #include <sys/mount.h>
 #include <sys/reboot.h>
 #include <sys/stat.h>
+#include <sys/vfs.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -44,6 +46,44 @@ static void mount_fs(const char *source, const char *target, const char *type)
 	mkdir(target, 0755);
 	if (mount(source, target, type, 0, NULL) < 0 && errno != EBUSY)
 		fprintf(stderr, "init: mount %s: %s\n", target, strerror(errno));
+}
+
+/*
+ * The live system runs straight from the kernel's initramfs: the files sit
+ * in "rootfs", the first mount of all, which has no mount above it. The
+ * kernel never lets a process pivot_root() away from rootfs, and that is
+ * how bubblewrap builds a sandbox (my-sandbox, the app permissions of
+ * my-run): "bwrap: pivot_root: Invalid argument".
+ *
+ * So make / an ordinary mount first, the way switch_root changes roots,
+ * but without copying anything: bind-mount rootfs onto a folder of itself,
+ * move that mount onto / and make it our root. It is the same filesystem,
+ * so the files stay where they are in RAM and no memory is used twice.
+ * Every process started from here on has the bind mount as its root,
+ * which has a mount above it and can be pivot_root()ed. Installed systems
+ * start from a disk (ext4) and skip this.
+ */
+static void live_root_as_mount(void)
+{
+	const char *dir = "/.live-root";
+	struct statfs fs;
+
+	if (statfs("/", &fs) < 0 ||
+	    (fs.f_type != RAMFS_MAGIC && fs.f_type != TMPFS_MAGIC))
+		return;
+	if (mkdir(dir, 0700) < 0 && errno != EEXIST)
+		goto fail;
+	if (mount("/", dir, NULL, MS_BIND | MS_REC, NULL) < 0)
+		goto fail;
+	if (chdir(dir) < 0 || mount(dir, "/", NULL, MS_MOVE, NULL) < 0 ||
+	    chroot(".") < 0 || chdir("/") < 0)
+		goto fail;
+	rmdir(dir);                 /* the empty folder, seen from the new root */
+	return;
+fail:
+	fprintf(stderr, "init: live root as a mount: %s (sandboxes won't work)\n",
+		strerror(errno));
+	chdir("/");
 }
 
 static void set_hostname(void)
@@ -155,8 +195,8 @@ static void shut_down(enum shutdown_kind kind)
 
 	/* On a system installed to disk (my-install), make the root filesystem
 	 * read-only now that nothing writes to it any more: the disk is then
-	 * clean at the next boot. The live system's root is in RAM and can't be
-	 * remounted, which is fine. */
+	 * clean at the next boot. (The live system's root is in RAM; making it
+	 * read-only there changes nothing.) */
 	if (mount(NULL, "/", NULL, MS_REMOUNT | MS_RDONLY, NULL) == 0)
 		printf("init: root filesystem is read-only\n");
 	sync();
@@ -176,6 +216,8 @@ int main(void)
 		fprintf(stderr, "init: must be run as PID 1 by the kernel\n");
 		return 1;
 	}
+
+	live_root_as_mount();
 
 	printf("init: mounting filesystems\n");
 	mount_fs("proc", "/proc", "proc");

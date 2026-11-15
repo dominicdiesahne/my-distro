@@ -62,9 +62,16 @@ check('crash report written', 'cat /var/crash/crashes.log', 'crashed')
 check('gdb', 'gdb --version | head -1', 'GNU gdb')
 check('strace', 'strace -c true 2>&1 | tail -2', 'total')
 check('perf', 'perf stat -e task-clock true 2>&1 | grep -i -E "task-clock|seconds"', 'task-clock')
-check('my-sandbox hides home', "su dominic -c 'touch ~/secret.txt; my-sandbox ls -a /home/dominic'", '.')
-out = vm.run("su dominic -c 'my-sandbox ls /home/dominic'", 120)
-results.append(('sandbox: secret.txt not visible', 'secret.txt' not in out.split('\n', 1)[1], out[-300:]))
+# (0.9.9: bwrap runs on the live system too; these used to pass even when
+# it failed with "pivot_root: Invalid argument", so they want its output)
+# (rootfs is its own parent in mountinfo; init's bind mount has rootfs above it)
+check('live root is a mount (bwrap can pivot_root)',
+      'awk \'$5 == "/" { print ($1 == $2 ? "rootfs" : "mount" "ed") }\' /proc/self/mountinfo', 'mounted')
+check('my-sandbox hides home', "su dominic -c 'touch ~/secret.txt; my-sandbox ls -a /home/dominic && echo SANDBOX-RAN'",
+      'SANDBOX-RAN')
+out = vm.run("su dominic -c 'my-sandbox ls -a /home/dominic; echo RC=$?'", 120)
+body = out.split('\n', 1)[1]
+results.append(('sandbox: secret.txt not visible', 'secret.txt' not in body and 'RC=0' in body, out[-300:]))
 print(results[-1][:2], out[-300:], flush=True)
 check('yama ptrace_scope', 'sysctl kernel.yama.ptrace_scope', '= 1')
 check('LSMs', 'cat /sys/kernel/security/lsm', 'lockdown')
@@ -147,18 +154,23 @@ vm.run('killall my-settings; ' + as_user('my-reader --stop'), 30)
 vm.run('modprobe vivid; sleep 3; ls /dev/video*', 60)
 vm.run("su dominic -c 'mkdir -p ~/.config/my-distro; echo \"ls camera=no microphone=yes home=none\" "
        "> ~/.config/my-distro/permissions'", 30)
-# bwrap can't pivot_root on the live system's initramfs root: the sandbox is
-# checked on the installed system (t_install.py) instead
+# (0.9.9: on the live system too; until 0.9.8 bwrap failed here with
+# "pivot_root: Invalid argument" and this was only checked in t_install.py)
+check('camera there outside the sandbox', 'ls /dev/video*', '/dev/video')
 out = vm.run(as_user('my-run ls /dev | tr \"\n\" \" \"'), 60)
-print('SKIP permissions: no camera in the sandbox (live root is an initramfs)' if 'pivot_root' in out
-      else ('PASS' if 'null' in out and 'video' not in out else 'FAIL') + ' permissions: no camera in the sandbox', out[-200:], flush=True)
-if 'pivot_root' not in out:
-    results.append(('permissions: no camera in the sandbox', 'null' in out and 'video' not in out, out[-200:]))
+body = out.split('\n', 1)[1]
+results.append(('permissions: sandbox shows /dev without camera',
+                'null' in body and 'video' not in body and 'pivot_root' not in body, out[-300:]))
+print(('PASS ' if results[-1][1] else 'FAIL ') + results[-1][0], out[-300:], flush=True)
 out = vm.run(as_user('my-run ls /dev; my-run ls ~'), 60)
-if 'pivot_root' not in out:
-    results.append(('permissions: camera and home hidden', 'video' not in out and 'secret.txt' not in out, out[-300:]))
-    print(results[-1][:2], out[-300:], flush=True)
-check('permissions: without a line it runs normally', as_user('my-run --menu "ls /dev" | grep -c video'), '')
+body = out.split('\n', 1)[1]
+results.append(('permissions: camera and home hidden',
+                'null' in body and 'video' not in body and 'secret.txt' not in body and 'pivot_root' not in body,
+                out[-300:]))
+print(('PASS ' if results[-1][1] else 'FAIL ') + results[-1][0], out[-300:], flush=True)
+# (a program without a line in the permissions file: find, not ls)
+check('permissions: without a line it runs normally',
+      as_user('my-run --menu "find /dev -maxdepth 1 -name video*"'), '/dev/video')
 vm.run(as_user('my-settings --page permissions >/dev/null 2>&1 &'), 30)
 time.sleep(40)
 vm.shot(SHOTS + '/07-settings-permissions.png')
