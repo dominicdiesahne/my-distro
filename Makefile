@@ -68,6 +68,13 @@ KVM := $(shell [ -w /dev/kvm ] && echo -enable-kvm)
 UPDATE      := out/my-distro-update.tar.xz
 # The files Buildroot put on its ISO (kernel, initrd, GRUB, boot menu)
 ISO_FILES   := $(BR_OUT)/build/buildroot-fs/rootfs.iso9660.tmp
+# Each ISO's own ID (0.9.9), like grub-mkrescue makes it: the ISO 9660
+# filesystem's modification date (xorriso --modification-date), which GRUB
+# reads as the filesystem's UUID (2026-11-15-17-08-00-00). GRUB looks for
+# exactly this ISO, not for any disk with /boot/bzImage (an installed
+# my-distro has one too).
+ISO_DATE    := $(shell date -u +%Y%m%d%H%M%S)00
+ISO_UUID    := $(shell echo $(ISO_DATE) | sed 's/\(....\)\(..\)\(..\)\(..\)\(..\)\(..\)\(..\)/\1-\2-\3-\4-\5-\6-\7/')
 SIGNING_KEY ?= $(HOME)/.config/my-distro/update-signing-key.pem
 # Secure Boot (make secureboot-key, make desktop-secureboot): the private
 # key stays on this machine, outside the repository (SB_BACKUP=folder: a
@@ -247,12 +254,23 @@ desktop: $(BR_DIR)/Makefile
 > [ -d $(ISO_FILES) ] || { echo "$(ISO_FILES) is missing"; exit 1; }
 > # Buildroot's BIOS GRUB looks for its files on "(cd)" only. Build it again
 > # with the prefix /boot/grub (no drive), so it uses the drive it started
-> # from: the CD, or the USB stick. desktop/grub-bios-embedded.cfg searches too.
+> # from: the CD, or the USB stick. desktop/grub-bios-iso.cfg makes sure it
+> # is this ISO (its ID, ISO_UUID), not an installed my-distro on another disk.
+> # (GRUB's rescue parser runs it: no comment lines.)
+> sed -e '/^[[:space:]]*#/d' -e 's/@ISO_UUID@/$(ISO_UUID)/' desktop/grub-bios-iso.cfg \
+>   > $(BR_OUT)/build/grub-bios-iso.cfg
 > G=$$(ls -d $(BR_OUT)/build/grub2-*/build-i386-pc/grub-core | head -1) && \
 >   $(BR_OUT)/host/bin/grub-mkimage -d $$G -O i386-pc -p /boot/grub \
->     -c desktop/grub-bios-embedded.cfg -o $(BR_OUT)/build/my-distro-core.img \
->     boot linux normal iso9660 biosdisk part_msdos part_gpt all_video search search_fs_file && \
+>     -c $(BR_OUT)/build/grub-bios-iso.cfg -o $(BR_OUT)/build/my-distro-core.img \
+>     boot linux normal iso9660 biosdisk part_msdos part_gpt all_video search search_fs_file \
+>     search_fs_uuid && \
 >   cat $$G/cdboot.img $(BR_OUT)/build/my-distro-core.img > $(ISO_FILES)/boot/grub/grub-eltorito.img
+> # UEFI (0.9.9): EFI/BOOT/grub.cfg says which ISO is this one (its ID), for
+> # my-distro's UEFI GRUB (desktop/grub-efi-embedded.cfg reads it from the
+> # folder it was started from): in the FAT image (USB stick) and in the ISO
+> # 9660 filesystem (a CD: there GRUB sees the whole disc as its drive)
+> mkdir -p $(ISO_FILES)/EFI/BOOT
+> sed 's/@ISO_UUID@/$(ISO_UUID)/' desktop/grub-iso-efi.cfg > $(ISO_FILES)/EFI/BOOT/grub.cfg
 > # UEFI (0.9.7): the boot image the firmware reads (a small FAT image in
 > # the ISO, also a partition on a USB stick) gets shim as BOOTX64.EFI,
 > # which starts GRUB (grubx64.efi, signed for Secure Boot by make
@@ -264,16 +282,17 @@ desktop: $(BR_DIR)/Makefile
 >   rm -f $$F && $$M -C -n MY_DISTRO $$F 8192 >/dev/null && \
 >   $(BR_OUT)/host/bin/mmd -i $$F ::/EFI ::/EFI/BOOT && \
 >   $(BR_OUT)/host/bin/mcopy -i $$F $$E/BOOTX64.EFI $$E/grubx64.efi $$E/mmx64.efi \
->     $$E/my-distro-secureboot.cer ::/EFI/BOOT/
+>     $$E/my-distro-secureboot.cer $(ISO_FILES)/EFI/BOOT/grub.cfg ::/EFI/BOOT/
 > rm -f out/my-distro.iso
 > $(BR_OUT)/host/bin/xorriso -as mkisofs -o out/my-distro.iso -J -R -V MY_DISTRO \
+>   --modification-date=$(ISO_DATE) \
 >   -b boot/grub/grub-eltorito.img -no-emul-boot -boot-load-size 4 -boot-info-table \
 >   --grub2-boot-info --grub2-mbr $(BR_OUT)/target/lib/grub/i386-pc/boot_hybrid.img \
 >   -eltorito-alt-boot --efi-boot boot/fat.efi -efi-boot-part --efi-boot-image \
 >   --protective-msdos-label $(ISO_FILES) 2>&1 | grep -v "^xorriso : UPDATE" || true
 > [ -s out/my-distro.iso ]
 > cp $(BR_OUT)/images/rootfs.tar.xz $(UPDATE)
-> @echo "ISO: out/my-distro.iso ($$(du -h out/my-distro.iso | cut -f1))"
+> @echo "ISO: out/my-distro.iso ($$(du -h out/my-distro.iso | cut -f1)), ID $(ISO_UUID)"
 > @echo "Update package: $(UPDATE) ($$(du -h $(UPDATE) | cut -f1)); sign it with: make release-files"
 
 # The files of a release besides the ISO: the update package that installed

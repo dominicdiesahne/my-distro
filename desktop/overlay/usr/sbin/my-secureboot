@@ -17,7 +17,8 @@
 #             "Enroll MOK", "Continue", "Yes", type that password, "Reboot".
 #             Now Secure Boot can be switched on in the firmware settings.
 #   refresh   (root, installed-fixups runs it after updates) puts the new
-#             shim and GRUB onto the EFI partition if it starts through shim
+#             shim and GRUB onto the EFI partition if it starts through shim,
+#             and brings GRUB's grub.cfg there up to date (0.9.9)
 #
 # Without "prepare": start with Secure Boot on; shim can't check GRUB yet
 # and starts MokManager by itself: "Enroll key from disk", then
@@ -40,6 +41,20 @@ efivars() {
 sb_state() {
 	efivars || { echo unsupported; return; }
 	if mokutil --sb-state 2>/dev/null | grep -qi "enabled"; then echo on; else echo off; fi
+}
+
+# 0.9.9: the grub.cfg next to shim's GRUB (EFI/BOOT/grub.cfg) finds this
+# installation's filesystem by its ID and then shows its boot menu itself
+# ("configfile"). The ones that my-install and prepare wrote in 0.9.7 and
+# 0.9.8 stop after "set prefix": GRUB's embedded config then went on and
+# took the first disk with /boot/bzImage, which with a USB stick or a
+# second installation attached could be the other one. Add the line
+# (refresh: after every update, so old installations get it by themselves).
+grub_cfg_fix() {
+	[ -f "$1" ] && grep -q -e '--fs-uuid' "$1" || return 0
+	grep -q '^[[:space:]]*configfile' "$1" && return 0
+	printf '%s\n' "$(cat "$1")" '# (0.9.9) the boot menu of the filesystem found above' \
+		'configfile $prefix/grub.cfg' >"$1.new" && mv "$1.new" "$1"
 }
 
 # The installation's EFI partition, if it starts through shim already
@@ -104,10 +119,12 @@ prepare)
 		[ -n "$uuid" ] || { echo "Could not find the filesystem with GRUB's boot menu."; exit 1; }
 		mkdir -p "$B"
 		[ -f "$B/BOOTX64.EFI" ] && cp "$B/BOOTX64.EFI" "$B/grub-before-shim.efi"
-		printf '# Read by my-distro'"'"'s UEFI GRUB (my-secureboot prepare)\nsearch --no-floppy --fs-uuid --set=root %s\nset prefix=($root)%s\n' \
+		# (this installation's filesystem by its ID, then its boot menu: see
+		# grub_cfg_fix below and my-install)
+		printf '# Read by my-distro'"'"'s UEFI GRUB (my-secureboot prepare)\nsearch --no-floppy --fs-uuid --set=root %s\nset prefix=($root)%s\nconfigfile $prefix/grub.cfg\n' \
 			"$uuid" "$prefix" >"$B/grub.cfg"
 		# shim's GRUB ends up at /boot/grub/grub.cfg of the EFI partition when
-		# it finds no /boot/bzImage (see my-install): send it on to /grub
+		# someone leaves the boot menu with Esc (see my-install): send it on to /grub
 		if [ "$prefix" = /grub ]; then
 			mkdir -p "$esp/boot/grub"
 			printf 'configfile /grub/grub.cfg\n' >"$esp/boot/grub/grub.cfg"
@@ -135,6 +152,7 @@ prepare)
 refresh)
 	[ "$(id -u)" = 0 ] || exit 1
 	B=$(shim_dir) || exit 0
+	grub_cfg_fix "$B/grub.cfg"
 	for f in BOOTX64.EFI grubx64.efi mmx64.efi my-distro-secureboot.cer; do
 		[ -f "$E/$f" ] || continue
 		cmp -s "$E/$f" "$B/$f" && continue

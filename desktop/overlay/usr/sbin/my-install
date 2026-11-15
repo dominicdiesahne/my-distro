@@ -375,7 +375,11 @@ EOF
 
 # UEFI GRUB (shim's, see above): where the boot menu is. The ext4 system
 # filesystem's /boot/grub, or (encrypted) the EFI partition's /grub. By
-# filesystem ID, like the BIOS GRUB that grub-install made.
+# filesystem ID, like the BIOS GRUB that grub-install made: that ID is this
+# installation's own, so GRUB finds it and no other disk with my-distro (a
+# USB stick, a second installation). "configfile" shows that boot menu and
+# starts the system from it (0.9.9; before, GRUB's embedded config went on
+# after this file and looked for any disk with /boot/bzImage).
 if [ "$SHIM" = 1 ]; then
 	if [ "$ENCRYPT" = 1 ]; then
 		FSUUID=$(blkid -s UUID -o value "$ESP")
@@ -393,12 +397,13 @@ if [ "$SHIM" = 1 ]; then
 # boot menu is. Written by my-install.
 search --no-floppy --fs-uuid --set=root $FSUUID
 set prefix=(\$root)$GPREFIX
+configfile \$prefix/grub.cfg
 EOF
-	# The embedded config of that GRUB (desktop/grub-efi-embedded.cfg) runs
-	# line by line before GRUB's script parser exists, so in the end the
-	# boot menu is /boot/grub/grub.cfg on the filesystem that has
-	# /boot/bzImage; with an encrypted system that is nothing, and GRUB looks
-	# on the EFI partition itself: send it on to the menu in /grub.
+	# Only if someone leaves that boot menu with Esc does GRUB go on with its
+	# embedded config (desktop/grub-efi-embedded.cfg), which ends at
+	# /boot/grub/grub.cfg on a filesystem with /boot/bzImage, or here on
+	# the EFI partition of an encrypted system: send it on to the menu in
+	# /grub. (Before 0.9.9, GRUB always got here.)
 	if [ "$ENCRYPT" = 1 ]; then
 		mkdir -p "$T/boot/efi/boot/grub"
 		printf '# Written by my-install: the boot menu of an encrypted system is /grub/grub.cfg\nconfigfile /grub/grub.cfg\n' \

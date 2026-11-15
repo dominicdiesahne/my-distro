@@ -152,8 +152,11 @@ rm -rf "$T"/usr/lib/libclang*.so* "$T"/usr/lib/libLLVMSPIRVLib.so* "$T/usr/share
 D=$(dirname "$0")
 G=$(ls -d "$BUILD_DIR"/grub2-[0-9]*/build-x86_64-efi/grub-core 2>/dev/null | head -n 1)
 if [ -n "$G" ] && [ -d "$T/usr/lib/my-distro/efi" ]; then
+	# (GRUB's rescue parser, which runs the embedded config, knows no
+	# comments: it would print "Unknown command" for each comment line)
+	sed '/^[[:space:]]*#/d; /^[[:space:]]*$/d' "$D/grub-efi-embedded.cfg" >"$BUILD_DIR/grub-efi-embedded.cfg"
 	"$HOST_DIR/bin/grub-mkimage" -d "$G" -O x86_64-efi -p /boot/grub \
-		-c "$D/grub-efi-embedded.cfg" --sbat "$D/secureboot/grub-sbat.csv" \
+		-c "$BUILD_DIR/grub-efi-embedded.cfg" --sbat "$D/secureboot/grub-sbat.csv" \
 		-o "$T/usr/lib/my-distro/efi/grubx64.efi" \
 		boot linux normal configfile iso9660 fat ext2 part_msdos part_gpt \
 		all_video efi_gop efi_uga video_bochs video_cirrus gfxterm \

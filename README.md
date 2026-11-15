@@ -414,7 +414,11 @@ The keyboard layout is German (`desktop/overlay/etc/X11/xorg.conf.d/00-keyboard.
 ### Boot
 
 1. GRUB loads the kernel and the whole root filesystem into RAM (initrd).
-2. The kernel starts our init, `/sbin/my-init` (`init/init.c`).
+2. The kernel starts our init, `/sbin/my-init` (`init/init.c`). The files
+   are in the kernel's first filesystem (rootfs), which no process may
+   `pivot_root` away from, as sandboxes (bubblewrap) do: init bind-mounts
+   it onto itself and makes that its root, so `/` is an ordinary mount
+   (nothing is copied, no extra RAM).
 3. init mounts `/proc`, `/sys`, `/dev`, `/tmp` and runs `/etc/init.d/rcS`:
    `S00reset` (a factory reset, if one was asked for),
    `S02sysctl` (kernel settings, crash reports), `S03audit` (audit log),
@@ -705,7 +709,11 @@ Secure Boot key. Its certificate is
 The installer puts shim (`EFI/BOOT/BOOTX64.EFI`), GRUB (`grubx64.efi`, one
 file with all its modules: with Secure Boot on GRUB loads nothing else),
 MokManager and a `grub.cfg` that says where the boot menu is onto the EFI
-partition. GRUB checks the kernel through shim (shim_lock); the initramfs of
+partition: the filesystem with this installation's own ID (UUID), so with a
+my-distro USB stick or a second installation attached GRUB still starts the
+one it was started from (the ISO's `EFI/BOOT/grub.cfg` names the ISO's own
+ID in the same way; before 0.9.9 GRUB could take the first disk with a
+kernel). GRUB checks the kernel through shim (shim_lock); the initramfs of
 encrypted systems is not checked (as on other distributions). Updates bring
 the new GRUB and kernel; `installed-fixups` copies them to the EFI partition.
 Without Secure Boot everything starts as before (shim doesn't check then).
@@ -866,7 +874,8 @@ http.server`, and in the VM put `url = http://10.0.2.2:8000/` into
 | `desktop/overlay/usr/sbin/my-secureboot`, `desktop/package/my-secureboot`, `desktop/secureboot/` | Secure Boot: enrolling the key, shim, the certificate, GRUB's SBAT |
 | `desktop/overlay/usr/lib/my-distro/firmware`, `esp-mount` | Firmware updates (fwupd); mounting the EFI partition |
 | `desktop/package/my-wireplumber`, `my-lua54`, `tinycc`, `osslsigncode` | WirePlumber with its own Lua, the C compiler package, the signing tool |
-| `tests/` | QEMU tests (live system, installer, packages, Secure Boot) |
+| `tests/` | QEMU tests (live system, installer, packages, Secure Boot, two disks, updates) |
+| `desktop/grub-efi-embedded.cfg`, `grub-iso-efi.cfg`, `grub-bios-iso.cfg` | GRUB's built-in configs (UEFI, the ISO's BIOS one) and the ISO's `EFI/BOOT/grub.cfg` |
 | `desktop/overlay/etc/my-distro/version` | The version number (the welcome text and `my-update` read it) |
 | `panel/` | Taskbar `my-panel` (with volume and battery), `my-screenshot`, `my-clipd` (keeps copied text) |
 | `settings/my-notifyd.c`, `settings/my-notify.c` | Notifications: the daemon that shows them, and the command that sends one |
@@ -950,6 +959,8 @@ python3 tests/t_install.py plain            # install, boot (BIOS and UEFI), hib
 python3 tests/t_install.py crypt            # the same, encrypted
 python3 tests/t_pkg.py out/packages         # Software app packages: tcc, Docker, Samba, ClamAV, Node.js
 python3 tests/t_secureboot.py out/my-distro.iso   # OVMF with Secure Boot on: enroll the key, boot
+python3 tests/t_twodisk.py plain out/my-distro.iso # installed disk + ISO: each GRUB starts its own system
+python3 tests/t_update.py plain DIR096       # 0.9.6 installed, updated to this build (also crypt)
 ```
 
 `tests/vm.py` is the small harness they share (serial and monitor sockets,
