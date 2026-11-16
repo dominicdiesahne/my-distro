@@ -2059,3 +2059,72 @@ msgstr ""
 #, c-format
 msgid "↑  Update to %s"
 msgstr ""
+
+msgid "  ·  connected"
+msgstr ""
+
+msgid "Address %s\nOpenVPN · received %s · sent %s"
+msgstr ""
+
+msgid "Not connected."
+msgstr ""
+
+msgid "Import the config file from your VPN service or router (WireGuard .conf or OpenVPN .ovpn), then connect."
+msgstr ""
+
+msgid "Could not connect."
+msgstr ""
+
+msgid "Check the config file, the user name and password (import the file again to change them) and that this network allows VPNs."
+msgstr ""
+
+msgid "VPN login"
+msgstr ""
+
+msgid "The VPN \"%s\" asks for a user name and password:"
+msgstr ""
+
+msgid "The user name and password could not be saved."
+msgstr ""
+
+msgid "Import a VPN config"
+msgstr ""
+
+msgid "VPN configs (WireGuard .conf, OpenVPN .ovpn)"
+msgstr ""
+
+msgid "Could not import this file."
+msgstr ""
+
+msgid "VPN imported."
+msgstr ""
+
+msgid "Could not read that file."
+msgstr ""
+
+msgid "Certificate (WPA Enterprise with EAP-TLS)"
+msgstr ""
+
+msgid "Identity"
+msgstr ""
+
+msgid "Client certificate"
+msgstr ""
+
+msgid "Private key"
+msgstr ""
+
+msgid "Key password"
+msgstr ""
+
+msgid "only if the key has one"
+msgstr ""
+
+msgid "Choose the files in your home folder (a .p12 file goes under Private key, the key password opens it). my-distro copies them to a place only the system can read. With a server domain it checks that it really is their server."
+msgstr ""
+
+msgid "Type your identity and choose the client certificate and the private key."
+msgstr ""
+
+msgid "Could not save the certificate files."
+msgstr ""

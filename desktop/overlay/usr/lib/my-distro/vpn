@@ -1,21 +1,31 @@
 #!/bin/sh
-# vpn up NAME | down | status: connects the WireGuard VPN saved as
-# /etc/my-distro/vpn/NAME.conf (by the VPN window, see my-vpnctl), as root.
+# vpn up NAME | down | status | reconnect: connects a VPN saved by the VPN
+# window (see my-vpnctl), as root. A WireGuard VPN is /etc/my-distro/vpn/
+# NAME.conf, an OpenVPN one NAME.ovpn (with NAME.auth for its user name and
+# password).
 #
-# What wg-quick does, in a few lines of sh: the interface wg0 with the
-# config's addresses, routes to what the VPN covers (AllowedIPs) and its DNS
-# servers. "All traffic" (AllowedIPs 0.0.0.0/0) uses two half routes,
-# 0.0.0.0/1 and 128.0.0.0/1: they win over the normal default route without
-# replacing it, and a route to the VPN server itself keeps going the
+# WireGuard: what wg-quick does, in a few lines of sh: the interface wg0
+# with the config's addresses, routes to what the VPN covers (AllowedIPs)
+# and its DNS servers. "All traffic" (AllowedIPs 0.0.0.0/0) uses two half
+# routes, 0.0.0.0/1 and 128.0.0.0/1: they win over the normal default route
+# without replacing it, and a route to the VPN server itself keeps going the
 # normal way.
 #
-# State while connected: /run/my-vpn (the name, the extra routes, DNS).
-# The DHCP client's hook (/usr/share/udhcpc/default.script.d/my-vpn) puts
-# the VPN's DNS servers back when a new DHCP lease rewrites resolv.conf.
+# OpenVPN: openvpn runs as a daemon on the interface ovpn0 and sets the
+# routes itself ("all traffic" is redirect-gateway def1, which works the
+# same way as the half routes above). Its route-up hook (this script,
+# "hook-up") applies the DNS servers the server pushes.
+#
+# State while connected: /run/my-vpn (the name, the kind, the extra routes,
+# DNS). The DHCP client's hook (/usr/share/udhcpc/default.script.d/my-vpn)
+# puts the VPN's DNS servers back when a new DHCP lease rewrites
+# resolv.conf, and runs "reconnect" when the network has changed (another
+# Wi-Fi, a cable): the VPN server must then be reached the new way.
 PATH=/usr/sbin:/usr/bin:/sbin:/bin
-IF=wg0
+SELF=/usr/lib/my-distro/vpn
 RUN=/run/my-vpn
 DIR=/etc/my-distro/vpn
+LOCK=/run/my-vpn-reconnect
 
 # The values of one setting in one kind of section, comma-separated values
 # one per line: setting Interface Address  ->  10.0.0.2/32 (newline) fd00::2/128
@@ -32,9 +42,27 @@ setting() {
 		}' "$CONF"
 }
 
+# How the normal way out of this computer looks (the default routes that are
+# not the VPN's): when it is another one, the network has changed
+netsig() {
+	ip route show default 2>/dev/null | grep -v -E 'dev (wg0|ovpn0)( |$)' | sort | tr '\n' ';'
+}
+
+stop_ovpn() {
+	[ -f "$RUN/ovpn.pid" ] || return 0
+	pid=$(cat "$RUN/ovpn.pid")
+	kill "$pid" 2>/dev/null            # it removes its routes and the interface
+	i=0
+	while [ $i -lt 50 ] && kill -0 "$pid" 2>/dev/null; do sleep 0.1; i=$((i + 1)); done
+	kill -9 "$pid" 2>/dev/null
+	cp "$RUN/ovpn.log" /run/my-vpn.last.log 2>/dev/null
+}
+
 down() {
-	[ -d "$RUN" ] || { ip link del "$IF" 2>/dev/null; return 0; }
-	ip link del "$IF" 2>/dev/null      # its addresses and routes go with it
+	[ -d "$RUN" ] || { ip link del wg0 2>/dev/null; return 0; }
+	stop_ovpn
+	ip link del wg0 2>/dev/null        # its addresses and routes go with it
+	ip link del ovpn0 2>/dev/null
 	if [ -f "$RUN/routes" ]; then
 		while read -r r; do ip route del $r 2>/dev/null; done <"$RUN/routes"
 	fi
@@ -54,12 +82,32 @@ normal_route() {
 		exit }'
 }
 
+# Makes these DNS servers (and search domains) the computer's:
+# apply_dns "SERVERS" "DOMAINS"
+apply_dns() {
+	[ -n "$1" ] || return 0
+	[ -f "$RUN/resolv.conf" ] || cat /etc/resolv.conf >"$RUN/resolv.saved" 2>/dev/null   # (not again after an OpenVPN restart)
+	{
+		echo "# DNS of the VPN $NAME (my-vpn); the normal one comes back when it disconnects"
+		[ -n "$2" ] && echo "search$2"
+		for s in $1; do echo "nameserver $s"; done
+	} >"$RUN/resolv.conf"
+	cat "$RUN/resolv.conf" >/etc/resolv.conf
+}
+
 up() {
 	NAME=$1
+	if [ -f "$DIR/$NAME.ovpn" ]; then
+		up_ovpn "$NAME"
+		return
+	fi
 	CONF=$DIR/$NAME.conf
 	[ -f "$CONF" ] || { echo "No VPN called $NAME."; exit 1; }
+	IF=wg0
 	down
 	mkdir -p -m 700 "$RUN"
+	netsig >"$RUN/net"
+	echo wg >"$RUN/kind"
 
 	# wg wants only its own settings (no Address, DNS, MTU)
 	grep -viE '^[[:space:]]*(Address|DNS|MTU)[[:space:]]*=' "$CONF" >"$RUN/wg.conf"
@@ -110,36 +158,115 @@ up() {
 	for d in $(setting Interface DNS); do
 		case "$d" in *[!0-9a-fA-F.:]*) search="$search $d" ;; *) servers="$servers $d" ;; esac
 	done
-	if [ -n "$servers" ]; then
-		cat /etc/resolv.conf >"$RUN/resolv.saved" 2>/dev/null
-		{
-			echo "# DNS of the VPN $NAME (my-vpn); the normal one comes back when it disconnects"
-			[ -n "$search" ] && echo "search$search"
-			for s in $servers; do echo "nameserver $s"; done
-		} >"$RUN/resolv.conf"
-		cat "$RUN/resolv.conf" >/etc/resolv.conf
-	fi
+	apply_dns "$servers" "$search"
 	echo "$NAME" >"$RUN/active"
 	logger -t my-vpn "connected to $NAME"
 	echo "Connected to $NAME."
 }
 
+# openvpn runs this when the tunnel and its routes are up (--route-up): the
+# DNS servers the server pushed (dhcp-option DNS and DOMAIN), then a marker
+hook_up() {
+	NAME=$(cat "$RUN/active.try" 2>/dev/null)
+	servers=; search=
+	for o in $(env | sed -n 's/^foreign_option_[0-9]*=dhcp-option \(DNS\|DOMAIN\|DOMAIN-SEARCH\) /\1:/p'); do
+		case "$o" in
+		DNS:*) servers="$servers ${o#DNS:}" ;;
+		*) search="$search ${o#*:}" ;;
+		esac
+	done
+	apply_dns "$servers" "$search"
+	: >"$RUN/up"
+}
+
+up_ovpn() {
+	NAME=$1
+	CONF=$DIR/$NAME.ovpn
+	down
+	mkdir -p -m 700 "$RUN"
+	netsig >"$RUN/net"
+	echo ovpn >"$RUN/kind"
+	echo "$NAME" >"$RUN/active.try"
+	auth=
+	if grep -q '^auth-user-pass' "$CONF"; then
+		if [ ! -f "$DIR/$NAME.auth" ]; then
+			echo "This VPN needs a user name and password."; rm -rf "$RUN"; exit 1
+		fi
+		auth="--auth-user-pass $DIR/$NAME.auth"
+	fi
+	modprobe tun 2>/dev/null
+	# our options come after the file's, so they win; the file itself can't
+	# run commands (my-vpnctl leaves them out)
+	openvpn --config "$CONF" --dev ovpn0 --dev-type tun $auth --auth-nocache \
+		--script-security 2 --route-up "$SELF hook-up" \
+		--daemon my-openvpn --writepid "$RUN/ovpn.pid" --log "$RUN/ovpn.log" --verb 3
+	i=0
+	while [ $i -lt 45 ]; do
+		[ -f "$RUN/up" ] && break
+		grep -q 'AUTH_FAILED' "$RUN/ovpn.log" 2>/dev/null && break
+		if [ -f "$RUN/ovpn.pid" ] && ! kill -0 "$(cat "$RUN/ovpn.pid")" 2>/dev/null; then
+			break
+		fi
+		sleep 1; i=$((i + 1))
+	done
+	if [ ! -f "$RUN/up" ]; then
+		if grep -q 'AUTH_FAILED' "$RUN/ovpn.log" 2>/dev/null; then
+			echo "The VPN server did not accept the user name and password."
+		else
+			echo "Could not connect: $(grep -iE 'error|fail|cannot' "$RUN/ovpn.log" | tail -n 1 | cut -c1-200)"
+		fi
+		down >/dev/null
+		exit 1
+	fi
+	mv "$RUN/active.try" "$RUN/active"
+	logger -t my-vpn "connected to $NAME (OpenVPN)"
+	echo "Connected to $NAME."
+}
+
+# After the network changed (the DHCP hook starts this): connect again, so
+# the VPN server is reached over the new network. WireGuard and OpenVPN.
+reconnect() {
+	[ -f "$RUN/active" ] || exit 0
+	mkdir "$LOCK" 2>/dev/null || exit 0           # one at a time
+	trap 'rmdir "$LOCK" 2>/dev/null' EXIT
+	sleep 2                                        # let the new routes settle
+	[ -f "$RUN/active" ] || exit 0
+	now=$(netsig)
+	[ -n "$now" ] || exit 0                        # no network yet: the next lease asks again
+	[ "$now" = "$(cat "$RUN/net" 2>/dev/null)" ] && exit 0
+	name=$(cat "$RUN/active")
+	logger -t my-vpn "network changed, connecting $name again"
+	up "$name"
+}
+
 status() {
-	if [ ! -f "$RUN/active" ] || ! ip link show "$IF" >/dev/null 2>&1; then
+	kind=$(cat "$RUN/kind" 2>/dev/null)
+	dev=wg0
+	[ "$kind" = ovpn ] && dev=ovpn0
+	if [ ! -f "$RUN/active" ] || ! ip link show "$dev" >/dev/null 2>&1; then
 		echo "disconnected"
 		return
 	fi
 	echo "connected $(cat "$RUN/active")"
-	echo "address $(ip -o address show dev "$IF" | awk '{ print $4 }' | tr '\n' ' ')"
+	echo "kind ${kind:-wg}"
+	echo "address $(ip -o address show dev "$dev" | awk '{ print $4 }' | tr '\n' ' ')"
+	if [ "$kind" = ovpn ]; then
+		echo "handshake 0"
+		echo "received $(cat /sys/class/net/ovpn0/statistics/rx_bytes)"
+		echo "sent $(cat /sys/class/net/ovpn0/statistics/tx_bytes)"
+		return
+	fi
 	now=$(date +%s)
-	last=$(wg show "$IF" latest-handshakes | awk '$2 > m { m = $2 } END { print m + 0 }')
+	last=$(wg show "$dev" latest-handshakes | awk '$2 > m { m = $2 } END { print m + 0 }')
 	[ "$last" -gt 0 ] && echo "handshake $((now - last))" || echo "handshake never"
-	wg show "$IF" transfer | awk '{ rx += $2; tx += $3 } END { print "received " rx + 0; print "sent " tx + 0 }'
+	wg show "$dev" transfer | awk '{ rx += $2; tx += $3 } END { print "received " rx + 0; print "sent " tx + 0 }'
 }
 
 case "$1" in
 up) [ -n "$2" ] || exit 1; up "$2" ;;
 down) down; echo "Disconnected." ;;
 status) status ;;
-*) echo "usage: $0 up NAME | down | status"; exit 1 ;;
+reconnect) reconnect ;;
+hook-up) hook_up ;;
+*) echo "usage: $0 up NAME | down | status | reconnect"; exit 1 ;;
 esac

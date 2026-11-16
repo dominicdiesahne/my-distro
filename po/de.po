@@ -1901,3 +1901,72 @@ msgstr "Webbrowser"
 
 msgid "Web browser (sandbox)"
 msgstr "Webbrowser (Sandbox)"
+
+msgid "  ·  connected"
+msgstr "  ·  verbunden"
+
+msgid "Address %s\nOpenVPN · received %s · sent %s"
+msgstr "Adresse %s\nOpenVPN · empfangen %s · gesendet %s"
+
+msgid "Not connected."
+msgstr "Nicht verbunden."
+
+msgid "Import the config file from your VPN service or router (WireGuard .conf or OpenVPN .ovpn), then connect."
+msgstr "Importiere die Konfigurationsdatei deines VPN-Anbieters oder Routers (WireGuard .conf oder OpenVPN .ovpn) und verbinde dann."
+
+msgid "Could not connect."
+msgstr "Verbindung nicht möglich."
+
+msgid "Check the config file, the user name and password (import the file again to change them) and that this network allows VPNs."
+msgstr "Prüfe die Konfigurationsdatei, Benutzername und Passwort (importiere die Datei erneut, um sie zu ändern) und ob dieses Netzwerk VPNs erlaubt."
+
+msgid "VPN login"
+msgstr "VPN-Anmeldung"
+
+msgid "The VPN \"%s\" asks for a user name and password:"
+msgstr "Das VPN \"%s\" fragt nach Benutzername und Passwort:"
+
+msgid "The user name and password could not be saved."
+msgstr "Benutzername und Passwort konnten nicht gespeichert werden."
+
+msgid "Import a VPN config"
+msgstr "VPN-Konfiguration importieren"
+
+msgid "VPN configs (WireGuard .conf, OpenVPN .ovpn)"
+msgstr "VPN-Konfigurationen (WireGuard .conf, OpenVPN .ovpn)"
+
+msgid "Could not import this file."
+msgstr "Diese Datei konnte nicht importiert werden."
+
+msgid "VPN imported."
+msgstr "VPN importiert."
+
+msgid "Could not read that file."
+msgstr "Diese Datei konnte nicht gelesen werden."
+
+msgid "Certificate (WPA Enterprise with EAP-TLS)"
+msgstr "Zertifikat (WPA Enterprise mit EAP-TLS)"
+
+msgid "Identity"
+msgstr "Identität"
+
+msgid "Client certificate"
+msgstr "Client-Zertifikat"
+
+msgid "Private key"
+msgstr "Privater Schlüssel"
+
+msgid "Key password"
+msgstr "Schlüsselpasswort"
+
+msgid "only if the key has one"
+msgstr "nur wenn der Schlüssel eines hat"
+
+msgid "Choose the files in your home folder (a .p12 file goes under Private key, the key password opens it). my-distro copies them to a place only the system can read. With a server domain it checks that it really is their server."
+msgstr "Wähle die Dateien in deinem Home-Ordner (eine .p12-Datei kommt unter Privater Schlüssel, das Schlüsselpasswort öffnet sie). my-distro kopiert sie an einen Ort, den nur das System lesen kann. Mit einer Server-Domain prüft es, dass es wirklich deren Server ist."
+
+msgid "Type your identity and choose the client certificate and the private key."
+msgstr "Gib deine Identität ein und wähle das Client-Zertifikat und den privaten Schlüssel."
+
+msgid "Could not save the certificate files."
+msgstr "Die Zertifikatsdateien konnten nicht gespeichert werden."

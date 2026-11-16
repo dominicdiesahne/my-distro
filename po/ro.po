@@ -1902,3 +1902,72 @@ msgstr "Navigator web"
 
 msgid "Web browser (sandbox)"
 msgstr "Navigator web (izolat)"
+
+msgid "  ·  connected"
+msgstr "  ·  conectat"
+
+msgid "Address %s\nOpenVPN · received %s · sent %s"
+msgstr "Adresă %s\nOpenVPN · primit %s · trimis %s"
+
+msgid "Not connected."
+msgstr "Neconectat."
+
+msgid "Import the config file from your VPN service or router (WireGuard .conf or OpenVPN .ovpn), then connect."
+msgstr "Importă fișierul de configurare de la furnizorul VPN sau de la router (WireGuard .conf sau OpenVPN .ovpn), apoi conectează-te."
+
+msgid "Could not connect."
+msgstr "Nu s-a putut conecta."
+
+msgid "Check the config file, the user name and password (import the file again to change them) and that this network allows VPNs."
+msgstr "Verifică fișierul de configurare, numele de utilizator și parola (importă din nou fișierul pentru a le schimba) și dacă această rețea permite VPN-uri."
+
+msgid "VPN login"
+msgstr "Autentificare VPN"
+
+msgid "The VPN \"%s\" asks for a user name and password:"
+msgstr "VPN-ul \"%s\" cere un nume de utilizator și o parolă:"
+
+msgid "The user name and password could not be saved."
+msgstr "Numele de utilizator și parola nu au putut fi salvate."
+
+msgid "Import a VPN config"
+msgstr "Importă o configurație VPN"
+
+msgid "VPN configs (WireGuard .conf, OpenVPN .ovpn)"
+msgstr "Configurații VPN (WireGuard .conf, OpenVPN .ovpn)"
+
+msgid "Could not import this file."
+msgstr "Acest fișier nu a putut fi importat."
+
+msgid "VPN imported."
+msgstr "VPN importat."
+
+msgid "Could not read that file."
+msgstr "Acest fișier nu a putut fi citit."
+
+msgid "Certificate (WPA Enterprise with EAP-TLS)"
+msgstr "Certificat (WPA Enterprise cu EAP-TLS)"
+
+msgid "Identity"
+msgstr "Identitate"
+
+msgid "Client certificate"
+msgstr "Certificat client"
+
+msgid "Private key"
+msgstr "Cheie privată"
+
+msgid "Key password"
+msgstr "Parola cheii"
+
+msgid "only if the key has one"
+msgstr "doar dacă cheia are una"
+
+msgid "Choose the files in your home folder (a .p12 file goes under Private key, the key password opens it). my-distro copies them to a place only the system can read. With a server domain it checks that it really is their server."
+msgstr "Alege fișierele din dosarul tău personal (un fișier .p12 merge la Cheie privată, parola cheii îl deschide). my-distro le copiază într-un loc pe care îl poate citi doar sistemul. Cu un domeniu de server verifică dacă este chiar serverul lor."
+
+msgid "Type your identity and choose the client certificate and the private key."
+msgstr "Scrie identitatea ta și alege certificatul client și cheia privată."
+
+msgid "Could not save the certificate files."
+msgstr "Fișierele certificatului nu au putut fi salvate."

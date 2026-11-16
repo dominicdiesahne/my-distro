@@ -2,8 +2,11 @@
  * my-vpn: the VPN window of my-distro (GTK 3), in the Start menu.
  *
  * VPN services and routers give you a WireGuard config file (NAME.conf, the
- * same file the official WireGuard apps import). "Import…" saves it; then
- * Connect / Disconnect. Only one VPN is connected at a time.
+ * same file the official WireGuard apps import) or an OpenVPN file
+ * (NAME.ovpn). "Import…" saves it (an OpenVPN file that wants a user name
+ * asks for it and the password); then Connect / Disconnect. Only one VPN is
+ * connected at a time. After a change of network (another Wi-Fi, a cable) a
+ * connected VPN connects again by itself (/usr/lib/my-distro/vpn).
  *
  * The work that needs root is done by my-vpnctl (setuid, for members of the
  * group netdev like the Wi-Fi window), which runs /usr/lib/my-distro/vpn.
@@ -23,6 +26,7 @@
 static GtkWidget *win, *status_label, *detail_label, *list, *btn_connect, *btn_disconnect,
                  *btn_remove;
 static char connected[32];        /* the connected VPN's name, or "" */
+static int connected_ovpn;        /* ... and it is an OpenVPN one */
 static int busy;                  /* my-vpnctl up/down is running */
 static gint64 connected_since;
 
@@ -94,13 +98,20 @@ static void fill_list(const char *select)
 	names = g_strsplit(out ? out : "", "\n", -1);
 	for (int i = 0; names[i]; i++) {
 		GtkWidget *row, *box, *name, *info;
+		char *tab = strchr(names[i], '\t'), *kind, *text;
 
 		if (!names[i][0])
 			continue;
+		kind = tab ? tab + 1 : "wg";
+		if (tab)
+			*tab = '\0';
 		row = gtk_list_box_row_new();
 		box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 12);
 		name = gtk_label_new(names[i]);
-		info = gtk_label_new(strcmp(names[i], connected) == 0 ? "connected" : "");
+		text = g_strdup_printf("%s%s", strcmp(kind, "ovpn") == 0 ? "OpenVPN" : "WireGuard",
+		                       strcmp(names[i], connected) == 0 ? _("  ·  connected") : "");
+		info = gtk_label_new(text);
+		g_free(text);
 		gtk_label_set_xalign(GTK_LABEL(name), 0);
 		gtk_style_context_add_class(gtk_widget_get_style_context(info), "dim-label");
 		g_object_set(box, "margin", 8, NULL);
@@ -134,6 +145,7 @@ static gboolean refresh_status(gpointer d)
 	int ok;
 	char *out, **lines, old[32], rx[32] = "", tx[32] = "", *text = NULL, *detail = NULL;
 	const char *addr = "", *hs = "never";
+	int ovpn = 0;
 
 	(void)d;
 	if (busy)
@@ -145,6 +157,8 @@ static gboolean refresh_status(gpointer d)
 	for (int i = 0; lines[i]; i++) {
 		if (g_str_has_prefix(lines[i], "connected "))
 			g_strlcpy(connected, lines[i] + 10, sizeof connected);
+		else if (g_str_has_prefix(lines[i], "kind "))
+			ovpn = strcmp(lines[i] + 5, "ovpn") == 0;
 		else if (g_str_has_prefix(lines[i], "address "))
 			addr = lines[i] + 8;
 		else if (g_str_has_prefix(lines[i], "handshake "))
@@ -159,11 +173,18 @@ static gboolean refresh_status(gpointer d)
 
 		if (strcmp(old, connected) != 0)
 			connected_since = g_get_monotonic_time();
+		connected_ovpn = ovpn;
 		text = g_strdup_printf(_("Connected to %s"), connected);
+		/* OpenVPN: the daemon reports "connected" when the tunnel works */
+		if (ovpn)
+			detail = g_strdup_printf(_("Address %s\nOpenVPN · received %s · sent %s"),
+			                         addr, rx, tx);
 		/* WireGuard talks to the server at least every 2 minutes while
 		 * something is sent; no answer at all means a wrong config or a
 		 * blocked network */
-		if (secs < 0 && g_get_monotonic_time() - connected_since > 15 * G_USEC_PER_SEC)
+		if (ovpn)
+			;
+		else if (secs < 0 && g_get_monotonic_time() - connected_since > 15 * G_USEC_PER_SEC)
 			detail = g_strdup_printf(_("Address %s\nNo answer from the VPN server yet. Is the "
 			                         "config right, and does this network allow VPNs?"), addr);
 		else if (secs < 0)
@@ -172,9 +193,9 @@ static gboolean refresh_status(gpointer d)
 			detail = g_strdup_printf(_("Address %s\nLast answer from the server %d s ago · "
 			                         "received %s · sent %s"), addr, secs, rx, tx);
 	} else {
-		text = g_strdup("Not connected.");
-		detail = g_strdup("Import the WireGuard config file (.conf) from your VPN service "
-		                  "or router, then connect.");
+		text = g_strdup(_("Not connected."));
+		detail = g_strdup(_("Import the config file from your VPN service or router "
+		                  "(WireGuard .conf or OpenVPN .ovpn), then connect."));
 	}
 	gtk_label_set_text(GTK_LABEL(status_label), text);
 	gtk_label_set_text(GTK_LABEL(detail_label), detail);
@@ -204,9 +225,13 @@ static void on_done(GPid pid, gint st, gpointer action)
 {
 	g_spawn_close_pid(pid);
 	busy = 0;
-	if (!g_spawn_check_wait_status(st, NULL) && strcmp(action, "up") == 0)
-		gtk_label_set_text(GTK_LABEL(status_label), "Could not connect.");
 	refresh_status(NULL);
+	if (!g_spawn_check_wait_status(st, NULL) && strcmp(action, "up") == 0) {
+		gtk_label_set_text(GTK_LABEL(status_label), _("Could not connect."));
+		gtk_label_set_text(GTK_LABEL(detail_label), _("Check the config file, the user name "
+			"and password (import the file again to change them) and that this network "
+			"allows VPNs."));
+	}
 	update_buttons();
 }
 
@@ -291,10 +316,80 @@ static int exists(const char *name)
 	int ok, found = 0;
 	char *out = ctl("list", NULL, NULL, &ok), **names = g_strsplit(out ? out : "", "\n", -1);
 
-	for (int i = 0; names[i]; i++)
+	for (int i = 0; names[i]; i++) {
+		char *tab = strchr(names[i], '\t');
+
+		if (tab)
+			*tab = '\0';
 		found |= strcmp(names[i], name) == 0;
+	}
 	g_strfreev(names);
 	g_free(out);
+	return found;
+}
+
+/* The user name and password an OpenVPN file asks for (auth-user-pass).
+ * Returns "user\npassword\n" (g_free it, wipe it first), or NULL if cancelled. */
+static char *ask_credentials(const char *name)
+{
+	GtkWidget *d, *box, *grid, *user, *pass, *show, *t;
+	char *title, *result = NULL;
+
+	d = gtk_dialog_new_with_buttons(_("VPN login"), GTK_WINDOW(win), GTK_DIALOG_MODAL,
+		_("Cancel"), GTK_RESPONSE_CANCEL, _("Save"), GTK_RESPONSE_OK, NULL);
+	box = gtk_dialog_get_content_area(GTK_DIALOG(d));
+	gtk_container_set_border_width(GTK_CONTAINER(box), 16);
+	gtk_box_set_spacing(GTK_BOX(box), 10);
+	title = g_strdup_printf(_("The VPN \"%s\" asks for a user name and password:"), name);
+	t = gtk_label_new(title);
+	g_free(title);
+	gtk_label_set_xalign(GTK_LABEL(t), 0);
+	gtk_label_set_line_wrap(GTK_LABEL(t), TRUE);
+	gtk_label_set_max_width_chars(GTK_LABEL(t), 50);
+	gtk_box_pack_start(GTK_BOX(box), t, FALSE, FALSE, 0);
+	grid = gtk_grid_new();
+	gtk_grid_set_row_spacing(GTK_GRID(grid), 8);
+	gtk_grid_set_column_spacing(GTK_GRID(grid), 10);
+	gtk_box_pack_start(GTK_BOX(box), grid, FALSE, FALSE, 0);
+	user = gtk_entry_new();
+	gtk_widget_set_hexpand(user, TRUE);
+	gtk_grid_attach(GTK_GRID(grid), gtk_label_new(_("User name")), 0, 0, 1, 1);
+	gtk_grid_attach(GTK_GRID(grid), user, 1, 0, 1, 1);
+	pass = gtk_entry_new();
+	gtk_entry_set_visibility(GTK_ENTRY(pass), FALSE);
+	gtk_entry_set_activates_default(GTK_ENTRY(pass), TRUE);
+	gtk_widget_set_hexpand(pass, TRUE);
+	gtk_grid_attach(GTK_GRID(grid), gtk_label_new(_("Password")), 0, 1, 1, 1);
+	gtk_grid_attach(GTK_GRID(grid), pass, 1, 1, 1, 1);
+	show = gtk_check_button_new_with_label(_("Show password"));
+	g_object_bind_property(show, "active", pass, "visibility", 0);
+	gtk_grid_attach(GTK_GRID(grid), show, 1, 2, 1, 1);
+	gtk_dialog_set_default_response(GTK_DIALOG(d), GTK_RESPONSE_OK);
+	gtk_widget_show_all(d);
+	while (gtk_dialog_run(GTK_DIALOG(d)) == GTK_RESPONSE_OK) {
+		const char *u = gtk_entry_get_text(GTK_ENTRY(user)), *p = gtk_entry_get_text(GTK_ENTRY(pass));
+
+		if (!u[0] || !p[0])
+			continue;
+		result = g_strdup_printf("%s\n%s\n", u, p);
+		break;
+	}
+	gtk_widget_destroy(d);
+	return result;
+}
+
+/* Does this OpenVPN file ask for a user name and password? */
+static int wants_login(const char *content)
+{
+	char **lines = g_strsplit(content, "\n", -1);
+	int found = 0;
+
+	for (int i = 0; lines[i]; i++) {
+		char *l = g_strstrip(lines[i]);
+
+		found |= strcmp(l, "auth-user-pass") == 0;
+	}
+	g_strfreev(lines);
 	return found;
 }
 
@@ -302,16 +397,17 @@ static void on_import(GtkButton *b, gpointer d)
 {
 	GtkWidget *fc;
 	GtkFileFilter *f = gtk_file_filter_new();
-	char *path = NULL, *content = NULL, *out, name[32];
+	char *path = NULL, *content = NULL, *out, name[32], *login = NULL;
 	gsize len;
-	int ok;
+	int ok, ovpn;
 
 	(void)b; (void)d;
-	fc = gtk_file_chooser_dialog_new(_("Import a WireGuard config"), GTK_WINDOW(win),
+	fc = gtk_file_chooser_dialog_new(_("Import a VPN config"), GTK_WINDOW(win),
 		GTK_FILE_CHOOSER_ACTION_OPEN, _("Cancel"), GTK_RESPONSE_CANCEL,
 		_("Import"), GTK_RESPONSE_ACCEPT, NULL);
-	gtk_file_filter_set_name(f, "WireGuard configs (*.conf)");
+	gtk_file_filter_set_name(f, _("VPN configs (WireGuard .conf, OpenVPN .ovpn)"));
 	gtk_file_filter_add_pattern(f, "*.conf");
+	gtk_file_filter_add_pattern(f, "*.ovpn");
 	gtk_file_chooser_add_filter(GTK_FILE_CHOOSER(fc), f);
 	gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(fc), g_get_home_dir());
 	if (gtk_dialog_run(GTK_DIALOG(fc)) == GTK_RESPONSE_ACCEPT)
@@ -320,12 +416,23 @@ static void on_import(GtkButton *b, gpointer d)
 	if (!path)
 		return;
 	if (!g_file_get_contents(path, &content, &len, NULL) || len > 60000) {
-		message(GTK_MESSAGE_ERROR, "Could not read that file.", NULL);
+		message(GTK_MESSAGE_ERROR, _("Could not read that file."), NULL);
 		g_free(path);
 		g_free(content);
 		return;
 	}
 	name_from_file(path, name, sizeof name);
+	/* OpenVPN: .ovpn, or a .conf that is not a WireGuard one */
+	ovpn = g_str_has_suffix(path, ".ovpn") || !strstr(content, "[Interface]");
+	if (ovpn && wants_login(content)) {
+		login = ask_credentials(name);
+		if (!login) {
+			memset(content, 0, len);
+			g_free(content);
+			g_free(path);
+			return;
+		}
+	}
 	if (exists(name)) {
 		GtkWidget *ask = gtk_message_dialog_new(GTK_WINDOW(win), GTK_DIALOG_MODAL,
 			GTK_MESSAGE_QUESTION, GTK_BUTTONS_NONE, _("Replace the VPN \"%s\"?"), name);
@@ -339,18 +446,35 @@ static void on_import(GtkButton *b, gpointer d)
 			memset(content, 0, len);
 			g_free(content);
 			g_free(path);
+			if (login) {
+				memset(login, 0, strlen(login));
+				g_free(login);
+			}
 			return;
 		}
 	}
-	out = ctl("import", name, content, &ok);
+	out = ctl(ovpn ? "import-ovpn" : "import", name, content, &ok);
 	memset(content, 0, len);          /* the private key */
 	g_free(content);
+	if (ok && login) {
+		char *junk = ctl("auth", name, login, &ok);
+
+		g_free(junk);
+		if (!ok) {
+			g_free(out);
+			out = g_strdup(_("The user name and password could not be saved."));
+		}
+	}
+	if (login) {
+		memset(login, 0, strlen(login));
+		g_free(login);
+	}
 	if (ok) {
 		fill_list(name);
 		if (out && out[0])                 /* what was left out */
-			message(GTK_MESSAGE_INFO, "VPN imported.", out);
+			message(GTK_MESSAGE_INFO, _("VPN imported."), out);
 	} else {
-		message(GTK_MESSAGE_ERROR, "Could not import this file.", out);
+		message(GTK_MESSAGE_ERROR, _("Could not import this file."), out);
 	}
 	g_free(out);
 	g_free(path);

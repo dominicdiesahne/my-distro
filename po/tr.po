@@ -1900,3 +1900,72 @@ msgstr "Web tarayıcısı"
 
 msgid "Web browser (sandbox)"
 msgstr "Web tarayıcısı (korumalı alan)"
+
+msgid "  ·  connected"
+msgstr "  ·  bağlı"
+
+msgid "Address %s\nOpenVPN · received %s · sent %s"
+msgstr "Adres %s\nOpenVPN · alınan %s · gönderilen %s"
+
+msgid "Not connected."
+msgstr "Bağlı değil."
+
+msgid "Import the config file from your VPN service or router (WireGuard .conf or OpenVPN .ovpn), then connect."
+msgstr "VPN hizmetinizin veya yönlendiricinizin yapılandırma dosyasını (WireGuard .conf veya OpenVPN .ovpn) içe aktarın, sonra bağlanın."
+
+msgid "Could not connect."
+msgstr "Bağlanılamadı."
+
+msgid "Check the config file, the user name and password (import the file again to change them) and that this network allows VPNs."
+msgstr "Yapılandırma dosyasını, kullanıcı adını ve parolayı (değiştirmek için dosyayı yeniden içe aktarın) ve bu ağın VPN'lere izin verip vermediğini kontrol edin."
+
+msgid "VPN login"
+msgstr "VPN oturumu"
+
+msgid "The VPN \"%s\" asks for a user name and password:"
+msgstr "\"%s\" VPN'i kullanıcı adı ve parola istiyor:"
+
+msgid "The user name and password could not be saved."
+msgstr "Kullanıcı adı ve parola kaydedilemedi."
+
+msgid "Import a VPN config"
+msgstr "VPN yapılandırmasını içe aktar"
+
+msgid "VPN configs (WireGuard .conf, OpenVPN .ovpn)"
+msgstr "VPN yapılandırmaları (WireGuard .conf, OpenVPN .ovpn)"
+
+msgid "Could not import this file."
+msgstr "Bu dosya içe aktarılamadı."
+
+msgid "VPN imported."
+msgstr "VPN içe aktarıldı."
+
+msgid "Could not read that file."
+msgstr "Bu dosya okunamadı."
+
+msgid "Certificate (WPA Enterprise with EAP-TLS)"
+msgstr "Sertifika (EAP-TLS ile WPA Enterprise)"
+
+msgid "Identity"
+msgstr "Kimlik"
+
+msgid "Client certificate"
+msgstr "İstemci sertifikası"
+
+msgid "Private key"
+msgstr "Özel anahtar"
+
+msgid "Key password"
+msgstr "Anahtar parolası"
+
+msgid "only if the key has one"
+msgstr "yalnızca anahtarın varsa"
+
+msgid "Choose the files in your home folder (a .p12 file goes under Private key, the key password opens it). my-distro copies them to a place only the system can read. With a server domain it checks that it really is their server."
+msgstr "Dosyaları ev klasörünüzden seçin (bir .p12 dosyası Özel anahtar'a girer, anahtar parolası onu açar). my-distro bunları yalnızca sistemin okuyabileceği bir yere kopyalar. Sunucu alan adıyla, gerçekten onların sunucusu olduğunu denetler."
+
+msgid "Type your identity and choose the client certificate and the private key."
+msgstr "Kimliğinizi yazın ve istemci sertifikasını ile özel anahtarı seçin."
+
+msgid "Could not save the certificate files."
+msgstr "Sertifika dosyaları kaydedilemedi."
