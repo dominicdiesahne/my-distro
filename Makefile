@@ -364,6 +364,9 @@ packages: $(BR_DIR)/Makefile
 > cd $(BR_OUT) && $(BR_DIR)/support/kconfig/merge_config.sh -m .config $(PKG_WORK)/packages.fragment
 > $(BR_MAKE) olddefconfig
 > $(BR_MAKE) -s --no-print-directory show-info > $(PKG_WORK)/info.json
+> # The owners and modes Buildroot gives files only when it makes an image
+> # (setuid newuidmap & co.): the packages get them too
+> $(BR_MAKE) -s --no-print-directory printvars VARS=PACKAGES_PERMISSIONS_TABLE > $(PKG_WORK)/permissions.txt
 > # Stops if the packages would change the image's own packages; build tools
 > # whose options changed are built again.
 > r=$$($(PKG_TOOL) check-config $(BR_OUT) $(PKG_WORK) desktop/packages.fragment) || exit 1; \

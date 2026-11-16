@@ -19,7 +19,9 @@ script then cuts them apart again:
       plus the package list my-pkg-index.json. Dependencies on other extra
       packages become the list's dependencies. Buildroot says which package
       installed which file (build/packages-file-list.txt) and what each
-      package needs (make show-info, in WORK/info.json).
+      package needs (make show-info, in WORK/info.json). Files get the modes
+      of the packages' permission tables (WORK/permissions.txt), e.g.
+      setuid, which Buildroot sets only in images.
 
   clean OUT [UPDATE]
       Takes the extra packages out of the build tree again (target and staging
@@ -223,6 +225,34 @@ def menu_command(entry):
     return run
 
 
+def permissions(work):
+    """path (relative) -> mode, from the packages' permission tables (WORK/
+    permissions.txt, make printvars VARS=PACKAGES_PERMISSIONS_TABLE).
+    Buildroot applies them only while it makes an image, so in the target
+    folder e.g. shadow's newuidmap is not setuid yet. Only files owned by
+    root: my-pkg installs every file as root."""
+    perms = {}
+    try:
+        with open(os.path.join(work, "permissions.txt")) as f:
+            text = f.read()
+    except OSError:
+        return perms
+    for line in text.splitlines():
+        line = line.strip()
+        if line.startswith("PACKAGES_PERMISSIONS_TABLE="):
+            line = line.split("=", 1)[1].strip()
+        f = line.split()
+        if len(f) < 5 or not f[0].startswith("/") or f[1] != "f":
+            continue
+        try:
+            mode = int(f[2], 8)
+        except ValueError:
+            continue
+        root = f[3] in ("0", "root", "-") and f[4] in ("0", "root", "-")
+        perms[f[0].lstrip("/")] = (mode, root, "%s:%s" % (f[3], f[4]))
+    return perms
+
+
 def safe(v):
     return re.sub(r"[^A-Za-z0-9._-]", "_", v)[:40]
 
@@ -252,6 +282,7 @@ def cut(out, work, buildroot, update, catalog_path, dest):
     print("Reading the image's file list...", flush=True)
     base_files, base_dirs = base_listing(update)
     lists = file_lists(out)
+    perms = permissions(work)
 
     # Each extra package's files: those not in the image. Finalizing the
     # target removed some (headers, manuals) and turned .py into .pyc.
@@ -336,6 +367,12 @@ def cut(out, work, buildroot, update, catalog_path, dest):
                     tar.addfile(tarinfo(p, st, tarfile.SYMTYPE, os.readlink(full)))
                 elif os.path.isfile(full):
                     ti = tarinfo(p, st, tarfile.REGTYPE)
+                    if p in perms and perms[p][1]:
+                        ti.mode = perms[p][0]
+                        print("  %s: mode %o" % (p, ti.mode))
+                    elif p in perms:
+                        print("  note: %s should belong to %s; my-pkg installs it as root"
+                              % (p, perms[p][2]))
                     ti.size = st.st_size
                     size += st.st_size
                     with open(full, "rb") as f:
