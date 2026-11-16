@@ -112,7 +112,9 @@ for loc in ('fr_FR', 'es_ES', 'it_IT', 'pl_PL', 'ro_RO', 'tr_TR'):
 # 12. video codecs
 check('FFmpeg decoders', "ffmpeg -hide_banner -decoders 2>/dev/null | grep -E ' (h264|hevc|vp9|libdav1d|av1) ' | "
       "awk '{print $2}' | tr '\\n' ' '", 'libdav1d')
-check('VA-API drivers', 'ls /usr/lib/dri/ | grep -E "drv_video" | tr "\\n" " "', 'drv_video')
+# in libva's driverdir: until 0.10.0 Mesa's (radeonsi, ...) were in /usr/lib/dri, where libva doesn't look
+check('VA-API drivers in libva\'s folder', 'ls /usr/lib/va/ | grep -E "drv_video" | tr "\\n" " "', 'radeonsi_drv_video')
+check('VA-API: none left in /usr/lib/dri', 'echo DRI=$(ls /usr/lib/dri/ | grep -c drv_video)', 'DRI=0')
 
 # --- 0.10.0 items that need no desktop or hardware ---------------------------------
 # OpenVPN next to WireGuard

@@ -44,3 +44,8 @@ PRBOOM_CONF_ENV += CFLAGS="$(TARGET_CFLAGS) -std=gnu17"
 # /usr/lib/va (its driverdir), where the image's i965 driver is: put iHD
 # there too.
 INTEL_MEDIADRIVER_CONF_OPTS += -DLIBVA_DRIVERS_PATH=/usr/lib/va
+
+# Mesa's VA-API drivers (radeonsi for AMD, virtio_gpu in VMs) went to
+# $libdir/dri too, where libva never looked: AMD video decoding on the
+# graphics chip didn't work. Same folder as i965 and iHD.
+MESA3D_CONF_OPTS += -Dva-libs-path=/usr/lib/va
