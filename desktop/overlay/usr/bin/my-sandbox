@@ -31,6 +31,7 @@ done
 [ $# -gt 0 ] || { echo "usage: my-sandbox [--no-net] [--home] PROGRAM [ARGS]" >&2; exit 2; }
 command -v bwrap >/dev/null || { echo "my-sandbox: bubblewrap (bwrap) is missing" >&2; exit 1; }
 prog=$(command -v "$1") || { echo "my-sandbox: $1: no such program" >&2; exit 1; }
+shift	# "$@" is now only the program's arguments
 name=$(basename "$prog")
 
 # The program's own home folder, and the Downloads folder it shares with you

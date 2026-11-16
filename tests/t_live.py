@@ -67,8 +67,8 @@ check('perf', 'perf stat -e task-clock true 2>&1 | grep -i -E "task-clock|second
 # (rootfs is its own parent in mountinfo; init's bind mount has rootfs above it)
 check('live root is a mount (bwrap can pivot_root)',
       'awk \'$5 == "/" { print ($1 == $2 ? "rootfs" : "mount" "ed") }\' /proc/self/mountinfo', 'mounted')
-check('my-sandbox hides home', "su dominic -c 'touch ~/secret.txt; my-sandbox ls -a /home/dominic && echo SANDBOX-RAN'",
-      'SANDBOX-RAN')
+check('my-sandbox hides home', "su dominic -c 'touch ~/secret.txt; my-sandbox ls -a /home/dominic && echo SANDBOX-RAN-$((2+3))'",
+      'SANDBOX-RAN-5')  # not in the echoed command line, only in the output
 out = vm.run("su dominic -c 'my-sandbox ls -a /home/dominic; echo RC=$?'", 120)
 body = out.split('\n', 1)[1]
 results.append(('sandbox: secret.txt not visible', 'secret.txt' not in body and 'RC=0' in body, out[-300:]))
