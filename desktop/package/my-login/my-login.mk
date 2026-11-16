@@ -3,7 +3,8 @@
 # my-login: builds login/my-login.c (login screen), login/my-power.c,
 # login/my-admin.c (opens "Users and system" as root), login/my-lock.c (screen
 # lock) with login/my-checkpass.c, login/my-lidd.c (laptop lid) and
-# login/my-vpnctl.c (the VPN window's root part)
+# login/my-vpnctl.c (the VPN window's root part), login/my-wificert.c (the Wi-Fi
+# window's: certificate files)
 #
 ################################################################################
 
@@ -27,6 +28,7 @@ define MY_LOGIN_BUILD_CMDS
 	$(MY_LOGIN_CC) -o $(@D)/my-checkpass $(@D)/my-checkpass.c $$($(PKG_CONFIG_HOST_BINARY) --cflags --libs libxcrypt)
 	$(MY_LOGIN_CC) -o $(@D)/my-lidd $(@D)/my-lidd.c
 	$(MY_LOGIN_CC) -o $(@D)/my-vpnctl $(@D)/my-vpnctl.c
+	$(MY_LOGIN_CC) -o $(@D)/my-wificert $(@D)/my-wificert.c
 endef
 
 define MY_LOGIN_INSTALL_TARGET_CMDS
@@ -37,17 +39,20 @@ define MY_LOGIN_INSTALL_TARGET_CMDS
 	$(INSTALL) -D -m 0755 $(@D)/my-checkpass $(TARGET_DIR)/usr/bin/my-checkpass
 	$(INSTALL) -D -m 0755 $(@D)/my-lidd $(TARGET_DIR)/usr/sbin/my-lidd
 	$(INSTALL) -D -m 0755 $(@D)/my-vpnctl $(TARGET_DIR)/usr/bin/my-vpnctl
+	$(INSTALL) -D -m 0755 $(@D)/my-wificert $(TARGET_DIR)/usr/bin/my-wificert
 endef
 
 # setuid root, so normal users can reboot (see my-power.c), open "Users and
 # system" with the root password (see my-admin.c), unlock the screen with
 # their own password (see my-checkpass.c) and connect a VPN (my-vpnctl.c,
-# members of netdev only)
+# members of netdev only) and save the certificate files of a Wi-Fi network
+# (my-wificert.c, the same)
 define MY_LOGIN_PERMISSIONS
 	/usr/bin/my-power f 4755 0 0 - - - - -
 	/usr/bin/my-admin f 4755 0 0 - - - - -
 	/usr/bin/my-checkpass f 4755 0 0 - - - - -
 	/usr/bin/my-vpnctl f 4755 0 0 - - - - -
+	/usr/bin/my-wificert f 4755 0 0 - - - - -
 endef
 
 $(eval $(generic-package))

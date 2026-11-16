@@ -82,6 +82,7 @@ KEEP = [
     "home", "root", "var", "tmp", "run", "proc", "sys", "dev", "mnt", "media",
     "lost+found", "boot/grub", "boot/efi", ".my-update",
     "etc/passwd", "etc/shadow", "etc/group", "etc/gshadow",
+    "etc/subuid", "etc/subgid",                  # rootless containers (my-subids)
     "etc/hostname", "etc/hosts", "etc/fstab",
     "etc/X11/xorg.conf.d/00-keyboard.conf",
     "etc/my-distro/setup-done", "etc/my-distro/update.conf",
@@ -92,6 +93,7 @@ KEEP = [
     "etc/localtime", "etc/timezone",             # the time zone
     "etc/my-distro/power.conf",                  # what closing the lid does
     "etc/my-distro/vpn",                         # imported VPNs
+    "etc/my-distro/wifi-certs",                  # certificates of Wi-Fi networks (EAP-TLS)
     "etc/cups/printers.conf", "etc/cups/classes.conf",   # printers (Bluetooth
     "etc/cups/ppd", "etc/cups/lpoptions",                # pairings are in /var)
     "etc/cron",                                  # everyone's crontabs (crontab -e)

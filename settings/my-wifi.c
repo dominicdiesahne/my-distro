@@ -14,8 +14,12 @@
  *
  * Besides networks with one password (WPA2/WPA3 Personal) it connects to
  * networks with a user name and password (WPA2/WPA3 Enterprise, e.g.
- * eduroam at schools and universities) and, with "Other network…", to hidden
- * networks that don't show their name.
+ * eduroam at schools and universities), to networks that log in with
+ * certificates (EAP-TLS: identity, CA certificate, client certificate,
+ * private key and its password) and, with "Other network…", to hidden
+ * networks that don't show their name. The certificate files are copied
+ * by my-wificert (root, for netdev) to /etc/my-distro/wifi-certs, where only
+ * root can read them; wpa_supplicant uses them from there.
  */
 #include <ctype.h>
 #include <dirent.h>
@@ -25,6 +29,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 #define CTRL_DIR "/run/wpa_supplicant"
@@ -40,6 +45,7 @@ struct net {
 };
 
 #define CA_BUNDLE "/etc/ssl/certs/ca-certificates.crt"
+#define CERT_CTL  "/usr/bin/my-wificert"
 
 static char iface[32];
 static GtkWidget *win, *status_label, *list, *btn_connect, *btn_forget, *btn_disconnect;
@@ -463,7 +469,7 @@ static char *ask_password(const char *ssid)
 
 /* --- Networks with a user name (eduroam), hidden networks -------------------- */
 
-enum { SEC_OPEN, SEC_PASSWORD, SEC_LOGIN };
+enum { SEC_OPEN, SEC_PASSWORD, SEC_LOGIN, SEC_TLS };
 
 /* What was typed in ask_login() */
 struct login {
@@ -471,12 +477,20 @@ struct login {
 	int security;         /* SEC_* */
 	char *user, *password, *anon, *domain, *ca;
 	int method;           /* 0 PEAP + MSCHAPv2, 1 TTLS + PAP, 2 TTLS + MSCHAPv2 */
+	/* SEC_TLS (user = the identity; ca, domain as above): files chosen in the
+	 * home folder, and the private key's password */
+	char *client_cert, *private_key, *key_pass;
 };
 
 static void free_login(struct login *l)
 {
 	if (l->password)
 		memset(l->password, 0, strlen(l->password));
+	if (l->key_pass)
+		memset(l->key_pass, 0, strlen(l->key_pass));
+	g_free(l->client_cert);
+	g_free(l->private_key);
+	g_free(l->key_pass);
 	g_free(l->ssid);
 	g_free(l->user);
 	g_free(l->password);
@@ -486,7 +500,7 @@ static void free_login(struct login *l)
 	memset(l, 0, sizeof *l);
 }
 
-static GtkWidget *lg_security, *lg_user_row[2], *lg_pass_row[2], *lg_advanced, *lg_hint;
+static GtkWidget *lg_security, *lg_user_row[2], *lg_pass_row[2], *lg_advanced, *lg_hint, *lg_tls;
 
 static void grid_row(GtkWidget *grid, int y, const char *caption, GtkWidget *w, GtkWidget **row)
 {
@@ -515,9 +529,10 @@ static void on_security(GtkComboBox *c, gpointer d)
 
 	(void)d;
 	show_row(lg_user_row, s == SEC_LOGIN);
-	show_row(lg_pass_row, s != SEC_OPEN);
+	show_row(lg_pass_row, s == SEC_PASSWORD || s == SEC_LOGIN);
 	gtk_widget_set_visible(lg_advanced, s == SEC_LOGIN);
 	gtk_widget_set_visible(lg_hint, s == SEC_LOGIN);
+	gtk_widget_set_visible(lg_tls, s == SEC_TLS);
 	/* as small as what is shown (it grows by itself, but doesn't shrink) */
 	gtk_window_resize(GTK_WINDOW(gtk_widget_get_toplevel(lg_security)), 1, 1);
 }
@@ -532,6 +547,7 @@ static int ask_login(const char *ssid, int security, struct login *l)
 {
 	GtkWidget *d, *box, *grid, *name = NULL, *user, *pass, *show, *err, *adv;
 	GtkWidget *method, *anon, *domain, *ca;
+	GtkWidget *t_id, *t_ca, *t_cert, *t_key, *t_pass, *t_domain, *t_hint;
 	char *title;
 	int y = 0, ok = 0;
 
@@ -565,11 +581,16 @@ static int ask_login(const char *ssid, int security, struct login *l)
 	gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(lg_security), "Password (WPA2/WPA3 Personal)");
 	gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(lg_security),
 	                               "User name and password (eduroam, WPA Enterprise)");
+	gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(lg_security),
+	                               _("Certificate (WPA Enterprise with EAP-TLS)"));
 	gtk_combo_box_set_active(GTK_COMBO_BOX(lg_security), ssid ? security : SEC_PASSWORD);
 	if (!ssid) {
 		name = gtk_entry_new();
 		gtk_entry_set_max_length(GTK_ENTRY(name), 32);
 		grid_row(grid, y++, _("Network name"), name, NULL);
+		grid_row(grid, y++, _("Security"), lg_security, NULL);
+	} else if (security == SEC_LOGIN) {
+		/* an enterprise network: with a password, or with a certificate */
 		grid_row(grid, y++, _("Security"), lg_security, NULL);
 	}
 	user = gtk_entry_new();
@@ -615,6 +636,42 @@ static int ask_login(const char *ssid, int security, struct login *l)
 	gtk_style_context_add_class(gtk_widget_get_style_context(lg_hint), "dim-label");
 	gtk_box_pack_start(GTK_BOX(box), lg_hint, FALSE, FALSE, 0);
 
+	/* EAP-TLS: the login is a certificate and its private key */
+	lg_tls = gtk_grid_new();
+	gtk_grid_set_row_spacing(GTK_GRID(lg_tls), 8);
+	gtk_grid_set_column_spacing(GTK_GRID(lg_tls), 10);
+	t_id = gtk_entry_new();
+	gtk_entry_set_placeholder_text(GTK_ENTRY(t_id), _("e.g. name@school.ac.at"));
+	grid_row(lg_tls, 0, _("Identity"), t_id, NULL);
+	t_ca = gtk_file_chooser_button_new(_("CA certificate"), GTK_FILE_CHOOSER_ACTION_OPEN);
+	grid_row(lg_tls, 1, _("CA certificate"), t_ca, NULL);
+	t_cert = gtk_file_chooser_button_new(_("Client certificate"), GTK_FILE_CHOOSER_ACTION_OPEN);
+	grid_row(lg_tls, 2, _("Client certificate"), t_cert, NULL);
+	t_key = gtk_file_chooser_button_new(_("Private key"), GTK_FILE_CHOOSER_ACTION_OPEN);
+	grid_row(lg_tls, 3, _("Private key"), t_key, NULL);
+	t_pass = gtk_entry_new();
+	gtk_entry_set_visibility(GTK_ENTRY(t_pass), FALSE);
+	gtk_entry_set_placeholder_text(GTK_ENTRY(t_pass), _("only if the key has one"));
+	gtk_entry_set_activates_default(GTK_ENTRY(t_pass), TRUE);
+	grid_row(lg_tls, 4, _("Key password"), t_pass, NULL);
+	t_domain = gtk_entry_new();
+	gtk_entry_set_placeholder_text(GTK_ENTRY(t_domain), _("e.g. school.ac.at"));
+	grid_row(lg_tls, 5, _("Server domain"), t_domain, NULL);
+	gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(t_ca), g_get_home_dir());
+	gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(t_cert), g_get_home_dir());
+	gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(t_key), g_get_home_dir());
+	gtk_box_pack_start(GTK_BOX(box), lg_tls, FALSE, FALSE, 0);
+	t_hint = gtk_label_new(_("Choose the files in your home folder (a .p12 file goes under "
+		"Private key, the key password opens it). my-distro copies them to a place only "
+		"the system can read. With a server domain it checks that it really is their "
+		"server."));
+	gtk_label_set_xalign(GTK_LABEL(t_hint), 0);
+	gtk_label_set_line_wrap(GTK_LABEL(t_hint), TRUE);
+	gtk_label_set_max_width_chars(GTK_LABEL(t_hint), 50);
+	gtk_style_context_add_class(gtk_widget_get_style_context(t_hint), "dim-label");
+	g_object_bind_property(lg_tls, "visible", t_hint, "visible", G_BINDING_SYNC_CREATE);
+	gtk_box_pack_start(GTK_BOX(box), t_hint, FALSE, FALSE, 0);
+
 	err = gtk_label_new("");
 	gtk_label_set_xalign(GTK_LABEL(err), 0);
 	gtk_box_pack_start(GTK_BOX(box), err, FALSE, FALSE, 0);
@@ -642,9 +699,28 @@ static int ask_login(const char *ssid, int security, struct login *l)
 			gtk_label_set_text(GTK_LABEL(err), _("Type your user name and password."));
 			continue;
 		}
+		if (s == SEC_TLS) {
+			char *cc = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(t_cert));
+			char *kk = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(t_key));
+			int missing = !gtk_entry_get_text(GTK_ENTRY(t_id))[0] || !cc || !kk;
+
+			if (missing) {
+				g_free(cc);
+				g_free(kk);
+				gtk_label_set_text(GTK_LABEL(err), _("Type your identity and choose the "
+					"client certificate and the private key."));
+				continue;
+			}
+			l->client_cert = cc;
+			l->private_key = kk;
+			l->user = g_strdup(gtk_entry_get_text(GTK_ENTRY(t_id)));
+			l->ca = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(t_ca));
+			l->domain = g_strstrip(g_strdup(gtk_entry_get_text(GTK_ENTRY(t_domain))));
+			l->key_pass = g_strdup(gtk_entry_get_text(GTK_ENTRY(t_pass)));
+		}
 		l->security = s;
 		l->ssid = name ? g_strdup(gtk_entry_get_text(GTK_ENTRY(name))) : NULL;
-		l->password = s != SEC_OPEN ? g_strdup(p) : NULL;
+		l->password = s == SEC_PASSWORD || s == SEC_LOGIN ? g_strdup(p) : NULL;
 		if (s == SEC_LOGIN) {
 			l->user = g_strdup(u);
 			l->anon = g_strdup(gtk_entry_get_text(GTK_ENTRY(anon)));
@@ -657,6 +733,45 @@ static int ask_login(const char *ssid, int security, struct login *l)
 	}
 	gtk_widget_destroy(d);
 	return ok;
+}
+
+/* Copies a certificate or key file to the root-only place (my-wificert) and
+ * returns the path it has there (g_free it), or NULL. kind: ca, cert, key. */
+static char *store_cert(const char *hex_ssid, const char *kind, const char *file)
+{
+	const char *argv[] = { CERT_CTL, "save", hex_ssid, kind, NULL };
+	char *content = NULL, *result = NULL;
+	gsize len;
+	GPid pid;
+	int in, outfd, st = 1;
+	GString *out = g_string_new(NULL);
+	char buf[512];
+	ssize_t n;
+
+	if (!g_file_get_contents(file, &content, &len, NULL) || len == 0 || len > 120000) {
+		g_free(content);
+		g_string_free(out, TRUE);
+		return NULL;
+	}
+	if (g_spawn_async_with_pipes(NULL, (char **)argv, NULL, G_SPAWN_DO_NOT_REAP_CHILD |
+	                             G_SPAWN_STDERR_TO_DEV_NULL, NULL, NULL, &pid, &in, &outfd,
+	                             NULL, NULL)) {
+		if (write(in, content, len) < 0) {
+			/* my-wificert then says the file is empty */
+		}
+		close(in);
+		while ((n = read(outfd, buf, sizeof buf)) > 0)
+			g_string_append_len(out, buf, n);
+		close(outfd);
+		waitpid(pid, &st, 0);
+		g_spawn_close_pid(pid);
+		if (WIFEXITED(st) && WEXITSTATUS(st) == 0 && out->len > 1)
+			result = g_strstrip(g_strdup(out->str));
+	}
+	memset(content, 0, len);          /* it may be the private key */
+	g_free(content);
+	g_string_free(out, TRUE);
+	return result;
 }
 
 /* Adds a network to wpa_supplicant and connects. hex_ssid: the name as hex. */
@@ -699,6 +814,44 @@ static void add_and_connect(const char *hex_ssid, const struct login *l, int sae
 		memset(quoted, 0, strlen(quoted));
 		g_free(quoted);
 		break;
+	case SEC_TLS: {
+		char *ca = NULL, *cert, *key;
+
+		cert = store_cert(hex_ssid, "cert", l->client_cert);
+		key = store_cert(hex_ssid, "key", l->private_key);
+		if (l->ca && l->ca[0])
+			ca = store_cert(hex_ssid, "ca", l->ca);
+		if (!cert || !key || (l->ca && l->ca[0] && !ca)) {
+			gtk_label_set_text(GTK_LABEL(status_label),
+				_("Could not save the certificate files."));
+			wpa_ok("remove_network", id, NULL, NULL);
+			new_id = -1;
+			g_free(ca);
+			g_free(cert);
+			g_free(key);
+			return;
+		}
+		/* wpa_supplicant's network block for EAP-TLS: eap=TLS, the identity,
+		 * the files (now in /etc/my-distro/wifi-certs) and the key's password */
+		wpa_ok("set_network", id, "key_mgmt", "WPA-EAP WPA-EAP-SHA256");
+		wpa_ok("set_network", id, "ieee80211w", "1");
+		wpa_ok("set_network", id, "eap", "TLS");
+		set_text(id, "identity", l->user);
+		set_text(id, "client_cert", cert);
+		set_text(id, "private_key", key);
+		if (l->key_pass && l->key_pass[0])
+			set_text(id, "private_key_passwd", l->key_pass);
+		if (ca)
+			set_text(id, "ca_cert", ca);
+		else if (l->domain && l->domain[0])
+			set_text(id, "ca_cert", CA_BUNDLE);
+		if (l->domain && l->domain[0])
+			set_text(id, "domain_suffix_match", l->domain);
+		g_free(ca);
+		g_free(cert);
+		g_free(key);
+		break;
+	}
 	case SEC_LOGIN: {
 		static const char *eap[] = { "PEAP", "TTLS", "TTLS" };
 		static const char *phase2[] = { "auth=MSCHAPV2", "auth=PAP", "auth=MSCHAPV2" };
@@ -784,6 +937,14 @@ static void on_forget(GtkButton *b, gpointer d)
 	snprintf(id, sizeof id, "%d", n->saved_id);
 	wpa_ok("remove_network", id, NULL, NULL);
 	wpa_ok("save_config", NULL, NULL, NULL);
+	if (n->enterprise) {                        /* its certificate files, if it had any */
+		char *hex = ssid_hex(n->ssid);
+		const char *argv[] = { CERT_CTL, "remove", hex, NULL };
+
+		g_spawn_sync(NULL, (char **)argv, NULL, G_SPAWN_STDOUT_TO_DEV_NULL |
+		             G_SPAWN_STDERR_TO_DEV_NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+		g_free(hex);
+	}
 	read_networks();
 	fill_list();
 }
