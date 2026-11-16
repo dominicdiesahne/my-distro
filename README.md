@@ -795,7 +795,24 @@ From a terminal: `my-pkg search pdf`, `my-pkg info vim`, `my-pkg list`
 | Lynx, irssi, OpenSSH client | Internet | | Doom (shareware), OpenTyrian, sl | Games |
 | Vim | Programming | | Node.js, C compiler (tcc) | Programming |
 | Docker | Tools | | Virus scanner (ClamAV) | Tools |
-| Samba (sharing) | Internet | | | |
+| Samba (sharing) | Internet | | Podman (rootless containers) | Tools |
+| Intel video driver (iHD) | Graphics | | | |
+
+**Containers:** Docker is for administrators (`sudo docker ...`, an engine
+that starts with the computer). **Podman** runs the same images for every
+user without root: `podman run --rm docker.io/library/alpine echo hi`. Each
+user's images are in `~/.local/share/containers`, on the kernel's overlayfs.
+For that every user has 65536 subordinate IDs in `/etc/subuid` and
+`/etc/subgid` (`my-subids`, at every start and when a user is added in Users
+and system), and shadow's `newuidmap`/`newgidmap` come setuid with the
+package. There is no systemd: podman makes its control groups itself
+(cgroupfs; rootless containers can't use limits like `--memory`) and writes
+events and logs into files (`/etc/containers/containers.conf.d/`).
+
+**Intel video driver (iHD):** with it, Intel graphics since Broadwell (2014)
+decode videos in the graphics chip, also the chips since ~2020 that the
+built-in i965 driver doesn't know. libva tries iHD first and falls back to
+i965 by itself (`vainfo` shows which one works).
 
 ### How it works
 
@@ -840,10 +857,11 @@ the image's libraries. Buildroot records which package installed which file
 (`build/packages-file-list.txt`) and what each package needs (`make
 show-info`); `desktop/make-packages.py` packs each package's files that are
 not in the image into its own `.tar.xz` and turns needs on other extra
-packages into dependencies. Then the tree is put back to the image's
-packages, so the next `make desktop` doesn't include them. The first run
-takes about an hour; `make packages PKG_JOBS=4` uses fewer
-compilers at once if the build machine runs out of memory.
+packages into dependencies; files get the modes of Buildroot's permission
+tables (e.g. setuid), which it otherwise only sets in images. Then the tree
+is put back to the image's packages, so the next `make desktop` doesn't
+include them. The first run takes about an hour; `make packages PKG_JOBS=4`
+uses fewer compilers at once if the build machine runs out of memory.
 
 Upload everything in `out/packages/` to the same GitHub release as the
 update package. To test without a release: `cd out/packages && python3 -m
@@ -1015,15 +1033,16 @@ make run    # boots in the terminal; quit with Ctrl-A, then X
   terminals, web page contents, login screen or root windows.
 - App permissions apply to programs started from the Start menu; a program
   without the microphone gets no sound at all.
-- Video decoding with the graphics chip: Intel's newer driver (iHD, for
-  chips since ~2019 at its best) is not in (big); those decode on the CPU.
+- Video decoding with the graphics chip on Intel chips since ~2020 needs
+  the iHD driver from the Software app (big, so not in the image); it was
+  only checked in a VM, without Intel graphics.
 - Secure Boot needs the key enrolled once per PC (MokManager); with Secure
   Boot on, hibernation is off (kernel lockdown).
 - Firmware updates were only tried in a VM (which has no updatable
   firmware): listing devices and asking the LVFS work there; installing a
   UEFI capsule is untried.
-- Docker: for administrators (sudo); rootless containers and podman are not
-  in.
+- Docker: for administrators (sudo). Rootless containers: with podman;
+  without systemd they can't have resource limits (`--memory`, `--cpus`).
 - Shares open through `mount.cifs` (Network share), not as `smb://` in the
   file manager (that needs gvfs with Samba, too big).
 
