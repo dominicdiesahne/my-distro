@@ -16,6 +16,13 @@ BR2_PACKAGE_GNUPLOT=y
 # (feh needs imlib2's JPEG loader, so that is in the image: buildroot.fragment)
 BR2_PACKAGE_FEH=y
 BR2_PACKAGE_IMAGEMAGICK=y
+# Intel's newer video driver for VA-API (iHD, 0.10.0): video decoding with
+# Intel graphics since Broadwell (2014; Gen8 on), best since ~2019, where the
+# image's i965 stops. Brings gmmlib; libva, Mesa and libpciaccess are in the
+# image. It goes next to i965 in libva's folder /usr/lib/va (external.mk);
+# libva tries iHD first on Intel chips and falls back to i965 by itself.
+BR2_PACKAGE_INTEL_MEDIADRIVER=y
+BR2_PACKAGE_INTEL_MEDIADRIVER_GEN8=y
 
 # --- Internet ------------------------------------------------------------------
 BR2_PACKAGE_DILLO=y
@@ -67,6 +74,23 @@ BR2_PACKAGE_DOCKER_ENGINE_DOCKER_INIT_TINI=y
 # nftables too
 BR2_PACKAGE_IPTABLES_NFTABLES=y
 BR2_PACKAGE_IPTABLES_NFTABLES_DEFAULT=y
+
+# Podman (0.10.0): containers for every user, without root ("rootless").
+# crun runs them (podman's own runtime; runc stays Docker's), conmon watches
+# them, pasta gives them the network, catatonit is podman's init and pause
+# process. netavark and aardvark-dns are the networks of root's containers.
+# shadow (selected by podman) brings the setuid newuidmap and newgidmap:
+# make-packages.py gives them the modes of Buildroot's permission table.
+# Every user gets subordinate IDs (/etc/subuid, /etc/subgid) from
+# my-subids in the image (at every start and when a user is made).
+# my-podman-conf: storage (the kernel's overlayfs, also in a user
+# namespace, so no fuse-overlayfs), cgroupfs and a log file instead of
+# systemd (desktop/package/my-podman-conf).
+BR2_PACKAGE_PODMAN=y
+BR2_PACKAGE_PODMAN_INIT_CATATONIT=y
+BR2_PACKAGE_PODMAN_NET_PASST=y
+BR2_PACKAGE_CRUN=y
+BR2_PACKAGE_MY_PODMAN_CONF=y
 
 # --- Security (0.9.7) ---------------------------------------------------------------
 # ClamAV, the virus scanner: clamscan and freshclam (signature updates);

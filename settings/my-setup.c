@@ -19,7 +19,8 @@
  * How the system is changed:
  *   - users: busybox adduser / deluser, the home folder is a copy of
  *     /etc/skel; passwords are hashed here with crypt() (SHA-256, "$5$")
- *     and written into /etc/shadow
+ *     and written into /etc/shadow; my-subids gives them subordinate IDs
+ *     (/etc/subuid, /etc/subgid) for rootless containers
  *   - computer name: /etc/hostname, /etc/hosts and the `hostname` command
  *   - keyboard: /etc/X11/xorg.conf.d/00-keyboard.conf for the next start of
  *     X, and `setxkbmap` for the X server that runs now
@@ -114,6 +115,10 @@ static int valid_hostname(const char *s)
 }
 
 /* --- Changing the system ------------------------------------------------------- */
+
+/* Gives every user subordinate IDs (/etc/subuid, /etc/subgid) for rootless
+ * containers and removes those of users that are gone (0.10.0). */
+static const char *const subids[] = { "/usr/sbin/my-subids", NULL };
 
 /* Runs a program (full path, no shell) and waits. 0 = it worked. */
 static int run(const char *const argv[])
@@ -257,6 +262,8 @@ static const char *save_user(const char *name, const char *fullname,
 			return _("Could not create the user.");
 		if (access(home, F_OK) != 0 && run(skel) != 0)
 			g_mkdir_with_parents(home, 0755);
+		/* subordinate IDs for rootless containers (podman) */
+		run(subids);
 	} else {
 		snprintf(home, sizeof home, "%s", pw->pw_dir);
 		set_field("/etc/passwd", name, 4, fullname);
@@ -319,6 +326,7 @@ static const char *remove_user(const char *name)
 	snprintf(home, sizeof home, "%s", pw->pw_dir);
 	if (run(del) != 0)
 		return _("Could not remove the user.");
+	run(subids);
 	/* only a folder in /home that is clearly theirs */
 	if (strncmp(home, "/home/", 6) == 0 && !strstr(home, "..") && strchr(home + 6, '/') == NULL) {
 		const char *rm[] = { "/bin/rm", "-rf", home, NULL };

@@ -59,6 +59,15 @@ description = Converts and changes pictures in a terminal: other formats,
   sizes, crops, text on pictures, many pictures at once. Example: magick
   photo.jpg -resize 50% small.png
 
+[intel-mediadriver]
+title = Intel video driver (iHD)
+category = Graphics
+description = Lets newer Intel graphics decode videos (H.264, H.265, VP9, AV1)
+  instead of the processor: cooler, quieter, longer on battery. For Intel
+  chips since 2014 (Broadwell), and the only one for chips since ~2020 (Ice
+  Lake, Tiger Lake and newer). Videos use it by themselves once it is
+  installed; older chips keep the built-in driver (i965). vainfo shows it.
+
 # --- Internet -----------------------------------------------------------------------
 
 [dillo]
@@ -153,6 +162,17 @@ description = Runs programs in containers: docker run hello-world downloads a
   small image from Docker Hub and starts it. Administrators only (sudo docker
   ...). The engine starts with the computer (right after installing: sudo
   /etc/init.d/S60docker start); on the live system its images are in RAM.
+
+[podman]
+title = Podman (containers without root)
+category = Tools
+needs = crun conmon netavark aardvark-dns passt catatonit containers-image-config
+  cgroupfs-v2-mount iptables my-podman-conf
+description = Runs containers like Docker, but every user for themselves,
+  without root and without an engine in the background: podman run --rm
+  docker.io/library/alpine echo hi. Images and containers are in your home
+  folder (~/.local/share/containers); podman ps, podman images and podman rm
+  work like docker's. Limits like --memory need root (sudo podman).
 
 [clamav]
 title = Virus scanner (ClamAV)

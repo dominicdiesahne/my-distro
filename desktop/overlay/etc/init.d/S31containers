@@ -1,0 +1,40 @@
+#!/bin/sh
+# Containers (0.10.0): what podman (a Software app package) needs from the
+# system, ready before it is installed, so it works right after installing:
+#   - subordinate IDs for every user (my-subids): rootless containers
+#   - control groups v2 in /sys/fs/cgroup (S30cgroupfs2 of the Docker and
+#     podman packages does the same at the next start; only mounted once)
+#   - / as a shared mount (as with systemd): mounts made inside rootless
+#     containers' namespaces can reach their volumes ("/" is not a shared
+#     mount, podman warns otherwise)
+#   - the tun module: pasta, the network of rootless containers, makes its
+#     interface with /dev/net/tun
+#   - on the live system the root filesystem is in RAM, where crun can't use
+#     pivot_root (like DOCKER_RAMDISK in S60docker): containers.conf.d gets
+#     no_pivot_root there; an installed system (which my-install copied from
+#     the live one) gets it removed
+LIVE_CONF=/etc/containers/containers.conf.d/90-my-live.conf
+
+case "$1" in
+start)
+	/usr/sbin/my-subids
+	mkdir -p /sys/fs/cgroup
+	grep -q " /sys/fs/cgroup cgroup2 " /proc/mounts ||
+		mount -t cgroup2 none /sys/fs/cgroup 2>/dev/null
+	mount --make-rshared / 2>/dev/null
+	modprobe -q tun 2>/dev/null
+	if grep -q "rdinit=" /proc/cmdline; then
+		mkdir -p "${LIVE_CONF%/*}"
+		printf '%s\n' "# The live system (S31containers): its root filesystem is in RAM" \
+			"[engine]" "no_pivot_root = true" >"$LIVE_CONF"
+	else
+		rm -f "$LIVE_CONF"
+	fi
+	;;
+stop) ;;
+*)
+	echo "Usage: $0 {start|stop}"
+	exit 1
+	;;
+esac
+exit 0

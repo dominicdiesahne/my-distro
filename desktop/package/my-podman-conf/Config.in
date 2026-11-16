@@ -1,0 +1,8 @@
+config BR2_PACKAGE_MY_PODMAN_CONF
+	bool "my-podman-conf"
+	depends on BR2_PACKAGE_PODMAN
+	help
+	  my-distro's settings for podman (a Software app package):
+	  storage on the kernel's overlayfs (also for rootless
+	  containers), cgroupfs and an events file instead of systemd,
+	  crun as the runtime.

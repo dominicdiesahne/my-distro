@@ -38,3 +38,9 @@ MESA3D_CONF_OPTS += -Dcpp_rtti=$(if $(filter YES,$(shell \
 # own "false" and "true", which C23 (GCC 15's default) made keywords: build
 # it as C17.
 PRBOOM_CONF_ENV += CFLAGS="$(TARGET_CFLAGS) -std=gnu17"
+
+# Intel's iHD video driver (a Software app package, 0.10.0) installs into
+# $libdir/dri unless told otherwise, but Buildroot's libva looks in
+# /usr/lib/va (its driverdir), where the image's i965 driver is: put iHD
+# there too.
+INTEL_MEDIADRIVER_CONF_OPTS += -DLIBVA_DRIVERS_PATH=/usr/lib/va
