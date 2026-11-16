@@ -4,7 +4,11 @@
 # your Videos folder as "Screen recording DATE TIME.mp4".
 #
 # FFmpeg reads the screen (x11grab over XCB) and packs it as MPEG-4 video,
-# which every player and Windows play. No sound is recorded.
+# which every player and Windows play. With the sound server running, the
+# sound the PC plays ("what you hear") is recorded too, as AAC: PipeWire's
+# ALSA plugin gives a capture stream the monitor of the default output when
+# it is asked for stream.capture.sink. The microphone is not recorded. If
+# the sound can't be recorded, the video is made without it.
 # Log of the last recording: /tmp/my-record-UID.log
 ME=$(id -u)
 PIDFILE=/tmp/my-record-$ME.pid
@@ -44,13 +48,33 @@ mkdir -p "$dir"
 file="$dir/Screen recording $(date '+%Y-%m-%d %H.%M.%S').mp4"
 
 # 25 pictures a second, the whole screen; video sizes must be even numbers
-ffmpeg -nostdin -y -f x11grab -framerate 25 -draw_mouse 1 -i "$DISPLAY" \
-	-vf 'crop=trunc(iw/2)*2:trunc(ih/2)*2' -c:v mpeg4 -q:v 4 -pix_fmt yuv420p \
-	"$file" >"$LOG" 2>&1 &
-printf '%s\n%s\n' "$!" "$file" >"$PIDFILE"
-sleep 1
+start() {      # start [with sound]
+	if [ -n "$1" ]; then
+		# the sound: the monitor of the default output, through ALSA's default
+		PIPEWIRE_ALSA='{ stream.capture.sink=true }' \
+		ffmpeg -nostdin -y -f x11grab -framerate 25 -draw_mouse 1 -i "$DISPLAY" \
+			-thread_queue_size 1024 -f alsa -ac 2 -ar 48000 -i default \
+			-vf 'crop=trunc(iw/2)*2:trunc(ih/2)*2' -c:v mpeg4 -q:v 4 -pix_fmt yuv420p \
+			-af aresample=async=1 -c:a aac -b:a 128k \
+			"$file" >"$LOG" 2>&1 &
+	else
+		ffmpeg -nostdin -y -f x11grab -framerate 25 -draw_mouse 1 -i "$DISPLAY" \
+			-vf 'crop=trunc(iw/2)*2:trunc(ih/2)*2' -c:v mpeg4 -q:v 4 -pix_fmt yuv420p \
+			"$file" >"$LOG" 2>&1 &
+	fi
+	printf '%s\n%s\n' "$!" "$file" >"$PIDFILE"
+	sleep 1
+}
+
+withsound=
+[ -S "${XDG_RUNTIME_DIR:-/nonexistent}/pipewire-0" ] && withsound=1
+start $withsound
+if ! running && [ -n "$withsound" ]; then
+	start                                # no sound possible: video only
+	withsound=
+fi
 if running; then
-	my-notify -i media-record "Recording the screen" \
+	my-notify -i media-record "Recording the screen${withsound:+ with sound}" \
 		"To stop, choose Record screen in the Start menu again, or press Super+Shift+R."
 else
 	rm -f "$PIDFILE"

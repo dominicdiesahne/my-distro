@@ -459,3 +459,13 @@ BR2_PACKAGE_UTIL_LINUX_PIVOT_ROOT=y
 # the image (a few hundred KB).
 BR2_PACKAGE_UTIL_LINUX_MOUNT=y
 BR2_PACKAGE_UTIL_LINUX_MOUNTPOINT=y
+
+# --- 0.10.0 ------------------------------------------------------------------
+
+# VPN: OpenVPN next to WireGuard (the VPN window imports .ovpn files;
+# /usr/lib/my-distro/vpn runs it). Its kernel part, tun, is in already.
+BR2_PACKAGE_OPENVPN=y
+
+# Screen recording with sound (my-record): FFmpeg's ALSA input records what
+# PipeWire plays (pipewire-alsa, see 0.9.7); AAC is FFmpeg's own encoder.
+# alsa-lib is in the image, so FFmpeg picks the ALSA input up by itself.
