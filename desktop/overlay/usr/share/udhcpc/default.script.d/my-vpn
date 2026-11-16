@@ -1,8 +1,12 @@
 #!/bin/sh
 # Runs after the DHCP client wrote /etc/resolv.conf (new or renewed lease).
-# While a VPN with its own DNS servers is connected (/usr/lib/my-distro/vpn),
-# keep using those: remember the new normal DNS for when the VPN disconnects,
-# and put the VPN's back.
+# While a VPN is connected (/usr/lib/my-distro/vpn):
+#  - with its own DNS servers: keep using those. Remember the new normal DNS
+#    for when the VPN disconnects, and put the VPN's back.
+#  - on a new lease ("bound": another network, or the same one again): have
+#    the VPN script look whether the way out has changed, and if so connect
+#    the VPN again over the new network (in the background, it takes a few
+#    seconds).
 RUN=/run/my-vpn
 case "$1" in
 bound|renew)
@@ -12,4 +16,7 @@ bound|renew)
 	fi
 	;;
 esac
+if [ "$1" = bound ] && [ -f "$RUN/active" ]; then
+	/usr/lib/my-distro/vpn reconnect </dev/null >/dev/null 2>&1 &
+fi
 exit 0
