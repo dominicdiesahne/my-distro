@@ -114,6 +114,48 @@ check('FFmpeg decoders', "ffmpeg -hide_banner -decoders 2>/dev/null | grep -E ' 
       "awk '{print $2}' | tr '\\n' ' '", 'libdav1d')
 check('VA-API drivers', 'ls /usr/lib/dri/ | grep -E "drv_video" | tr "\\n" " "', 'drv_video')
 
+# --- 0.10.0 items that need no desktop or hardware ---------------------------------
+# OpenVPN next to WireGuard
+check('openvpn', 'openvpn --version | head -1', 'OpenVPN')
+check('tun device can be made', 'modprobe tun; ip tuntap add dev tt0 mode tun && ip link del tt0 && echo TUNOK', 'TUNOK')
+check('FFmpeg: ALSA input and AAC encoder', "ffmpeg -hide_banner -devices 2>&1 | grep -w alsa; "
+      "ffmpeg -hide_banner -encoders 2>&1 | grep -w aac", 'aac')
+OVPN = ('client\\ndev tun\\nremote vpn.example.com 1194\\nauth-user-pass\\nredirect-gateway\\n'
+        'up /bin/evil\\nscript-security 2\\n<ca>\\n-----BEGIN CERTIFICATE-----\\nMIIB\\n-----END CERTIFICATE-----\\n</ca>\\n')
+check('my-vpnctl imports an .ovpn (redirect-gateway gets def1)',
+      "printf '" + OVPN + "' > /tmp/t.ovpn; su dominic -c 'my-vpnctl import-ovpn tt < /tmp/t.ovpn'; "
+      "cat /etc/my-distro/vpn/tt.ovpn", 'redirect-gateway def1')
+check('.ovpn: up and script-security are not kept',
+      'grep -c -E "^(up|script-security)" /etc/my-distro/vpn/tt.ovpn; true', '0')
+check('my-vpnctl: OpenVPN login is root-only', "printf 'me\\nsecret\\n' | su dominic -c 'my-vpnctl auth tt'; "
+      "ls -l /etc/my-distro/vpn/tt.auth", '-rw-------')
+check('my-vpnctl lists it as ovpn', "su dominic -c 'my-vpnctl list' | tr '\\t' ' '", 'tt ovpn')
+check('my-vpnctl refuses a file reference',
+      "printf 'client\\nremote a 1\\nca /etc/shadow\\n' | su dominic -c 'my-vpnctl import-ovpn bad'; "
+      "ls /etc/my-distro/vpn/bad.ovpn 2>&1", 'No such file')
+check('vpn status: disconnected', "su dominic -c 'my-vpnctl status'", 'disconnected')
+# VPN reconnect after a network change: nothing to do without a VPN
+check('vpn reconnect without a VPN does nothing', '/usr/lib/my-distro/vpn reconnect; echo RC=$?', 'RC=0')
+check('DHCP hook runs on a new lease', 'sh /usr/share/udhcpc/default.script.d/my-vpn bound; echo RC=$?', 'RC=0')
+check('my-vpnctl removes it', "su dominic -c 'my-vpnctl remove tt'; ls /etc/my-distro/vpn/ | grep -c '^tt'; true", '0')
+# Wi-Fi with certificates (EAP-TLS): the files go to a root-only place
+check('my-wificert saves a key root-only', "echo KEYDATA | su dominic -c 'my-wificert save 6162 key'; "
+      "ls -l /etc/my-distro/wifi-certs/", '-rw-------')
+check('my-wificert refuses a bad kind', "echo x | su dominic -c 'my-wificert save 6162 ../../x'; echo RC=$?", 'RC=1')
+check('my-wificert removes them', "su dominic -c 'my-wificert remove 6162'; "
+      "ls /etc/my-distro/wifi-certs/ | grep -c 6162; true", '0')
+# wpa_supplicant takes the network block the Wi-Fi window writes for EAP-TLS
+vm.run("printf '%s\\n' 'ctrl_interface=DIR=/run/wpa_supplicant' 'network={' ' ssid=\"corp\"' "
+       "' key_mgmt=WPA-EAP WPA-EAP-SHA256' ' ieee80211w=1' ' eap=TLS' ' identity=\"me@corp.example\"' "
+       "' ca_cert=\"/etc/my-distro/wifi-certs/636f7270-ca\"' "
+       "' client_cert=\"/etc/my-distro/wifi-certs/636f7270-cert\"' "
+       "' private_key=\"/etc/my-distro/wifi-certs/636f7270-key\"' ' private_key_passwd=\"pw\"' "
+       "' domain_suffix_match=\"corp.example\"' '}' > /tmp/tls.conf", 30)
+check('wpa_supplicant reads an EAP-TLS network block',
+      'out=$(timeout 8 wpa_supplicant -dd -c /tmp/tls.conf -i eth0 -D wired 2>&1); '
+      'echo "$out" | grep -q "Priority group" && ! echo "$out" | grep -q -E "failed to parse|Failed to read" '
+      '&& echo PARSE-OK', 'PARSE-OK', timeout=60)
+
 # --- the desktop ----------------------------------------------------------------
 vm.run('echo skipped > /etc/my-distro/setup-done; killall my-setup; true', 60)
 time.sleep(20)
@@ -135,6 +177,17 @@ time.sleep(30)
 vm.shot(SHOTS + '/04-sound-window.png')
 check('a playing program in the list', as_user('/usr/lib/my-distro/sound list'), 'app\t')
 vm.run('killall my-sound speaker-test; true', 30)
+# 0.10.0: a screen recording has the sound that plays (QEMU's sound card is a
+# null device, but PipeWire still runs its monitor, so there is an audio stream)
+vm.run(as_user('(speaker-test -t sine >/dev/null 2>&1 &); sleep 2; my-record'), 60)
+time.sleep(8)
+vm.run(as_user('my-record'), 60)           # stops it
+time.sleep(4)
+vm.run('killall speaker-test; true', 30)
+check('my-record file has video and AAC audio',
+      as_user('f=$(ls -t ~/Videos/*.mp4 | head -1); ffmpeg -hide_banner -i "$f" 2>&1 | grep -E "Stream"'),
+      'Audio: aac')
+check('my-record log shows the sound input', 'grep -c "Input #1, alsa" /tmp/my-record-1000.log; true', '1')
 # 6. screen reader
 vm.run(as_user('MY_READER_LOG=/tmp/reader.log my-reader --toggle'), 60)
 time.sleep(15)

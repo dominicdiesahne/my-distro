@@ -79,13 +79,27 @@ the taskbar, the login screen, the file history daemon and the search indexer.
   click lists the networks around, asks for the password and connects
   (wpa_supplicant underneath; started by a udev rule when an adapter appears).
   Networks with a user name and password (eduroam, WPA2/WPA3 Enterprise:
-  PEAP or TTLS, with the server's certificate checked against its domain) and
-  hidden networks (*Other network…*) work too.
+  PEAP or TTLS, with the server's certificate checked against its domain),
+  networks that log in with certificates (EAP-TLS: identity, CA certificate,
+  client certificate, private key and its password) and hidden networks
+  (*Other network…*) work too. The certificate files you choose are copied
+  by `login/my-wificert.c` (setuid root, for `netdev`) to
+  `/etc/my-distro/wifi-certs`, where only root can read them, and the
+  network block gets `eap=TLS`, `ca_cert`, `client_cert`, `private_key` and
+  `private_key_passwd` pointing there.
 - **VPN** (`settings/my-vpn.c`, Start menu *VPN*): import a WireGuard config
-  file (`.conf`) from your VPN service or router, then connect and
-  disconnect. `login/my-vpnctl.c` does the root part (for members of
-  `netdev`, like Wi-Fi) and never runs commands from the file (PostUp & co
-  are left out).
+  file (`.conf`) or an OpenVPN file (`.ovpn`) from your VPN service or
+  router, then connect and disconnect; the window shows the status and the
+  traffic. An OpenVPN file that asks for a user name (`auth-user-pass`) makes
+  the window ask for it and the password (kept root-only). Certificates and
+  keys must be inside the `.ovpn` file (`<ca>`, `<cert>`, `<key>`,
+  `<tls-crypt>`...). `login/my-vpnctl.c` does the root part (for members of
+  `netdev`, like Wi-Fi) and never runs commands from the file (`PostUp` & co,
+  OpenVPN's `up`, `down`, `plugin`, `script-security`... are left out). The
+  DNS servers of the VPN (WireGuard `DNS`, OpenVPN's pushed
+  `dhcp-option DNS`) are used while it is connected. When the network
+  changes (another Wi-Fi, a cable) a connected VPN connects again by itself
+  (the DHCP client's hook runs `vpn reconnect` on a new lease).
 - **Installer** (`my-install`): copies the live system onto a hard disk with
   GRUB for BIOS and UEFI, so your files and settings survive a reboot.
 - **Sound** (PipeWire with WirePlumber): a speaker in the taskbar shows the
@@ -139,8 +153,9 @@ the taskbar, the login screen, the file history daemon and the search indexer.
 - **Clipboard that stays** (`panel/my-clipd.c`): copied text can still be
   pasted after the program you copied it from is closed.
 - **Screen recording** (`my-record`): Start menu *Record screen* or
-  Super+Shift+R starts it, the same again stops it. The video (MPEG-4, no
-  sound) goes to `~/Videos`.
+  Super+Shift+R starts it, the same again stops it. The video (MPEG-4) goes to
+  `~/Videos`, with the sound the PC plays (AAC; "what you hear", not the
+  microphone) when the sound server runs.
 - **Camera** (`my-camera`): USB webcams and laptop cameras (UVC) in an mpv
   window; S takes a photo into `~/Pictures`.
 - **System logs** (`settings/my-logs.c`): system messages, kernel messages
@@ -328,8 +343,8 @@ pick a network, type its password. my-distro remembers it
 (`/etc/wpa_supplicant.conf`, kept by system updates) and connects again by
 itself. Drivers and firmware are in for Intel, Qualcomm Atheros, MediaTek,
 Realtek and Broadcom chips, and most USB Wi-Fi sticks. Networks without a
-name (hidden) and enterprise Wi-Fi (eduroam, username + password) can't be
-chosen in the window yet; `wpa_cli` in a terminal can.
+name (hidden) and enterprise Wi-Fi (eduroam with username + password, or with
+certificates) are set up in the window too (*Other network…*).
 
 If something doesn't work, a terminal shows what the PC has: `lspci -k`
 (each device and the driver that took it), `dmesg | grep -i firmware`.
@@ -531,6 +546,12 @@ window (`my-sound`) and `my-bluetooth` ask PipeWire through
 Lua 5.4 and the image has LuaJIT (mpv), which Buildroot can't have
 together with Lua: `desktop/package/my-wireplumber` builds WirePlumber
 with its own static Lua (`desktop/package/my-lua54`).
+
+Screen recordings (`my-record`) take the sound the PC plays through ALSA's
+`default` (FFmpeg's ALSA input, which pipewire-alsa serves) with
+`PIPEWIRE_ALSA='{ stream.capture.sink=true }'`: PipeWire then connects the
+capture stream to the monitor of the default output instead of the
+microphone. Without a running PipeWire the video is recorded without sound.
 
 ### Printing
 
@@ -848,12 +869,12 @@ http.server`, and in the VM put `url = http://10.0.2.2:8000/` into
 |---|---|
 | `Makefile` | `make desktop` (ISO and update package), `make release-files` (signature), `make packages` / `make release-packages` (Software app), `make run-iso`; `make` / `make run` for the minimal version |
 | `init/init.c` | PID 1 |
-| `login/` | Login screen `my-login`, screen lock `my-lock` with `my-checkpass`, lid switch `my-lidd`, `my-power` (reboot, power off, suspend, brightness, eject USB sticks for normal users), `my-admin` (root password check for Users and system, Disks, Backup and the Software app), `my-vpnctl` (the VPN window's root part) |
+| `login/` | Login screen `my-login`, screen lock `my-lock` with `my-checkpass`, lid switch `my-lidd`, `my-power` (reboot, power off, suspend, brightness, eject USB sticks for normal users), `my-admin` (root password check for Users and system, Disks, Backup and the Software app), `my-vpnctl` (the VPN window's root part), `my-wificert` (the Wi-Fi window's: certificate files) |
 | `settings/my-bluetooth.c`, `my-printers.c`, `my-disks.c`, `my-backup-gui.c` | The Bluetooth, Printers (and Scan), Disks and Backup windows |
 | `desktop/overlay/usr/lib/my-distro/disk-tool`, `usr/bin/my-backup` | What Disks does as root (format, fsck); the backup command |
 | `panel/my-zoom.c`, `panel/my-speak.c`, `desktop/overlay/usr/bin/my-keyboard` | Magnifier, read aloud, on-screen keyboard |
 | `desktop/overlay/etc/cups/`, `usr/lib/cups/backend/my-pdf`, `etc/init.d/S81cupsd`, `S41bluealsa` | Printing settings, the PDF printer, start scripts |
-| `desktop/overlay/usr/lib/my-distro/vpn` | Connects and disconnects a WireGuard VPN (run by `my-vpnctl`) |
+| `desktop/overlay/usr/lib/my-distro/vpn` | Connects and disconnects a WireGuard or OpenVPN VPN, reconnects it after a network change (run by `my-vpnctl` and the DHCP hook) |
 | `desktop/overlay/usr/sbin/my-reset`, `etc/init.d/S00reset`, `desktop/post-fakeroot.sh` | Factory reset, and the factory copy it puts back |
 | `desktop/overlay/usr/bin/my-record`, `my-camera` | Screen recording, webcam |
 | `desktop/overlay/usr/sbin/my-install` | Installer (shell script) |
@@ -983,11 +1004,10 @@ make run    # boots in the terminal; quit with Ctrl-A, then X
 - NetSurf has limited JavaScript; big web apps (YouTube, Google Docs) don't work.
 - Only x86-64. Tested in VirtualBox and QEMU; the drivers for real PCs are
   in, but not yet tried on one (see [On a real PC](#on-a-real-pc)).
-- Enterprise Wi-Fi (eduroam) knows PEAP and TTLS with a password; logins
-  with a certificate instead of a password (EAP-TLS) are not in the window.
-- VPN: WireGuard only (no OpenVPN). When you change networks while a VPN
-  with "all traffic" is connected, disconnect and connect it again.
-- Screen recordings have no sound.
+- OpenVPN files must have their certificates and keys inside (`<ca>`...);
+  files that point at other files, tap (bridge) mode, scripts and plugins
+  are not supported, and private keys with a password (OpenVPN) are not
+  supported yet. Screen recordings take the PC's sound, not the microphone.
 - The digital microphones of some new laptops (Intel SOF) don't work yet.
   Bluetooth headset microphones (HFP) and Bluetooth audio in general are
   untested on real hardware.
