@@ -1,8 +1,9 @@
 """Software app package tests (0.9.7): boots the live system, installs
 packages from out/packages through a local web server (my-pkg), and tries
 them: tcc compiles and runs hello.c, node, docker run hello-world (QEMU's
-user network reaches the internet), Samba sharing to itself, ClamAV finds
-a test file.
+user network reaches the internet), Intel's iHD video driver is where libva
+looks, rootless podman as a normal user (0.10.0), Samba sharing to itself,
+ClamAV finds a test file.
 
     python3 tests/t_pkg.py PKGDIR [BUILD]
 
@@ -77,6 +78,35 @@ try:
     check('docker run hello-world', 'docker run --rm hello-world 2>&1 | head -5', 'Hello from Docker', timeout=900)
     check('container reaches the internet', 'docker run --rm busybox wget -q -O /dev/null -T 20 '
           "http://example.com && echo NET''OK", 'NETOK', timeout=900)
+
+    # 0.10.0: Intel's iHD video driver. QEMU has no Intel graphics, so vainfo
+    # can't use it: only check that it is in libva's folder (next to i965)
+    # and that the loader finds every library it needs (gmmlib & co.)
+    check('install intel-mediadriver', 'my-pkg install intel-mediadriver 2>&1 | tail -3', 'intel-mediadriver',
+          timeout=1200)
+    check("iHD in libva's folder", 'ls /usr/lib/va/', 'iHD_drv_video.so')
+    check('iHD finds its libraries', 'l=$(/lib64/ld-linux-x86-64.so.2 --list /usr/lib/va/iHD_drv_video.so 2>&1); '
+          'echo "$l" | grep -E "not found|igdgmm"; echo "$l" | grep -q libigdgmm && ! echo "$l" | grep -q "not found" '
+          "&& echo LIBS''OK", 'LIBSOK')
+
+    # 0.10.0: rootless podman, as the normal user dominic
+    check('install podman', 'my-pkg install podman 2>&1 | tail -3', 'podman', timeout=1200)
+    check('newuidmap is setuid', 'ls -l /usr/bin/newuidmap /usr/bin/newgidmap', '-rwsr-xr-x')
+    check('dominic has subordinate IDs', 'grep -h "^dominic:" /etc/subuid /etc/subgid', 'dominic:100000:65536')
+    info = check('podman info as a normal user (rootless)', "su dominic -c 'cd ~ && podman info 2>&1' | "
+                 "grep -E 'rootless:|graphDriverName|cgroupManager|ociRuntime:|name: crun|level=(error|warn)'",
+                 'rootless: true', timeout=300)
+    results.append(('rootless storage on overlayfs', 'graphDriverName: overlay' in info))
+    print(('PASS ' if results[-1][1] else 'FAIL ') + results[-1][0], flush=True)
+    # the first pull can time out like docker's: try again
+    vm.run("su dominic -c 'cd ~ && for i in 1 2 3 4; do podman pull docker.io/library/alpine >/dev/null 2>&1 "
+           "&& break; sleep 15; done; podman images'", 900)
+    check('rootless podman run alpine', "su dominic -c 'cd ~ && podman run --rm docker.io/library/alpine echo hi''podman'",
+          'hipodman', timeout=900)
+    check('rootless container reaches the internet (pasta)', "su dominic -c 'cd ~ && podman run --rm "
+          "docker.io/library/alpine wget -q -O /dev/null -T 20 http://example.com && echo NET''OK'", 'NETOK', timeout=900)
+    check('remove podman (Docker keeps iptables)', 'my-pkg remove podman 2>&1 | tail -3; command -v podman || echo GONE; '
+          'command -v iptables', 'GONE')
 
     # 2. Samba sharing
     check('install samba4', 'my-pkg install samba4 2>&1 | tail -3', 'samba', timeout=1200)
