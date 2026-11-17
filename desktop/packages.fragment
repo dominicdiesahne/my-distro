@@ -70,6 +70,9 @@ BR2_PACKAGE_JQ=y
 BR2_PACKAGE_DOCKER_ENGINE=y
 BR2_PACKAGE_DOCKER_CLI=y
 BR2_PACKAGE_DOCKER_ENGINE_DOCKER_INIT_TINI=y
+# runc: containerd selects it only without crun, and podman (0.10.0) brings
+# crun, so it is named here; Docker's runtime stays runc
+BR2_PACKAGE_RUNC=y
 # iptables in its nftables variant (iptables-nft): the image's firewall is
 # nftables too
 BR2_PACKAGE_IPTABLES_NFTABLES=y
