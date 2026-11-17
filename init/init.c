@@ -3,7 +3,7 @@
  *
  * The kernel starts this program first, and it must never exit
  * (if PID 1 exits, the kernel panics). Its jobs:
- *   1. mount the virtual filesystems (/proc, /sys, /dev, /tmp, /run)
+ *   1. mount the virtual filesystems (/proc, /sys, /dev, /dev/shm, /tmp, /run)
  *   2. set the hostname from /etc/hostname
  *   3. run the startup scripts in /etc/init.d, if the system has them
  *      (on the desktop build they start udev and the graphical desktop)
@@ -230,6 +230,16 @@ int main(void)
 		mount_fs("efivarfs", "/sys/firmware/efi/efivars", "efivarfs");
 	mount_fs("devtmpfs", "/dev", "devtmpfs");
 	mount_fs("devpts", "/dev/pts", "devpts");
+	/* /dev/shm (0.10.0): POSIX shared memory (shm_open, sem_open) lives
+	 * here, and devtmpfs doesn't make the folder. The fstab entry for it is
+	 * never used: nothing here runs "mount -a". Without it rootless podman
+	 * can't make its locks ("failed to create 2048 locks in
+	 * /libpod_rootless_lock_1000"), and browsers and Python's
+	 * multiprocessing lose their shared memory too. */
+	mkdir("/dev/shm", 01777);
+	if (mount("tmpfs", "/dev/shm", "tmpfs", MS_NOSUID | MS_NODEV, "mode=1777") < 0 &&
+	    errno != EBUSY)
+		fprintf(stderr, "init: mount /dev/shm: %s\n", strerror(errno));
 	mount_fs("tmpfs", "/tmp", "tmpfs");
 	/* /run holds what is only true until the next boot: PID files, and the
 	 * list of network interfaces that are up (ifup's /run/ifstate). On a

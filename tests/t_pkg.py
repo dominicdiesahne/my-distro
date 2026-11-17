@@ -93,8 +93,11 @@ try:
     check('install podman', 'my-pkg install podman 2>&1 | tail -3', 'podman', timeout=1200)
     check('newuidmap is setuid', 'ls -l /usr/bin/newuidmap /usr/bin/newgidmap', '-rwsr-xr-x')
     check('dominic has subordinate IDs', 'grep -h "^dominic:" /etc/subuid /etc/subgid', 'dominic:100000:65536')
+    # podman's locks are POSIX shared memory in /dev/shm (my-init mounts it)
+    check('/dev/shm is a tmpfs every user can write', "grep ' /dev/shm tmpfs ' /proc/mounts; "
+          "su dominic -c 't=/dev/shm/t-$$ && : > $t && rm $t && echo SHM''OK'", 'SHMOK')
     info = check('podman info as a normal user (rootless)', "su dominic -c 'cd ~ && podman info 2>&1' | "
-                 "grep -E 'rootless:|graphDriverName|cgroupManager|ociRuntime:|name: crun|level=(error|warn)'",
+                 "grep -E 'rootless:|graphDriverName|cgroupManager|ociRuntime:|name: crun|level=(error|warn)|^Error'",
                  'rootless: true', timeout=300)
     results.append(('rootless storage on overlayfs', 'graphDriverName: overlay' in info))
     print(('PASS ' if results[-1][1] else 'FAIL ') + results[-1][0], flush=True)
