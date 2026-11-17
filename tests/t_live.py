@@ -19,7 +19,7 @@ results = []
 
 def check(name, cmd, want=None, timeout=300):
     out = vm.run(cmd, timeout)
-    body = out.split('\n', 1)[1] if '\n' in out else out
+    body = VM.body(out)
     ok = (' 0' in out.splitlines()[-1]) if want is None else (want in body)
     results.append((name, ok, body.strip()[-400:]))
     print(('PASS ' if ok else 'FAIL ') + name + '\n    ' + body.strip()[-400:].replace('\n', '\n    '), flush=True)

@@ -20,7 +20,7 @@ results = []
 
 def check(name, cmd, want, timeout=600):
     out = vm.run(cmd, timeout)
-    body = out.split('\n', 1)[1] if '\n' in out else out
+    body = VM.body(out)
     ok = want in body
     results.append((name, ok))
     print(('PASS ' if ok else 'FAIL ') + name + '\n    ' + body.strip()[-600:].replace('\n', '\n    '), flush=True)
@@ -70,7 +70,7 @@ try:
         print('SKIP nodejs (not in the package list)', flush=True)
 
     # 10. Docker
-    check('install docker-engine', 'my-pkg install docker-engine 2>&1 | tail -3', 'docker', timeout=1200)
+    check('install docker-engine', 'my-pkg install docker-engine 2>&1 | tail -3; test -x /usr/bin/dockerd && test -x /usr/bin/runc && echo DOCKER\'\'OK', 'DOCKEROK', timeout=1200)
     vm.run('/etc/init.d/S60docker start; sleep 30', 120)
     check('dockerd runs', 'docker info 2>&1 | grep -E "Server Version|Storage Driver|Cgroup"', 'Server Version')
     # the first pull right after dockerd started can time out: try again

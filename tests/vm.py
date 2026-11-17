@@ -91,6 +91,22 @@ class VM:
         out = self.expect(mark + r' (\d+)', timeout)
         return out
 
+    @staticmethod
+    def body(out):
+        """run()'s output without the echoed command. A long command wraps on
+        the console, so dropping only the first line can leave its end (and a
+        check's expected text in it) in the output: cut after the echo of
+        the END mark instead (it's in the output twice: echoed, then printed)."""
+        m = re.search(r'END\d+ (\d+)\s*$', out)
+        if m:
+            mark = m.group(0).split()[0]
+            i = out.find(mark)
+            if i < m.start():
+                nl = out.find('\n', i)
+                if 0 <= nl < m.start():
+                    return out[nl + 1:]
+        return out.split('\n', 1)[1] if '\n' in out else out
+
     def keys(self, combo):
         self.monitor('sendkey ' + combo)
 
