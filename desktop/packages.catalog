@@ -166,7 +166,7 @@ description = Runs programs in containers: docker run hello-world downloads a
 [podman]
 title = Podman (containers without root)
 category = Tools
-needs = crun conmon netavark aardvark-dns passt catatonit containers-image-config
+needs = crun conmon netavark aardvark-dns slirp4netns catatonit containers-image-config
   cgroupfs-v2-mount iptables my-podman-conf
 description = Runs containers like Docker, but every user for themselves,
   without root and without an engine in the background: podman run --rm

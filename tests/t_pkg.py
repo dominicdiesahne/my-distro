@@ -103,7 +103,7 @@ try:
            "&& break; sleep 15; done; podman images'", 900)
     check('rootless podman run alpine', "su dominic -c 'cd ~ && podman run --rm docker.io/library/alpine echo hi''podman'",
           'hipodman', timeout=900)
-    check('rootless container reaches the internet (pasta)', "su dominic -c 'cd ~ && podman run --rm "
+    check('rootless container reaches the internet (slirp4netns)', "su dominic -c 'cd ~ && podman run --rm "
           "docker.io/library/alpine wget -q -O /dev/null -T 20 http://example.com && echo NET''OK'", 'NETOK', timeout=900)
     check('remove podman (Docker keeps iptables)', 'my-pkg remove podman 2>&1 | tail -3; command -v podman || echo GONE; '
           'command -v iptables', 'GONE')

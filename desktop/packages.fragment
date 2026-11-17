@@ -77,7 +77,7 @@ BR2_PACKAGE_IPTABLES_NFTABLES_DEFAULT=y
 
 # Podman (0.10.0): containers for every user, without root ("rootless").
 # crun runs them (podman's own runtime; runc stays Docker's), conmon watches
-# them, pasta gives them the network, catatonit is podman's init and pause
+# them, slirp4netns gives them the network, catatonit is podman's init and pause
 # process. netavark and aardvark-dns are the networks of root's containers.
 # shadow (selected by podman) brings the setuid newuidmap and newgidmap:
 # make-packages.py gives them the modes of Buildroot's permission table.
@@ -88,7 +88,8 @@ BR2_PACKAGE_IPTABLES_NFTABLES_DEFAULT=y
 # systemd (desktop/package/my-podman-conf).
 BR2_PACKAGE_PODMAN=y
 BR2_PACKAGE_PODMAN_INIT_CATATONIT=y
-BR2_PACKAGE_PODMAN_NET_PASST=y
+# passt/pasta (podman 5's default) needs kernel headers >= 5.9; the toolchain has 5.4
+BR2_PACKAGE_PODMAN_NET_SLIRP4NETNS=y
 BR2_PACKAGE_CRUN=y
 BR2_PACKAGE_MY_PODMAN_CONF=y
 

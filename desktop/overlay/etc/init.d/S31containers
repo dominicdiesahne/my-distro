@@ -7,7 +7,7 @@
 #   - / as a shared mount (as with systemd): mounts made inside rootless
 #     containers' namespaces can reach their volumes ("/" is not a shared
 #     mount, podman warns otherwise)
-#   - the tun module: pasta, the network of rootless containers, makes its
+#   - the tun module: slirp4netns, the network of rootless containers, makes its
 #     interface with /dev/net/tun
 #   - on the live system the root filesystem is in RAM, where crun can't use
 #     pivot_root (like DOCKER_RAMDISK in S60docker): containers.conf.d gets
