@@ -2,7 +2,7 @@
 packages from out/packages through a local web server (my-pkg), and tries
 them: tcc compiles and runs hello.c, node, docker run hello-world (QEMU's
 user network reaches the internet), Intel's iHD video driver is where libva
-looks, rootless podman as a normal user (0.10.0), Samba sharing to itself,
+looks, rootless podman as a normal user (1.0.0), Samba sharing to itself,
 ClamAV finds a test file.
 
     python3 tests/t_pkg.py PKGDIR [BUILD]
@@ -79,7 +79,7 @@ try:
     check('container reaches the internet', 'docker run --rm busybox wget -q -O /dev/null -T 20 '
           "http://example.com && echo NET''OK", 'NETOK', timeout=900)
 
-    # 0.10.0: Intel's iHD video driver. QEMU has no Intel graphics, so vainfo
+    # 1.0.0: Intel's iHD video driver. QEMU has no Intel graphics, so vainfo
     # can't use it: only check that it is in libva's folder (next to i965)
     # and that the loader finds every library it needs (gmmlib & co.)
     check('install intel-mediadriver', 'my-pkg install intel-mediadriver 2>&1 | tail -3', 'intel-mediadriver',
@@ -89,7 +89,7 @@ try:
           'echo "$l" | grep -E "not found|igdgmm"; echo "$l" | grep -q libigdgmm && ! echo "$l" | grep -q "not found" '
           "&& echo LIBS''OK", 'LIBSOK')
 
-    # 0.10.0: rootless podman, as the normal user dominic
+    # 1.0.0: rootless podman, as the normal user dominic
     check('install podman', 'my-pkg install podman 2>&1 | tail -3', 'podman', timeout=1200)
     check('newuidmap is setuid', 'ls -l /usr/bin/newuidmap /usr/bin/newgidmap', '-rwsr-xr-x')
     check('dominic has subordinate IDs', 'grep -h "^dominic:" /etc/subuid /etc/subgid', 'dominic:100000:65536')

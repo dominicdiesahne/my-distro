@@ -1,5 +1,5 @@
 #!/bin/sh
-# Containers (0.10.0): what podman (a Software app package) needs from the
+# Containers (1.0.0): what podman (a Software app package) needs from the
 # system, ready before it is installed, so it works right after installing:
 #   - subordinate IDs for every user (my-subids): rootless containers
 #   - control groups v2 in /sys/fs/cgroup (S30cgroupfs2 of the Docker and

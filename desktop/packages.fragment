@@ -16,7 +16,7 @@ BR2_PACKAGE_GNUPLOT=y
 # (feh needs imlib2's JPEG loader, so that is in the image: buildroot.fragment)
 BR2_PACKAGE_FEH=y
 BR2_PACKAGE_IMAGEMAGICK=y
-# Intel's newer video driver for VA-API (iHD, 0.10.0): video decoding with
+# Intel's newer video driver for VA-API (iHD, 1.0.0): video decoding with
 # Intel graphics since Broadwell (2014; Gen8 on), best since ~2019, where the
 # image's i965 stops. Brings gmmlib; libva, Mesa and libpciaccess are in the
 # image. It goes next to i965 in libva's folder /usr/lib/va (external.mk);
@@ -70,7 +70,7 @@ BR2_PACKAGE_JQ=y
 BR2_PACKAGE_DOCKER_ENGINE=y
 BR2_PACKAGE_DOCKER_CLI=y
 BR2_PACKAGE_DOCKER_ENGINE_DOCKER_INIT_TINI=y
-# runc: containerd selects it only without crun, and podman (0.10.0) brings
+# runc: containerd selects it only without crun, and podman (1.0.0) brings
 # crun, so it is named here; Docker's runtime stays runc
 BR2_PACKAGE_RUNC=y
 # iptables in its nftables variant (iptables-nft): the image's firewall is
@@ -78,7 +78,7 @@ BR2_PACKAGE_RUNC=y
 BR2_PACKAGE_IPTABLES_NFTABLES=y
 BR2_PACKAGE_IPTABLES_NFTABLES_DEFAULT=y
 
-# Podman (0.10.0): containers for every user, without root ("rootless").
+# Podman (1.0.0): containers for every user, without root ("rootless").
 # crun runs them (podman's own runtime; runc stays Docker's), conmon watches
 # them, slirp4netns gives them the network, catatonit is podman's init and pause
 # process. netavark and aardvark-dns are the networks of root's containers.

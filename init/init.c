@@ -230,7 +230,7 @@ int main(void)
 		mount_fs("efivarfs", "/sys/firmware/efi/efivars", "efivarfs");
 	mount_fs("devtmpfs", "/dev", "devtmpfs");
 	mount_fs("devpts", "/dev/pts", "devpts");
-	/* /dev/shm (0.10.0): POSIX shared memory (shm_open, sem_open) lives
+	/* /dev/shm (1.0.0): POSIX shared memory (shm_open, sem_open) lives
 	 * here, and devtmpfs doesn't make the folder. The fstab entry for it is
 	 * never used: nothing here runs "mount -a". Without it rootless podman
 	 * can't make its locks ("failed to create 2048 locks in

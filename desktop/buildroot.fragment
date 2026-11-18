@@ -421,9 +421,10 @@ BR2_PACKAGE_MESA3D_GALLIUM_DRIVER_I915=y
 BR2_PACKAGE_MESA3D_VULKAN_DRIVER_INTEL=y
 
 # Videos: AV1 with dav1d (FFmpeg has H.264, H.265 and VP9 itself), and
-# decoding with the graphics chip (VA-API): Mesa's driver for AMD
-# (radeonsi) and Intel's older driver (i965, up to ~2019's chips). mpv
-# uses it when it works (hwdec=auto-safe in /etc/mpv/mpv.conf).
+# decoding with the graphics chip (VA-API): Intel's older driver (i965, up
+# to ~2019's chips). mpv uses it when it works (hwdec=auto-safe in
+# /etc/mpv/mpv.conf). Mesa's VA-API (radeonsi for AMD) needs libglvnd
+# with GLX on: without it Buildroot drops MESA3D_GALLIUM_VA silently.
 BR2_PACKAGE_DAV1D=y
 BR2_PACKAGE_LIBVA=y
 BR2_PACKAGE_LIBVA_UTILS=y
@@ -460,7 +461,7 @@ BR2_PACKAGE_UTIL_LINUX_PIVOT_ROOT=y
 BR2_PACKAGE_UTIL_LINUX_MOUNT=y
 BR2_PACKAGE_UTIL_LINUX_MOUNTPOINT=y
 
-# --- 0.10.0 ------------------------------------------------------------------
+# --- 1.0.0 ------------------------------------------------------------------
 
 # VPN: OpenVPN next to WireGuard (the VPN window imports .ovpn files;
 # /usr/lib/my-distro/vpn runs it). Its kernel part, tun, is in already.

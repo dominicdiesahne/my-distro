@@ -1,7 +1,7 @@
 ################################################################################
 #
 # my-podman-conf: podman's settings for my-distro (a Software app package,
-# 0.10.0, installed with podman: "needs" in packages.catalog).
+# 1.0.0, installed with podman: "needs" in packages.catalog).
 #
 #   /etc/containers/storage.conf                       where images and
 #       containers are kept, with the kernel's overlayfs: since Linux 5.13 it

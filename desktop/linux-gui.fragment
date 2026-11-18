@@ -457,7 +457,7 @@ CONFIG_IP6_NF_TARGET_MASQUERADE=y
 CONFIG_IP6_NF_MANGLE=y
 CONFIG_IP6_NF_RAW=y
 
-# Podman (a Software app package, 0.10.0) uses the options above, plus for
+# Podman (a Software app package, 1.0.0) uses the options above, plus for
 # rootless containers user namespaces (CONFIG_USER_NS), overlayfs inside
 # them and tun (pasta). On the live system the containers' layers are on
 # the root filesystem in RAM (tmpfs), where overlayfs needs user.* extended

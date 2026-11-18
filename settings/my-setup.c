@@ -117,7 +117,7 @@ static int valid_hostname(const char *s)
 /* --- Changing the system ------------------------------------------------------- */
 
 /* Gives every user subordinate IDs (/etc/subuid, /etc/subgid) for rootless
- * containers and removes those of users that are gone (0.10.0). */
+ * containers and removes those of users that are gone (1.0.0). */
 static const char *const subids[] = { "/usr/sbin/my-subids", NULL };
 
 /* Runs a program (full path, no shell) and waits. 0 = it worked. */

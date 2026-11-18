@@ -1,5 +1,5 @@
 #!/bin/sh
-# my-subids (0.10.0): subordinate user and group IDs for every user, so
+# my-subids (1.0.0): subordinate user and group IDs for every user, so
 # podman (a Software app package) can run containers without root. Inside a
 # rootless container root and the other users are these IDs of the user
 # outside; the setuid newuidmap and newgidmap (shadow) only hand out what

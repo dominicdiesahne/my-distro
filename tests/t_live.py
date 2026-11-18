@@ -43,7 +43,7 @@ vm.send('root\n'); vm.expect('Password: ', 60); vm.send('root\n')
 vm.expect(r'# ', 120)
 vm.send('stty cols 200; export PS1="# "\n'); vm.expect(r'# ', 30)
 
-check('version 0.9.9', 'cat /etc/my-distro/version', '0.9.9')
+check('version 1.0.0', 'cat /etc/my-distro/version', '1.0.0')
 for _ in range(120):
     if 'my-setup' in vm.run('ps | grep -v grep | grep my-setup || true', 30): break
     time.sleep(10)
@@ -112,11 +112,11 @@ for loc in ('fr_FR', 'es_ES', 'it_IT', 'pl_PL', 'ro_RO', 'tr_TR'):
 # 12. video codecs
 check('FFmpeg decoders', "ffmpeg -hide_banner -decoders 2>/dev/null | grep -E ' (h264|hevc|vp9|libdav1d|av1) ' | "
       "awk '{print $2}' | tr '\\n' ' '", 'libdav1d')
-# in libva's driverdir: until 0.10.0 Mesa's (radeonsi, ...) were in /usr/lib/dri, where libva doesn't look
-check('VA-API drivers in libva\'s folder', 'ls /usr/lib/va/ | grep -E "drv_video" | tr "\\n" " "', 'radeonsi_drv_video')
+# in libva's driverdir (Intel's i965; Mesa's radeonsi needs libglvnd, not in yet)
+check('VA-API drivers in libva\'s folder', 'ls /usr/lib/va/ | grep -E "drv_video" | tr "\\n" " "', 'i965_drv_video')
 check('VA-API: none left in /usr/lib/dri', 'echo DRI=$(ls /usr/lib/dri/ | grep -c drv_video)', 'DRI=0')
 
-# --- 0.10.0 items that need no desktop or hardware ---------------------------------
+# --- 1.0.0 items that need no desktop or hardware ---------------------------------
 # OpenVPN next to WireGuard
 check('openvpn', 'openvpn --version | head -1', 'OpenVPN')
 check('tun device can be made', 'modprobe tun; ip tuntap add dev tt0 mode tun && ip link del tt0 && echo TUNOK', 'TUNOK')
@@ -179,7 +179,7 @@ time.sleep(30)
 vm.shot(SHOTS + '/04-sound-window.png')
 check('a playing program in the list', as_user('/usr/lib/my-distro/sound list'), 'app\t')
 vm.run('killall my-sound speaker-test; true', 30)
-# 0.10.0: a screen recording has the sound that plays (QEMU's sound card is a
+# 1.0.0: a screen recording has the sound that plays (QEMU's sound card is a
 # null device, but PipeWire still runs its monitor, so there is an audio stream)
 vm.run(as_user('(speaker-test -t sine >/dev/null 2>&1 &); sleep 2; my-record'), 60)
 time.sleep(8)
