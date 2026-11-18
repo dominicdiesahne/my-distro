@@ -139,7 +139,7 @@ try:
           "--stdout 2>&1 | grep -q 'cvd updated' && echo FRESH''OK", 'FRESHOK', timeout=1000)
     check('clamscan with the real signatures', 'clamscan --no-summary -d /tmp/cdb /tmp/eicar.com 2>&1 | tail -2', 'FOUND',
           timeout=900)
-    check('remove packages again', 'my-pkg remove tinycc 2>&1 | tail -2; command -v tcc || echo GONE', 'GONE')
+    check('remove packages again', 'my-pkg remove tinycc 2>&1 | tail -2; ls /usr/bin/tcc /usr/share/tcc 2>&1 | head -3; test -e /usr/bin/tcc || echo GO\'\'NE', 'GONE')
 finally:
     print('\n== SUMMARY packages')
     for n, ok in results:
