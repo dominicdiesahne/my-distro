@@ -112,8 +112,8 @@ for loc in ('fr_FR', 'es_ES', 'it_IT', 'pl_PL', 'ro_RO', 'tr_TR'):
 # 12. video codecs
 check('FFmpeg decoders', "ffmpeg -hide_banner -decoders 2>/dev/null | grep -E ' (h264|hevc|vp9|libdav1d|av1) ' | "
       "awk '{print $2}' | tr '\\n' ' '", 'libdav1d')
-# in libva's driverdir (Intel's i965; Mesa's radeonsi needs libglvnd, not in yet)
-check('VA-API drivers in libva\'s folder', 'ls /usr/lib/va/ | grep -E "drv_video" | tr "\\n" " "', 'i965_drv_video')
+# in libva's driverdir: Intel's i965 and Mesa's (radeonsi, ...; since 1.1 with libglvnd)
+check('VA-API drivers in libva\'s folder', 'ls /usr/lib/va/ | grep -E "drv_video" | tr "\\n" " "', 'radeonsi_drv_video')
 check('VA-API: none left in /usr/lib/dri', 'echo DRI=$(ls /usr/lib/dri/ | grep -c drv_video)', 'DRI=0')
 
 # --- 1.0.0 items that need no desktop or hardware ---------------------------------
@@ -165,6 +165,13 @@ vm.shot(SHOTS + '/02-login.png')
 vm.type('dominic\n')                           # the password; the user is filled in
 time.sleep(150)
 vm.shot(SHOTS + '/03-desktop.png')
+
+# 0. OpenGL through libglvnd (1.1): libGL/libEGL hand the calls to Mesa
+check('libglvnd and Mesa\'s vendor libraries', 'test -e /usr/lib/libGLdispatch.so.0 && test -e /usr/lib/libGLX_mesa.so.0 '
+      '&& test -e /usr/lib/libEGL_mesa.so.0 && echo GLVND""OK', 'GLVNDOK')
+check('OpenGL on the desktop (GLX)', as_user('glxinfo -B 2>&1 | grep -E "OpenGL (vendor|renderer|version)|Error"'),
+      'vendor string: Mesa')
+check('EGL', as_user('eglinfo -B 2>&1 | grep -m3 -E "EGL vendor|renderer|Error"'), 'Mesa')
 
 # 1. PipeWire
 check('XDG_RUNTIME_DIR made by my-login', 'ls -ld /run/user/1000', 'dominic')

@@ -260,8 +260,8 @@ the taskbar, the login screen, the file history daemon and the search indexer.
   through Debian's Microsoft-signed shim, once my-distro's key is enrolled
   (see [Secure Boot](#secure-boot)).
 - **Videos**: H.264, H.265, VP9 and AV1 (dav1d), decoded with the graphics
-  chip where VA-API can (Intel; since ~2020's chips with the iHD package),
-  else on the CPU.
+  chip where VA-API can (Intel, with the iHD package for chips since ~2020;
+  AMD), else on the CPU.
 
 ## Try it
 
@@ -1042,8 +1042,6 @@ make run    # boots in the terminal; quit with Ctrl-A, then X
 - Firmware updates were only tried in a VM (which has no updatable
   firmware): listing devices and asking the LVFS work there; installing a
   UEFI capsule is untried.
-- Video decoding with the graphics chip on AMD (Mesa's VA-API) is not in
-  yet: it needs Mesa built with libglvnd. AMD videos play on the CPU.
 - Docker: for administrators (sudo). Rootless containers: with podman;
   without systemd they can't have resource limits (`--memory`, `--cpus`).
 - Shares open through `mount.cifs` (Network share), not as `smb://` in the
