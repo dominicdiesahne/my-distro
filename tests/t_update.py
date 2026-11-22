@@ -1,11 +1,11 @@
-"""Update test, my-distro 0.9.6 -> 1.0.0: python3 t_update.py plain|crypt ISO096DIR [BUILD]
+"""Update test, my-distro 0.9.6 -> 1.1.0: python3 t_update.py plain|crypt ISO096DIR [BUILD]
 
 ISO096DIR holds what was taken out of the released 0.9.6 ISO: bzImage and
 initrd (xorriso -osirrox on -indev my-distro.iso -extract /boot/bzImage ...).
 
 1. installs 0.9.6 on an empty disk (its own installer, plain or encrypted)
 2. boots it with UEFI (OVMF, Secure Boot off), makes files that must survive
-3. serves the 1.0.0 update package (out/my-distro-update.tar.xz) from the
+3. serves the 1.1.0 update package (out/my-distro-update.tar.xz) from the
    host on port 8000 like GitHub would (latest.json, .sha256, .sha256.sig),
    signed with a throw-away test key whose public half is put into the VM
    (the real update key is never touched), and runs my-update install there
@@ -72,7 +72,7 @@ subprocess.run(['openssl', 'pkey', '-in', '/tmp/update-test-priv.pem', '-pubout'
 subprocess.run(['openssl', 'pkeyutl', '-sign', '-rawin', '-inkey', '/tmp/update-test-priv.pem',
                 '-in', SERVE + '/my-distro-update.tar.xz.sha256', '-out', SERVE + '/my-distro-update.tar.xz.sha256.sig'], check=True)
 base = 'http://10.0.2.2:8000/'
-json.dump({'tag_name': 'v1.0.0', 'name': 'my-distro 1.0.0 (test)', 'body': 'test',
+json.dump({'tag_name': 'v1.1.0', 'name': 'my-distro 1.1.0 (test)', 'body': 'test',
            'assets': [{'name': n, 'browser_download_url': base + n} for n in
                       ('my-distro-update.tar.xz', 'my-distro-update.tar.xz.sha256', 'my-distro-update.tar.xz.sha256.sig')]},
           open(SERVE + '/latest.json', 'w'))
@@ -144,9 +144,9 @@ try:
            ".write(u.urlopen('http://10.0.2.2:8000/test-key.pem').read())\"", 120)
     vm.run("sed -i 's|^url *=.*|url = http://10.0.2.2:8000/latest.json|' /etc/my-distro/update.conf; "
            "grep '^url' /etc/my-distro/update.conf", 30)
-    check(vm, 'my-update sees 1.0.0', 'my-update check', '1.0.0', 300)
+    check(vm, 'my-update sees 1.1.0', 'my-update check', '1.1.0', 300)
     out = check(vm, 'my-update install', 'my-update install 2>&1 | tail -12', 'is installed', 5400)
-    check(vm, 'version is 1.0.0 right after the update', 'cat /etc/my-distro/version', '1.0.0')
+    check(vm, 'version is 1.1.0 right after the update', 'cat /etc/my-distro/version', '1.1.0')
     poweroff(vm)
 
     # --- 4. the updated system, UEFI then BIOS -------------------------------------------
@@ -156,7 +156,7 @@ try:
         else:
             vm = boot('new-bios', common)
         p = tag + ': '
-        check(vm, p + 'starts, version 1.0.0', 'cat /etc/my-distro/version', '1.0.0')
+        check(vm, p + 'starts, version 1.1.0', 'cat /etc/my-distro/version', '1.1.0')
         check(vm, p + 'my files survive', 'cat /root/keepme.txt /home/tester/keepme.txt; cat /etc/hostname', 'mine\nmine\ntestbox')
         check(vm, p + 'installed-fixups ran (installer entries gone)',
               'ls /usr/share/applications/my-install.desktop 2>&1; grep -c my-install /etc/my-panel/menu', 'No such file')
@@ -167,7 +167,7 @@ try:
             body = vm.run('mount /dev/vda2 /mnt/e; sha256sum /mnt/e/my-distro/bzImage /boot/bzImage | cut -c1-64 | sort -u | wc -l; umount /mnt/e', 60)
             results.append((p + 'ESP kernel is the same file as /boot/bzImage', '\n1' in body.replace('\r', '')))
         new = subprocess.run(['sha256sum', NEWKERNEL], capture_output=True, text=True).stdout.split()[0]
-        check(vm, p + 'kernel is the new 1.0.0 kernel', 'sha256sum /boot/bzImage', new[:64])
+        check(vm, p + 'kernel is the new 1.1.0 kernel', 'sha256sum /boot/bzImage', new[:64])
         check(vm, p + 'running kernel is not the old one', 'uname -r', '6.')
         check(vm, p + 'EFI partition: layout after the update',
               'mount /dev/vda2 /mnt/e 2>/dev/null; ls /mnt/e/EFI/BOOT/; umount /mnt/e', 'BOOTX64.EFI')
@@ -195,7 +195,7 @@ try:
             # boot through shim (Secure Boot off): the box must still start
             fresh_vars()
             vm = boot('new-shim', uefi + common)
-            check(vm, 'starts through shim -> GRUB -> kernel', 'cat /etc/my-distro/version; ls -d /sys/firmware/efi', '1.0.0')
+            check(vm, 'starts through shim -> GRUB -> kernel', 'cat /etc/my-distro/version; ls -d /sys/firmware/efi', '1.1.0')
             check(vm, 'my files still there through shim', 'cat /root/keepme.txt', 'mine')
         poweroff(vm)
 finally:
