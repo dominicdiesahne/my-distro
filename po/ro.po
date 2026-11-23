@@ -1971,3 +1971,9 @@ msgstr "Scrie identitatea ta și alege certificatul client și cheia privată."
 
 msgid "Could not save the certificate files."
 msgstr "Fișierele certificatului nu au putut fi salvate."
+
+msgid "Type to search"
+msgstr "Tastează pentru a căuta"
+
+msgid "No matching apps"
+msgstr "Nicio aplicație găsită"

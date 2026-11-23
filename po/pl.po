@@ -1971,3 +1971,9 @@ msgstr "Wpisz swoją tożsamość i wybierz certyfikat klienta oraz klucz prywat
 
 msgid "Could not save the certificate files."
 msgstr "Nie udało się zapisać plików certyfikatu."
+
+msgid "Type to search"
+msgstr "Pisz, aby szukać"
+
+msgid "No matching apps"
+msgstr "Brak pasujących aplikacji"

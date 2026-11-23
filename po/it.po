@@ -1969,3 +1969,9 @@ msgstr "Scrivi la tua identità e scegli il certificato client e la chiave priva
 
 msgid "Could not save the certificate files."
 msgstr "Impossibile salvare i file del certificato."
+
+msgid "Type to search"
+msgstr "Digita per cercare"
+
+msgid "No matching apps"
+msgstr "Nessuna app trovata"

@@ -150,6 +150,9 @@ the taskbar, the login screen, the file history daemon and the search indexer.
 - **Start menu on the Windows key**: press and release Super on its own
   (`panel/my-panel.c` listens with XInput 2, so Super+L and the other
   shortcuts still work). On small screens the menu has two columns.
+  Type while it is open to search it: Super, `term`, Enter starts the
+  terminal. It matches names and commands (`htop` finds *System monitor*);
+  Esc clears the search.
 - **Clipboard that stays** (`panel/my-clipd.c`): copied text can still be
   pasted after the program you copied it from is closed.
 - **Screen recording** (`my-record`): Start menu *Record screen* or

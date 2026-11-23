@@ -14,6 +14,11 @@
  *   holds the keyboard, so Super+L and the other shortcuts still work (another
  *   key between press and release means it was a shortcut, not the menu).
  *   When the menu is taller than the screen it gets more columns.
+ *   Typing while it is open searches it: only the entries whose name (or
+ *   command, so "htop" finds System monitor) contains what you typed stay,
+ *   best matches first, and the first one is selected, so Super, a few
+ *   letters and Enter start a program. Backspace deletes, Esc clears the
+ *   search (a second Esc closes the menu).
  * - One button per open window, with the app's icon. Click: bring it to the
  *   front; click the window that is already in front: minimise it. The x on
  *   the button (shown under the mouse and on the active window) closes it.
@@ -148,6 +153,11 @@ static int hover_close;      /* the mouse is on the x of button `hover` */
 static struct item items[MAX_ITEMS];
 static int nitems, menu_w = MENU_W, menu_h, menu_open, menu_hover = -1, item_h = ITEM_H;
 static XftDraw *menu_draw;
+
+/* Search in the menu: what was typed, and the entries that match it (best
+ * first). Entries that don't match get h = 0: not drawn, not clickable. */
+static char query[64];
+static int order[MAX_ITEMS], norder;
 
 /* The Windows key alone (XInput 2 raw key events) */
 static int xi_opcode = -1;        /* -1: the X server has no XInput 2 */
@@ -1261,12 +1271,39 @@ static void reader_say(const char *label)
 
 static void draw_menu(void)
 {
+	int cols_w;
+
 	XftDrawRect(menu_draw, &c_bg, 0, 0, menu_w, menu_h);
 	XftDrawRect(menu_draw, &c_button, 0, 0, menu_w, HEADER_H);
 	XftDrawRect(menu_draw, &c_accent, 0, HEADER_H - 2, menu_w, 2);
-	text(menu_draw, bold, &c_accent, 16, 0, HEADER_H, "my-distro");
-	for (int x = MENU_W; x < menu_w; x += MENU_W)   /* lines between columns */
+	if (query[0]) {
+		/* the search: what was typed (its end, if it is too long) and a
+		 * text cursor after it */
+		const char *q = query;
+		int fh = font->ascent + font->descent;
+
+		while (*q && text_width(font, q) > menu_w - 40) {
+			q++;
+			while (((unsigned char)*q & 0xC0) == 0x80)
+				q++;
+		}
+		text(menu_draw, font, &c_text, 16, 0, HEADER_H, q);
+		XftDrawRect(menu_draw, &c_accent, 16 + text_width(font, q) + 2,
+		            (HEADER_H - fh) / 2, 2, fh);
+	} else {
+		char hint[TITLE_MAX + 1];
+		int w = text_width(bold, "my-distro");
+
+		text(menu_draw, bold, &c_accent, 16, 0, HEADER_H, "my-distro");
+		fit_text(font, _("Type to search"), menu_w - 16 - w - 12 - 8, hint);
+		text(menu_draw, font, &c_dim, 16 + w + 12, 0, HEADER_H, hint);
+	}
+	/* lines between columns; while searching only between the used ones */
+	cols_w = query[0] ? (norder ? items[order[norder - 1]].x + MENU_W : MENU_W) : menu_w;
+	for (int x = MENU_W; x < cols_w; x += MENU_W)
 		XftDrawRect(menu_draw, &c_sep, x, HEADER_H + 6, 1, menu_h - HEADER_H - 12);
+	if (query[0] && norder == 0)
+		text(menu_draw, font, &c_dim, 16, HEADER_H + 6, item_h, _("No matching apps"));
 
 	for (int i = 0; i < nitems; i++) {
 		struct item *it = &items[i];
@@ -1277,6 +1314,8 @@ static void draw_menu(void)
 				            MENU_W - 24, 1);
 			continue;
 		}
+		if (!it->h)                 /* hidden by the search */
+			continue;
 		if (i == menu_hover)
 			XftDrawRect(menu_draw, &c_hover, it->x, it->y, MENU_W, it->h);
 		draw_icon(menu_buf, it->icon, it->x + 16, it->y + (it->h - ICON_SIZE) / 2);
@@ -1409,6 +1448,126 @@ static void layout_menu(void)
 	}
 }
 
+/* --- Searching the menu ---------------------------------------------------- */
+
+/* Case is ignored for ASCII letters, which is what the labels are made of. */
+static int starts_with(const char *s, const char *q)
+{
+	return strncasecmp(s, q, strlen(q)) == 0;
+}
+
+static int contains(const char *s, const char *q)
+{
+	for (; *s; s++)
+		if (starts_with(s, q))
+			return 1;
+	return 0;
+}
+
+/* How well an entry matches the query: 0 its name starts with it, 1 a word
+ * in its name does ("edit" -> Text editor), 2 its name contains it, 3 only
+ * its command does ("htop" -> System monitor); -1 no match. */
+static int match_rank(const struct item *it, const char *q)
+{
+	if (!it->cmd[0])
+		return -1;
+	if (starts_with(it->label, q))
+		return 0;
+	for (const char *p = it->label; *p; p++)
+		if ((*p == ' ' || *p == '(' || *p == '-') && starts_with(p + 1, q))
+			return 1;
+	if (contains(it->label, q))
+		return 2;
+	if (contains(it->cmd, q))
+		return 3;
+	return -1;
+}
+
+/* Places the matching entries, best first, from the top of the menu, column
+ * by column. The menu keeps its size, so it doesn't jump while you type;
+ * if there are more matches than fit, only the best are shown. */
+static void search_menu(void)
+{
+	int top = HEADER_H + 6, x = 0, y = top;
+
+	norder = 0;
+	for (int i = 0; i < nitems; i++)
+		items[i].h = 0;
+	for (int rank = 0; rank <= 3; rank++) {
+		for (int i = 0; i < nitems; i++) {
+			if (match_rank(&items[i], query) != rank)
+				continue;
+			if (y + item_h > menu_h - 6) {      /* column full */
+				x += MENU_W;
+				y = top;
+			}
+			if (x >= menu_w)
+				return;
+			items[i].x = x;
+			items[i].y = y;
+			items[i].h = item_h;
+			order[norder++] = i;
+			y += item_h;
+		}
+	}
+}
+
+/* The query changed: show what matches (or the whole menu again) and
+ * select the best match, so Enter starts it. */
+static void update_search(void)
+{
+	if (query[0]) {
+		search_menu();
+		menu_hover = norder ? order[0] : -1;
+	} else {
+		norder = 0;
+		layout_menu();
+		menu_hover = -1;
+	}
+}
+
+/* Adds the character of a key press to the query. XLookupString gives
+ * Latin-1 (that covers ä, ö, ü and ß), the labels are UTF-8. Returns 1 if
+ * the key typed a character. */
+static int add_typed(XKeyEvent *k)
+{
+	char s[8];
+	size_t len = strlen(query);
+	unsigned char c;
+
+	if (k->state & (ControlMask | Mod1Mask))   /* shortcuts, not text */
+		return 0;
+	if (XLookupString(k, s, sizeof s, NULL, NULL) != 1)
+		return 0;
+	c = (unsigned char)s[0];
+	if (c < 0x20 || (c >= 0x7f && c < 0xa0))   /* Enter, Tab, Backspace, ... */
+		return 0;
+	if ((c == ' ' && len == 0) || len + 3 > sizeof query)
+		return 0;
+	if (c < 0x80) {
+		query[len++] = c;
+	} else {
+		query[len++] = 0xC0 | c >> 6;
+		query[len++] = 0x80 | (c & 0x3F);
+	}
+	query[len] = '\0';
+	return 1;
+}
+
+/* Backspace: removes the last (UTF-8) character. Returns 0 if empty. */
+static int delete_typed(void)
+{
+	size_t len = strlen(query);
+
+	if (len == 0)
+		return 0;
+	do
+		len--;
+	while (len > 0 && ((unsigned char)query[len] & 0xC0) == 0x80);
+	query[len] = '\0';
+	return 1;
+}
+
 /* (Re)makes the menu's picture in its current size */
 static void size_menu_window(void)
 {
@@ -1458,6 +1617,10 @@ static void run(const char *cmd)
 
 static void open_menu(void)
 {
+	if (query[0]) {             /* a search from last time: start fresh */
+		query[0] = '\0';
+		update_search();
+	}
 	XMoveWindow(dpy, menu, PAD, cfg.panel_position == PANEL_TOP ? panel_h
 	            : sh - panel_h - menu_h);
 	XMapRaised(dpy, menu);
@@ -1488,17 +1651,30 @@ static void close_menu(void)
 static int menu_item_at(int x, int y)
 {
 	for (int i = 0; i < nitems; i++)
-		if (items[i].cmd[0] && x >= items[i].x && x < items[i].x + MENU_W &&
+		if (items[i].cmd[0] && items[i].h && x >= items[i].x && x < items[i].x + MENU_W &&
 		    y >= items[i].y && y < items[i].y + items[i].h)
 			return i;
 	return -1;
 }
 
-/* Moves the keyboard selection to the next real item (skips separators). */
+/* Moves the keyboard selection to the next real item (skips separators;
+ * while searching, goes through the matches in the order they are shown). */
 static void menu_step(int dir)
 {
 	int i = menu_hover;
 
+	if (query[0]) {
+		int k = 0;
+
+		if (norder == 0)
+			return;
+		while (k < norder && order[k] != menu_hover)
+			k++;
+		if (k == norder)            /* nothing selected: first or last */
+			k = dir > 0 ? -1 : 0;
+		menu_hover = order[(k + dir + norder) % norder];
+		return;
+	}
 	for (int n = 0; n < nitems; n++) {
 		i = (i + dir + nitems) % nitems;
 		if (i < 0)
@@ -1972,7 +2148,9 @@ static void handle(XEvent *e)
 		}
 		if (e->xbutton.window == menu) {
 			/* With the grab, every click lands here; outside means "close". */
-			if (menu_item_at(e->xbutton.x, e->xbutton.y) < 0) {
+			int x = e->xbutton.x, y = e->xbutton.y;
+
+			if (x < 0 || y < 0 || x >= menu_w || y >= menu_h) {
 				close_menu();
 				draw_panel();
 			}
@@ -2049,17 +2227,31 @@ static void handle(XEvent *e)
 		}
 		if (!menu_open)
 			break;
-		if (key == XK_Escape) {
+		if (key == XK_Escape && query[0]) {     /* first Esc: clear the search */
+			query[0] = '\0';
+			update_search();
+			redraw_menu();
+		} else if (key == XK_Escape) {
 			close_menu();
 			draw_panel();
 		} else if (key == XK_Down || key == XK_Up) {
 			menu_step(key == XK_Down ? 1 : -1);
 			redraw_menu();
-		} else if ((key == XK_Return || key == XK_KP_Enter) && menu_hover >= 0) {
-			i = menu_hover;
-			close_menu();
-			run_app(items[i].cmd);
-			draw_panel();
+		} else if (key == XK_Return || key == XK_KP_Enter) {
+			if (menu_hover >= 0) {
+				i = menu_hover;
+				close_menu();
+				run_app(items[i].cmd);
+				draw_panel();
+			}
+		} else if (key == XK_BackSpace) {
+			if (delete_typed()) {
+				update_search();
+				redraw_menu();
+			}
+		} else if (add_typed(&e->xkey)) {
+			update_search();
+			redraw_menu();
 		}
 		break;
 	}
