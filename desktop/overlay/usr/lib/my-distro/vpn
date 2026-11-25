@@ -2,7 +2,7 @@
 # vpn up NAME | down | status | reconnect: connects a VPN saved by the VPN
 # window (see my-vpnctl), as root. A WireGuard VPN is /etc/my-distro/vpn/
 # NAME.conf, an OpenVPN one NAME.ovpn (with NAME.auth for its user name and
-# password).
+# password, NAME.pass for the password of its private key).
 #
 # WireGuard: what wg-quick does, in a few lines of sh: the interface wg0
 # with the config's addresses, routes to what the VPN covers (AllowedIPs)
@@ -194,7 +194,12 @@ up_ovpn() {
 		fi
 		auth="--auth-user-pass $DIR/$NAME.auth"
 	fi
+	# a private key with a password: openvpn reads it from this file
+	[ -f "$DIR/$NAME.pass" ] && auth="$auth --askpass $DIR/$NAME.pass"
 	modprobe tun 2>/dev/null
+	# what openvpn logs when it gives up at once: a refused login, or a
+	# private key whose password is missing or wrong
+	FAILED='AUTH_FAILED|[Pp]rivate [Kk]ey [Pp]assword|[Ll]oad [Pp]rivate [Kk]ey'
 	# our options come after the file's, so they win; the file itself can't
 	# run commands (my-vpnctl leaves them out)
 	openvpn --config "$CONF" --dev ovpn0 --dev-type tun $auth --auth-nocache \
@@ -203,7 +208,7 @@ up_ovpn() {
 	i=0
 	while [ $i -lt 45 ]; do
 		[ -f "$RUN/up" ] && break
-		grep -q 'AUTH_FAILED' "$RUN/ovpn.log" 2>/dev/null && break
+		grep -q -E "$FAILED" "$RUN/ovpn.log" 2>/dev/null && break
 		if [ -f "$RUN/ovpn.pid" ] && ! kill -0 "$(cat "$RUN/ovpn.pid")" 2>/dev/null; then
 			break
 		fi
@@ -212,6 +217,8 @@ up_ovpn() {
 	if [ ! -f "$RUN/up" ]; then
 		if grep -q 'AUTH_FAILED' "$RUN/ovpn.log" 2>/dev/null; then
 			echo "The VPN server did not accept the user name and password."
+		elif grep -q -E "$FAILED" "$RUN/ovpn.log" 2>/dev/null; then
+			echo "The password of the private key is wrong or missing: import the file again."
 		else
 			echo "Could not connect: $(grep -iE 'error|fail|cannot' "$RUN/ovpn.log" | tail -n 1 | cut -c1-200)"
 		fi

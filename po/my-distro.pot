@@ -2128,3 +2128,30 @@ msgstr ""
 
 msgid "Could not save the certificate files."
 msgstr ""
+
+msgid "Private key password"
+msgstr ""
+
+#, c-format
+msgid "The private key of the VPN \"%s\" is protected by a password. Enter it so the VPN can connect:"
+msgstr ""
+
+msgid "PKCS#12 files (.p12) are not supported. Ask your VPN service for the certificate and key as PEM files (.crt, .key)."
+msgstr ""
+
+#, c-format
+msgid "The config points to the file %s (%s), which could not be read. Put it in the same folder as the config."
+msgstr ""
+
+#, c-format
+msgid "%s is not a key or certificate file (PEM)."
+msgstr ""
+
+msgid "The config and the files it points to are too big."
+msgstr ""
+
+msgid "The password of the private key could not be saved."
+msgstr ""
+
+msgid "Record screen with microphone"
+msgstr ""

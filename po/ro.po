@@ -1977,3 +1977,30 @@ msgstr "Tastează pentru a căuta"
 
 msgid "No matching apps"
 msgstr "Nicio aplicație găsită"
+
+msgid "Private key password"
+msgstr "Parola cheii private"
+
+#, c-format
+msgid "The private key of the VPN \"%s\" is protected by a password. Enter it so the VPN can connect:"
+msgstr "Cheia privată a VPN-ului „%s” este protejată cu o parolă. Introdu-o ca VPN-ul să se poată conecta:"
+
+msgid "PKCS#12 files (.p12) are not supported. Ask your VPN service for the certificate and key as PEM files (.crt, .key)."
+msgstr "Fișierele PKCS#12 (.p12) nu sunt acceptate. Cere furnizorului VPN certificatul și cheia ca fișiere PEM (.crt, .key)."
+
+#, c-format
+msgid "The config points to the file %s (%s), which could not be read. Put it in the same folder as the config."
+msgstr "Configurația trimite la fișierul %s (%s), care nu a putut fi citit. Pune-l în același dosar cu configurația."
+
+#, c-format
+msgid "%s is not a key or certificate file (PEM)."
+msgstr "%s nu este un fișier de cheie sau de certificat (PEM)."
+
+msgid "The config and the files it points to are too big."
+msgstr "Configurația și fișierele la care trimite sunt prea mari."
+
+msgid "The password of the private key could not be saved."
+msgstr "Parola cheii private nu a putut fi salvată."
+
+msgid "Record screen with microphone"
+msgstr "Înregistrează ecranul cu microfonul"

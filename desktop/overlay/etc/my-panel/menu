@@ -16,6 +16,7 @@ Search files|my-search-gui|system-search
 File history|my-history|document-open-recent
 Screenshot|my-screenshot --delay 1|camera-photo
 Record screen|my-record|media-record
+Record screen with microphone|my-record --sound both|audio-input-microphone
 On-screen keyboard|my-keyboard|input-keyboard
 Magnifier|my-zoom|zoom-in
 -

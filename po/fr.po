@@ -1975,3 +1975,30 @@ msgstr "Tapez pour chercher"
 
 msgid "No matching apps"
 msgstr "Aucune application trouvée"
+
+msgid "Private key password"
+msgstr "Mot de passe de la clé privée"
+
+#, c-format
+msgid "The private key of the VPN \"%s\" is protected by a password. Enter it so the VPN can connect:"
+msgstr "La clé privée du VPN « %s » est protégée par un mot de passe. Saisissez-le pour que le VPN puisse se connecter :"
+
+msgid "PKCS#12 files (.p12) are not supported. Ask your VPN service for the certificate and key as PEM files (.crt, .key)."
+msgstr "Les fichiers PKCS#12 (.p12) ne sont pas pris en charge. Demandez à votre service VPN le certificat et la clé en fichiers PEM (.crt, .key)."
+
+#, c-format
+msgid "The config points to the file %s (%s), which could not be read. Put it in the same folder as the config."
+msgstr "La configuration renvoie au fichier %s (%s), qui n'a pas pu être lu. Placez-le dans le même dossier que la configuration."
+
+#, c-format
+msgid "%s is not a key or certificate file (PEM)."
+msgstr "%s n'est pas un fichier de clé ou de certificat (PEM)."
+
+msgid "The config and the files it points to are too big."
+msgstr "La configuration et les fichiers auxquels elle renvoie sont trop volumineux."
+
+msgid "The password of the private key could not be saved."
+msgstr "Le mot de passe de la clé privée n'a pas pu être enregistré."
+
+msgid "Record screen with microphone"
+msgstr "Enregistrer l'écran avec le micro"

@@ -1,14 +1,26 @@
 #!/bin/sh
-# my-record: starts a screen recording, or stops the one that is running.
-# Start menu: "Record screen"; keyboard: Super+Shift+R. The video goes to
-# your Videos folder as "Screen recording DATE TIME.mp4".
+# my-record [--sound pc|mic|both|none]: starts a screen recording, or stops
+# the one that is running. Start menu: "Record screen" and "Record screen
+# with microphone"; keyboard: Super+Shift+R. The video goes to your Videos
+# folder as "Screen recording DATE TIME.mp4".
+#
+# The sound (AAC, with the sound server running):
+#   pc    the sound the PC plays ("what you hear"), the default
+#   mic   the microphone
+#   both  the two mixed (talking over a video or a game)
+#   none  no sound
+# Without --sound it is the line "sound=..." in ~/.config/my-distro/record,
+# else pc.
 #
 # FFmpeg reads the screen (x11grab over XCB) and packs it as MPEG-4 video,
-# which every player and Windows play. With the sound server running, the
-# sound the PC plays ("what you hear") is recorded too, as AAC: PipeWire's
-# ALSA plugin gives a capture stream the monitor of the default output when
-# it is asked for stream.capture.sink. The microphone is not recorded. If
-# the sound can't be recorded, the video is made without it.
+# which every player and Windows play. The sound comes through ALSA's
+# default, which PipeWire serves (pipewire-alsa): a capture stream is the
+# default microphone, or, with stream.capture.sink, the monitor of the
+# default output. "both" needs two streams that differ: the PC sound that
+# way, and the microphone named by its object.serial (pipewire:NODE=N),
+# which WirePlumber links to that node whatever stream.capture.sink says.
+# FFmpeg's amix mixes them. If the sound can't be recorded, the video is
+# made without it; with no microphone, "both" is only the PC sound.
 # Log of the last recording: /tmp/my-record-UID.log
 ME=$(id -u)
 PIDFILE=/tmp/my-record-$ME.pid
@@ -35,6 +47,19 @@ if running; then
 	exit 0
 fi
 
+sound=
+case "$1" in
+--sound) sound=$2 ;;
+--sound=*) sound=${1#--sound=} ;;
+"") ;;
+*) echo "usage: my-record [--sound pc|mic|both|none]" >&2; exit 2 ;;
+esac
+[ -n "$sound" ] || sound=$(sed -n 's/^sound=//p' "$HOME/.config/my-distro/record" 2>/dev/null | tail -n 1)
+case "$sound" in
+pc|mic|both|none) ;;
+*) sound=pc ;;
+esac
+
 [ -n "$DISPLAY" ] || { echo "my-record: no screen (DISPLAY is not set)"; exit 1; }
 
 # The Videos folder: from ~/.config/user-dirs.dirs, else ~/Videos
@@ -47,34 +72,71 @@ fi
 mkdir -p "$dir"
 file="$dir/Screen recording $(date '+%Y-%m-%d %H.%M.%S').mp4"
 
+# No sound server: no sound
+[ -S "${XDG_RUNTIME_DIR:-/nonexistent}/pipewire-0" ] || sound=none
+
+# "both": the default microphone's object.serial; none, then only the PC sound
+mic=
+if [ "$sound" = both ]; then
+	mic=$(wpctl inspect @DEFAULT_AUDIO_SOURCE@ 2>/dev/null |
+		sed -n 's/^[ *]*object\.serial = "\([0-9]*\)".*/\1/p' | head -n 1)
+	[ -n "$mic" ] || sound=pc
+fi
+
 # 25 pictures a second, the whole screen; video sizes must be even numbers
-start() {      # start [with sound]
-	if [ -n "$1" ]; then
-		# the sound: the monitor of the default output, through ALSA's default
+VIDEO="-c:v mpeg4 -q:v 4 -pix_fmt yuv420p"
+CROP='crop=trunc(iw/2)*2:trunc(ih/2)*2'
+AUDIO_IN="-thread_queue_size 1024 -f alsa -ac 2 -ar 48000"
+
+start() {      # start pc|mic|both|none
+	# shellcheck disable=SC2086 # VIDEO and AUDIO_IN are lists of options
+	case "$1" in
+	pc)
 		PIPEWIRE_ALSA='{ stream.capture.sink=true }' \
 		ffmpeg -nostdin -y -f x11grab -framerate 25 -draw_mouse 1 -i "$DISPLAY" \
-			-thread_queue_size 1024 -f alsa -ac 2 -ar 48000 -i default \
-			-vf 'crop=trunc(iw/2)*2:trunc(ih/2)*2' -c:v mpeg4 -q:v 4 -pix_fmt yuv420p \
-			-af aresample=async=1 -c:a aac -b:a 128k \
-			"$file" >"$LOG" 2>&1 &
-	else
+			$AUDIO_IN -i default \
+			-vf "$CROP" $VIDEO -af aresample=async=1 -c:a aac -b:a 128k \
+			"$file" >"$LOG" 2>&1 & ;;
+	mic)
 		ffmpeg -nostdin -y -f x11grab -framerate 25 -draw_mouse 1 -i "$DISPLAY" \
-			-vf 'crop=trunc(iw/2)*2:trunc(ih/2)*2' -c:v mpeg4 -q:v 4 -pix_fmt yuv420p \
-			"$file" >"$LOG" 2>&1 &
-	fi
+			$AUDIO_IN -i default \
+			-vf "$CROP" $VIDEO -af aresample=async=1 -c:a aac -b:a 128k \
+			"$file" >"$LOG" 2>&1 & ;;
+	both)
+		# input 1: the PC sound (the default, as a monitor); input 2: the
+		# microphone by its serial. normalize=0: both at their own volume.
+		PIPEWIRE_ALSA='{ stream.capture.sink=true }' \
+		ffmpeg -nostdin -y -f x11grab -framerate 25 -draw_mouse 1 -i "$DISPLAY" \
+			$AUDIO_IN -i default $AUDIO_IN -i "pipewire:NODE=$mic" \
+			-filter_complex "[0:v]$CROP[v];[1:a]aresample=async=1[pc];[2:a]aresample=async=1[mic];[pc][mic]amix=inputs=2:duration=longest:normalize=0[a]" \
+			-map '[v]' -map '[a]' $VIDEO -c:a aac -b:a 128k \
+			"$file" >"$LOG" 2>&1 & ;;
+	*)
+		ffmpeg -nostdin -y -f x11grab -framerate 25 -draw_mouse 1 -i "$DISPLAY" \
+			-vf "$CROP" $VIDEO \
+			"$file" >"$LOG" 2>&1 & ;;
+	esac
 	printf '%s\n%s\n' "$!" "$file" >"$PIDFILE"
 	sleep 1
 }
 
-withsound=
-[ -S "${XDG_RUNTIME_DIR:-/nonexistent}/pipewire-0" ] && withsound=1
-start $withsound
-if ! running && [ -n "$withsound" ]; then
-	start                                # no sound possible: video only
-	withsound=
+start "$sound"
+if ! running && [ "$sound" = both ]; then
+	sound=pc                             # the microphone failed: the PC sound alone
+	start "$sound"
 fi
+if ! running && [ "$sound" != none ]; then
+	sound=none                           # no sound possible: video only
+	start "$sound"
+fi
+case "$sound" in
+pc) what=" with sound" ;;
+mic) what=" with the microphone" ;;
+both) what=" with sound and the microphone" ;;
+*) what= ;;
+esac
 if running; then
-	my-notify -i media-record "Recording the screen${withsound:+ with sound}" \
+	my-notify -i media-record "Recording the screen$what" \
 		"To stop, choose Record screen in the Start menu again, or press Super+Shift+R."
 else
 	rm -f "$PIDFILE"

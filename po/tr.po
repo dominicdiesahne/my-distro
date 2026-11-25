@@ -1975,3 +1975,30 @@ msgstr "Aramak için yazın"
 
 msgid "No matching apps"
 msgstr "Eşleşen uygulama yok"
+
+msgid "Private key password"
+msgstr "Özel anahtar parolası"
+
+#, c-format
+msgid "The private key of the VPN \"%s\" is protected by a password. Enter it so the VPN can connect:"
+msgstr "\"%s\" VPN'inin özel anahtarı bir parolayla korunuyor. VPN'in bağlanabilmesi için parolayı girin:"
+
+msgid "PKCS#12 files (.p12) are not supported. Ask your VPN service for the certificate and key as PEM files (.crt, .key)."
+msgstr "PKCS#12 dosyaları (.p12) desteklenmiyor. VPN hizmetinizden sertifikayı ve anahtarı PEM dosyaları (.crt, .key) olarak isteyin."
+
+#, c-format
+msgid "The config points to the file %s (%s), which could not be read. Put it in the same folder as the config."
+msgstr "Yapılandırma %s (%s) dosyasını gösteriyor, ancak dosya okunamadı. Dosyayı yapılandırmayla aynı klasöre koyun."
+
+#, c-format
+msgid "%s is not a key or certificate file (PEM)."
+msgstr "%s bir anahtar veya sertifika dosyası (PEM) değil."
+
+msgid "The config and the files it points to are too big."
+msgstr "Yapılandırma ve gösterdiği dosyalar çok büyük."
+
+msgid "The password of the private key could not be saved."
+msgstr "Özel anahtarın parolası kaydedilemedi."
+
+msgid "Record screen with microphone"
+msgstr "Ekranı mikrofonla kaydet"

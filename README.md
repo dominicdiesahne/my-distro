@@ -91,9 +91,14 @@ the taskbar, the login screen, the file history daemon and the search indexer.
   file (`.conf`) or an OpenVPN file (`.ovpn`) from your VPN service or
   router, then connect and disconnect; the window shows the status and the
   traffic. An OpenVPN file that asks for a user name (`auth-user-pass`) makes
-  the window ask for it and the password (kept root-only). Certificates and
-  keys must be inside the `.ovpn` file (`<ca>`, `<cert>`, `<key>`,
-  `<tls-crypt>`...). `login/my-vpnctl.c` does the root part (for members of
+  the window ask for it and the password (kept root-only; `auth-user-pass
+  FILE` fills them in from that file). Certificates and keys can be inside
+  the `.ovpn` file (`<ca>`, `<cert>`, `<key>`, `<tls-crypt>`...) or files
+  next to it (`ca ca.crt`, `tls-auth ta.key 1`...): the window reads those as
+  the user and puts them in as blocks, so the root part never opens a file
+  for you. A private key with a password asks for it once (kept root-only as
+  `NAME.pass`, given to openvpn with `--askpass`), so reconnecting after a
+  network change needs nothing. `login/my-vpnctl.c` does the root part (for members of
   `netdev`, like Wi-Fi) and never runs commands from the file (`PostUp` & co,
   OpenVPN's `up`, `down`, `plugin`, `script-security`... are left out). The
   DNS servers of the VPN (WireGuard `DNS`, OpenVPN's pushed
@@ -157,8 +162,11 @@ the taskbar, the login screen, the file history daemon and the search indexer.
   pasted after the program you copied it from is closed.
 - **Screen recording** (`my-record`): Start menu *Record screen* or
   Super+Shift+R starts it, the same again stops it. The video (MPEG-4) goes to
-  `~/Videos`, with the sound the PC plays (AAC; "what you hear", not the
-  microphone) when the sound server runs.
+  `~/Videos`, with the sound the PC plays (AAC; "what you hear") when the
+  sound server runs. *Record screen with microphone* mixes your microphone
+  in (talking over a game or a demo). `my-record --sound pc|mic|both|none`
+  picks it on the command line; `sound=...` in `~/.config/my-distro/record`
+  changes what *Record screen* and Super+Shift+R take.
 - **Camera** (`my-camera`): USB webcams and laptop cameras (UVC) in an mpv
   window; S takes a photo into `~/Pictures`.
 - **System logs** (`settings/my-logs.c`): system messages, kernel messages
@@ -555,7 +563,13 @@ Screen recordings (`my-record`) take the sound the PC plays through ALSA's
 `default` (FFmpeg's ALSA input, which pipewire-alsa serves) with
 `PIPEWIRE_ALSA='{ stream.capture.sink=true }'`: PipeWire then connects the
 capture stream to the monitor of the default output instead of the
-microphone. Without a running PipeWire the video is recorded without sound.
+microphone. With the microphone mixed in (`--sound both`) FFmpeg opens a
+second ALSA stream, `pipewire:NODE=N` with the default microphone's
+`object.serial` (from `wpctl inspect @DEFAULT_AUDIO_SOURCE@`): WirePlumber
+links a target given by serial without looking at `stream.capture.sink`, so
+the two streams in one process get different sources; `amix` mixes them.
+Without a running PipeWire the video is recorded without sound, and without
+a microphone `both` records only the PC sound.
 
 ### Printing
 
@@ -1026,10 +1040,8 @@ make run    # boots in the terminal; quit with Ctrl-A, then X
 - NetSurf has limited JavaScript; big web apps (YouTube, Google Docs) don't work.
 - Only x86-64. Tested in VirtualBox and QEMU; the drivers for real PCs are
   in, but not yet tried on one (see [On a real PC](#on-a-real-pc)).
-- OpenVPN files must have their certificates and keys inside (`<ca>`...);
-  files that point at other files, tap (bridge) mode, scripts and plugins
-  are not supported, and private keys with a password (OpenVPN) are not
-  supported yet. Screen recordings take the PC's sound, not the microphone.
+- OpenVPN: tap (bridge) mode, PKCS#12 files (`.p12`), scripts and plugins
+  are not supported (scripts and plugins on purpose: they would run as root).
 - The digital microphones of some new laptops (Intel SOF) don't work yet.
   Bluetooth headset microphones (HFP) and Bluetooth audio in general are
   untested on real hardware.

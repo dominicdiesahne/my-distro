@@ -135,6 +135,27 @@ check('my-vpnctl lists it as ovpn', "su dominic -c 'my-vpnctl list' | tr '\\t' '
 check('my-vpnctl refuses a file reference',
       "printf 'client\\nremote a 1\\nca /etc/shadow\\n' | su dominic -c 'my-vpnctl import-ovpn bad'; "
       "ls /etc/my-distro/vpn/bad.ovpn 2>&1", 'No such file')
+# 1.2.0: a private key with a password (my-vpnctl keypass -> openvpn --askpass).
+# No server: with the right password openvpn gets as far as sending to it.
+vm.run('cd /tmp && openssl req -x509 -newkey rsa:2048 -keyout k.pem -passout pass:right -out c.pem '
+       '-subj /CN=t -days 2 2>/dev/null; { printf "client\\ndev tun\\nproto udp\\nremote 127.0.0.1 1194\\n'
+       '<ca>\\n"; cat c.pem; printf "</ca>\\n<cert>\\n"; cat c.pem; printf "</cert>\\n<key>\\n"; cat k.pem; '
+       'printf "</key>\\n"; } > tk.ovpn; cd /', 120)
+check('my-vpnctl imports an encrypted private key',
+      "su dominic -c 'my-vpnctl import-ovpn tk < /tmp/tk.ovpn' && echo ENC=$(grep -c ENCRYPTED /etc/my-distro/vpn/tk.ovpn)",
+      'ENC=2')
+check('my-vpnctl: key password is root-only', "printf 'wrong\\n' | su dominic -c 'my-vpnctl keypass tk'; "
+      "ls -l /etc/my-distro/vpn/tk.pass", '-rw-------')
+check('vpn: a wrong key password is reported', '/usr/lib/my-distro/vpn up tk', 'password of the private key',
+      timeout=120)
+vm.run("printf 'right\\n' | su dominic -c 'my-vpnctl keypass tk'", 30)
+vm.run('/usr/lib/my-distro/vpn up tk; true', 120)           # no server: it gives up after 45 s
+check('vpn: the right key password opens the key',
+      'echo PW=$(grep -c -i -E "private key password|load private key" /run/my-vpn.last.log)', 'PW=0')
+check('vpn: ... and openvpn tries the server', 'grep -o "link remote" /run/my-vpn.last.log | head -1',
+      'link remote')
+check('my-vpnctl remove takes the key password too',
+      "su dominic -c 'my-vpnctl remove tk'; ls /etc/my-distro/vpn/tk.pass 2>&1", 'No such file')
 check('vpn status: disconnected', "su dominic -c 'my-vpnctl status'", 'disconnected')
 # VPN reconnect after a network change: nothing to do without a VPN
 check('vpn reconnect without a VPN does nothing', '/usr/lib/my-distro/vpn reconnect; echo RC=$?', 'RC=0')
@@ -197,6 +218,41 @@ check('my-record file has video and AAC audio',
       as_user('f=$(ls -t ~/Videos/*.mp4 | head -1); ffmpeg -hide_banner -i "$f" 2>&1 | grep -E "Stream"'),
       'Audio: aac')
 check('my-record log shows the sound input', 'grep -c "Input #1, alsa" /tmp/my-record-1000.log; true', '1')
+# 1.2.0: the microphone, alone and mixed with the PC sound. QEMU has no
+# microphone that sends anything: a virtual one (a null source) stands in
+# and becomes the default.
+vm.run(as_user('pw-cli create-node adapter "{ factory.name=support.null-audio-sink node.name=test-mic '
+               'node.description=test-mic media.class=Audio/Source/Virtual object.linger=true '
+               'audio.position=[FL FR] }" >/dev/null; sleep 2; '
+               'wpctl set-default $(wpctl status | sed -n "s/^[^0-9]*\\([0-9][0-9]*\\)\\. test-mic.*/\\1/p" | head -n 1)'),
+       60)
+check('the virtual microphone is the default', as_user('wpctl inspect @DEFAULT_AUDIO_SOURCE@ | grep node.name'),
+      'test-mic')
+vm.run(as_user('my-record --sound mic'), 60)
+time.sleep(6)
+vm.run(as_user('my-record'), 60)
+time.sleep(4)
+check('my-record --sound mic: video with AAC audio',
+      as_user('f=$(ls -t ~/Videos/*.mp4 | head -1); ffmpeg -hide_banner -i "$f" 2>&1 | grep -E "Stream"'),
+      'Audio: aac')
+vm.run(as_user('(speaker-test -t sine >/dev/null 2>&1 &); sleep 2; my-record --sound both'), 60)
+time.sleep(5)
+# while it records: one stream on the microphone, one on the output's monitor
+check('my-record --sound both: the microphone is linked',
+      as_user('pw-link -l | grep -A1 "^test-mic:capture_FL"'), '|->')
+check('my-record --sound both: the PC sound (monitor) is linked',
+      as_user('pw-link -l | grep -A1 ":monitor_FL"'), '|->')
+time.sleep(3)
+vm.run(as_user('my-record'), 60)
+time.sleep(4)
+vm.run('killall speaker-test; true', 30)
+check('my-record --sound both: two sound inputs',
+      'echo IN=$(grep -c -E "Input #[12], alsa" /tmp/my-record-1000.log)', 'IN=2')
+check('my-record --sound both: the microphone by its serial',
+      'grep -o "pipewire:NODE=[0-9]*" /tmp/my-record-1000.log | head -1', 'pipewire:NODE=')
+check('my-record --sound both: one mixed AAC track',
+      as_user('f=$(ls -t ~/Videos/*.mp4 | head -1); echo TRACKS=$(ffmpeg -hide_banner -i "$f" 2>&1 | grep -c "Audio: aac")'),
+      'TRACKS=1')
 # 6. screen reader
 vm.run(as_user('MY_READER_LOG=/tmp/reader.log my-reader --toggle'), 60)
 time.sleep(15)

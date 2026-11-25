@@ -9,6 +9,10 @@
  *   my-vpnctl auth NAME        the user name and password (two lines on
  *                              standard input) for an OpenVPN config that
  *                              has auth-user-pass (NAME.auth, root only)
+ *   my-vpnctl keypass NAME     the password of the private key in an
+ *                              OpenVPN config (one line on standard input;
+ *                              NAME.pass, root only, given to openvpn with
+ *                              --askpass)
  *   my-vpnctl remove NAME      deletes it
  *   my-vpnctl up NAME          connects (only one VPN at a time)
  *   my-vpnctl down             disconnects
@@ -39,7 +43,7 @@
 
 #define DIR_VPN "/etc/my-distro/vpn"
 #define SCRIPT  "/usr/lib/my-distro/vpn"
-#define MAX_CONF (64 * 1024)
+#define MAX_CONF (128 * 1024)   /* the VPN window puts ca, cert, key... in */
 
 /* root, or the real user is in the group netdev */
 static int allowed(void)
@@ -340,8 +344,10 @@ static int import_ovpn(const char *name)
 			continue;
 		}
 		if (in_list(ovpn_files, key)) {
-			printf("%s points to a file. Put the file's content into the config "
-			       "(between <%s> and </%s>) and import it again.\n", key, key, key);
+			/* the VPN window reads such files itself and puts them in as blocks */
+			printf("%s points to a file. Import the config with the VPN window (it "
+			       "takes the file from the same folder), or put the file's content "
+			       "into the config (between <%s> and </%s>).\n", key, key, key);
 			goto bad;
 		}
 		if (!in_list(ovpn_keys, key)) {
@@ -433,6 +439,38 @@ static int save_auth(const char *name)
 	return 0;
 }
 
+/* keypass NAME: the password of the OpenVPN config's private key (one line
+ * on standard input) */
+static int save_keypass(const char *name)
+{
+	char pass[1024], path[256], tmp[260];
+	int fd;
+	FILE *out;
+
+	snprintf(path, sizeof path, DIR_VPN "/%s.ovpn", name);
+	if (access(path, F_OK) != 0)
+		return 1;
+	if (!fgets(pass, sizeof pass, stdin))
+		return 1;
+	pass[strcspn(pass, "\r\n")] = '\0';
+	if (!pass[0])
+		return 1;
+	snprintf(path, sizeof path, DIR_VPN "/%s.pass", name);
+	snprintf(tmp, sizeof tmp, "%s.new", path);
+	fd = open(tmp, O_WRONLY | O_CREAT | O_TRUNC | O_NOFOLLOW, 0600);
+	if (fd < 0 || !(out = fdopen(fd, "w"))) {
+		memset(pass, 0, sizeof pass);
+		return 1;
+	}
+	fprintf(out, "%s\n", pass);
+	memset(pass, 0, sizeof pass);
+	if (fclose(out) != 0 || rename(tmp, path) != 0) {
+		unlink(tmp);
+		return 1;
+	}
+	return 0;
+}
+
 static int list(void)
 {
 	DIR *d = opendir(DIR_VPN);
@@ -458,7 +496,7 @@ static int list(void)
 
 static int usage(void)
 {
-	fprintf(stderr, "usage: my-vpnctl list | status | import NAME | import-ovpn NAME | auth NAME | remove NAME | up NAME | down\n");
+	fprintf(stderr, "usage: my-vpnctl list | status | import NAME | import-ovpn NAME | auth NAME | keypass NAME | remove NAME | up NAME | down\n");
 	return 1;
 }
 
@@ -466,7 +504,8 @@ int main(int argc, char **argv)
 {
 	const char *cmd = argc > 1 ? argv[1] : "", *name = argc > 2 ? argv[2] : "";
 	int needs_name = !strcmp(cmd, "import") || !strcmp(cmd, "import-ovpn") ||
-	                !strcmp(cmd, "auth") || !strcmp(cmd, "remove") || !strcmp(cmd, "up");
+	                !strcmp(cmd, "auth") || !strcmp(cmd, "keypass") || !strcmp(cmd, "remove") ||
+	                !strcmp(cmd, "up");
 	char path[256];
 
 	if (!allowed()) {
@@ -493,10 +532,14 @@ int main(int argc, char **argv)
 		unlink(path);
 		snprintf(path, sizeof path, DIR_VPN "/%s.auth", name);
 		unlink(path);
+		snprintf(path, sizeof path, DIR_VPN "/%s.pass", name);
+		unlink(path);
 		return 0;
 	}
 	if (!strcmp(cmd, "auth"))
 		return save_auth(name);
+	if (!strcmp(cmd, "keypass"))
+		return save_keypass(name);
 	if (!strcmp(cmd, "remove")) {
 		int gone = 0;
 
@@ -505,6 +548,8 @@ int main(int argc, char **argv)
 		snprintf(path, sizeof path, DIR_VPN "/%s.ovpn", name);
 		gone |= unlink(path) == 0;
 		snprintf(path, sizeof path, DIR_VPN "/%s.auth", name);
+		unlink(path);
+		snprintf(path, sizeof path, DIR_VPN "/%s.pass", name);
 		unlink(path);
 		return gone ? 0 : 1;
 	}

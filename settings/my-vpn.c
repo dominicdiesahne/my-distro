@@ -4,7 +4,10 @@
  * VPN services and routers give you a WireGuard config file (NAME.conf, the
  * same file the official WireGuard apps import) or an OpenVPN file
  * (NAME.ovpn). "Import…" saves it (an OpenVPN file that wants a user name
- * asks for it and the password); then Connect / Disconnect. Only one VPN is
+ * asks for it and the password). Files an OpenVPN config points to (ca
+ * ca.crt, cert, key, tls-auth ta.key 1, ...) are read from its folder here,
+ * as the user, and put into it as <ca> ... </ca> blocks; a private key with
+ * a password asks for that password. Then Connect / Disconnect. Only one VPN is
  * connected at a time. After a change of network (another Wi-Fi, a cable) a
  * connected VPN connects again by itself (/usr/lib/my-distro/vpn).
  *
@@ -18,6 +21,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -51,8 +55,12 @@ static char *ctl(const char *a1, const char *a2, const char *input, int *ok)
 		                              G_SPAWN_STDERR_TO_DEV_NULL, NULL, NULL, &pid,
 		                              &in, &outfd, NULL, NULL))
 			return g_string_free(s, FALSE);
-		if (write(in, input, strlen(input)) < 0) {
-			/* my-vpnctl then says the file is empty */
+		for (size_t done = 0, len = strlen(input); done < len; ) {
+			ssize_t w = write(in, input + done, len - done);
+
+			if (w <= 0)
+				break;            /* my-vpnctl then says the file is cut off */
+			done += w;
 		}
 		close(in);
 		while ((n = read(outfd, buf, sizeof buf)) > 0)
@@ -330,7 +338,7 @@ static int exists(const char *name)
 
 /* The user name and password an OpenVPN file asks for (auth-user-pass).
  * Returns "user\npassword\n" (g_free it, wipe it first), or NULL if cancelled. */
-static char *ask_credentials(const char *name)
+static char *ask_credentials(const char *name, const char *user0, const char *pass0)
 {
 	GtkWidget *d, *box, *grid, *user, *pass, *show, *t;
 	char *title, *result = NULL;
@@ -364,6 +372,11 @@ static char *ask_credentials(const char *name)
 	show = gtk_check_button_new_with_label(_("Show password"));
 	g_object_bind_property(show, "active", pass, "visibility", 0);
 	gtk_grid_attach(GTK_GRID(grid), show, 1, 2, 1, 1);
+	/* from the file "auth-user-pass FILE" named, to check and save */
+	if (user0)
+		gtk_entry_set_text(GTK_ENTRY(user), user0);
+	if (pass0)
+		gtk_entry_set_text(GTK_ENTRY(pass), pass0);
 	gtk_dialog_set_default_response(GTK_DIALOG(d), GTK_RESPONSE_OK);
 	gtk_widget_show_all(d);
 	while (gtk_dialog_run(GTK_DIALOG(d)) == GTK_RESPONSE_OK) {
@@ -393,11 +406,202 @@ static int wants_login(const char *content)
 	return found;
 }
 
+/* Frees text that may hold a key or a password after overwriting it */
+static void wipe_free(char *s)
+{
+	if (s) {
+		memset(s, 0, strlen(s));
+		g_free(s);
+	}
+}
+
+static void wipe_strv(char **v)
+{
+	for (int i = 0; v && v[i]; i++)
+		memset(v[i], 0, strlen(v[i]));
+	g_strfreev(v);
+}
+
+/* The password of an OpenVPN config's private key. Returns it (wipe_free
+ * it), or NULL if cancelled. */
+static char *ask_key_password(const char *name)
+{
+	GtkWidget *d, *box, *pass, *show, *t;
+	char *title, *result = NULL;
+
+	d = gtk_dialog_new_with_buttons(_("Private key password"), GTK_WINDOW(win), GTK_DIALOG_MODAL,
+		_("Cancel"), GTK_RESPONSE_CANCEL, _("Save"), GTK_RESPONSE_OK, NULL);
+	box = gtk_dialog_get_content_area(GTK_DIALOG(d));
+	gtk_container_set_border_width(GTK_CONTAINER(box), 16);
+	gtk_box_set_spacing(GTK_BOX(box), 10);
+	title = g_strdup_printf(_("The private key of the VPN \"%s\" is protected by a password. "
+	                          "Enter it so the VPN can connect:"), name);
+	t = gtk_label_new(title);
+	g_free(title);
+	gtk_label_set_xalign(GTK_LABEL(t), 0);
+	gtk_label_set_line_wrap(GTK_LABEL(t), TRUE);
+	gtk_label_set_max_width_chars(GTK_LABEL(t), 50);
+	gtk_box_pack_start(GTK_BOX(box), t, FALSE, FALSE, 0);
+	pass = gtk_entry_new();
+	gtk_entry_set_visibility(GTK_ENTRY(pass), FALSE);
+	gtk_entry_set_activates_default(GTK_ENTRY(pass), TRUE);
+	gtk_box_pack_start(GTK_BOX(box), pass, FALSE, FALSE, 0);
+	show = gtk_check_button_new_with_label(_("Show password"));
+	g_object_bind_property(show, "active", pass, "visibility", 0);
+	gtk_box_pack_start(GTK_BOX(box), show, FALSE, FALSE, 0);
+	gtk_dialog_set_default_response(GTK_DIALOG(d), GTK_RESPONSE_OK);
+	gtk_widget_show_all(d);
+	while (gtk_dialog_run(GTK_DIALOG(d)) == GTK_RESPONSE_OK) {
+		const char *p = gtk_entry_get_text(GTK_ENTRY(pass));
+
+		if (!p[0] || strchr(p, '\n'))
+			continue;
+		result = g_strdup_printf("%s\n", p);
+		break;
+	}
+	gtk_widget_destroy(d);
+	return result;
+}
+
+/* Is the private key in this (inlined) OpenVPN config protected by a
+ * password? (PKCS#8 "ENCRYPTED PRIVATE KEY", or the old OpenSSL header) */
+static int key_encrypted(const char *content)
+{
+	return strstr(content, "BEGIN ENCRYPTED PRIVATE KEY") ||
+	       strstr(content, "Proc-Type: 4,ENCRYPTED");
+}
+
+/* Settings of an .ovpn file that name a file. my-vpnctl takes them only as
+ * blocks (<ca> ... </ca>), so the file is read here, as the user. */
+static const char *const file_keys[] = { "ca", "cert", "key", "tls-auth", "tls-crypt",
+	"tls-crypt-v2", "extra-certs", "secret", "crl-verify", NULL };
+
+/* The PEM parts of a file (-----BEGIN ... -----END ...): certificate files
+ * often start with a readable dump of the certificate. NULL if it has none. */
+static char *pem_parts(const char *text)
+{
+	GString *s = g_string_new(NULL);
+	char **lines = g_strsplit(text, "\n", -1);
+	int in = 0;
+
+	for (int i = 0; lines[i]; i++) {
+		char *l = g_strstrip(lines[i]);
+
+		if (!in && g_str_has_prefix(l, "-----BEGIN "))
+			in = 1;
+		if (in) {
+			g_string_append(s, l);
+			g_string_append_c(s, '\n');
+		}
+		if (in && g_str_has_prefix(l, "-----END "))
+			in = 0;
+	}
+	wipe_strv(lines);
+	if (s->len == 0) {
+		g_string_free(s, TRUE);
+		return NULL;
+	}
+	return g_string_free(s, FALSE);
+}
+
+/* An OpenVPN config with the files it points to (ca ca.crt, tls-auth ta.key
+ * 1, ...) put in as blocks, from the folder DIR the config is in. A user
+ * name and password in the file "auth-user-pass FILE" names go to *user and
+ * *pass (wipe_free them). Returns the new config (wipe_free it), or NULL
+ * and *err (g_free it) when a file can't be used. */
+static char *inline_files(const char *content, const char *dir, char **user, char **pass,
+                          char **err)
+{
+	GString *out = g_string_new(NULL);
+	char **lines = g_strsplit(content, "\n", -1);
+	int block = 0;
+
+	*user = *pass = *err = NULL;
+	for (int i = 0; lines[i] && !*err; i++) {
+		char *l = g_strstrip(lines[i]), **argv = NULL, *path, *text = NULL, *pem;
+		int argc = 0, is_file;
+		gsize n;
+
+		if (block || (l[0] == '<' && l[1] != '/')) {     /* already a block */
+			block = !g_str_has_prefix(l, "</");
+			g_string_append_printf(out, "%s\n", l);
+			continue;
+		}
+		if (!*l || *l == '#' || *l == ';' || !g_shell_parse_argv(l, &argc, &argv, NULL) ||
+		    argc < 2) {
+			g_string_append_printf(out, "%s\n", l);
+			g_strfreev(argv);
+			continue;
+		}
+		is_file = 0;
+		for (int k = 0; file_keys[k]; k++)
+			is_file |= strcasecmp(argv[0], file_keys[k]) == 0;
+		if (strcasecmp(argv[0], "pkcs12") == 0) {
+			*err = g_strdup(_("PKCS#12 files (.p12) are not supported. Ask your VPN service "
+			                  "for the certificate and key as PEM files (.crt, .key)."));
+		} else if (is_file && strcmp(argv[1], "[inline]") == 0) {
+			/* "tls-auth [inline] 1": the block is elsewhere in the file */
+			if (argc > 2)
+				g_string_append_printf(out, "key-direction %s\n", argv[2]);
+		} else if (is_file) {
+			path = g_path_is_absolute(argv[1]) ? g_strdup(argv[1]) :
+			       g_build_filename(dir, argv[1], NULL);
+			if (!g_file_get_contents(path, &text, &n, NULL) || n > 64000) {
+				*err = g_strdup_printf(_("The config points to the file %s (%s), which "
+					"could not be read. Put it in the same folder as the config."),
+					argv[1], argv[0]);
+			} else if (!(pem = pem_parts(text))) {
+				*err = g_strdup_printf(_("%s is not a key or certificate file (PEM)."),
+				                       argv[1]);
+			} else {
+				g_string_append_printf(out, "<%s>\n%s</%s>\n", argv[0], pem, argv[0]);
+				/* "tls-auth ta.key 1": the direction comes along */
+				if (argc > 2 && (strcasecmp(argv[0], "tls-auth") == 0 ||
+				                 strcasecmp(argv[0], "secret") == 0))
+					g_string_append_printf(out, "key-direction %s\n", argv[2]);
+				wipe_free(pem);
+			}
+			wipe_free(text);
+			g_free(path);
+		} else if (strcasecmp(argv[0], "auth-user-pass") == 0) {
+			/* a file with the user name and the password: the login dialog
+			 * shows them; the window saves them its own way */
+			path = g_path_is_absolute(argv[1]) ? g_strdup(argv[1]) :
+			       g_build_filename(dir, argv[1], NULL);
+			if (g_file_get_contents(path, &text, &n, NULL) && n < 2048) {
+				char **up = g_strsplit(text, "\n", 3);
+
+				if (up[0] && up[1]) {
+					*user = g_strdup(g_strstrip(up[0]));
+					*pass = g_strdup(g_strstrip(up[1]));
+				}
+				wipe_strv(up);
+			}
+			wipe_free(text);
+			g_free(path);
+			g_string_append(out, "auth-user-pass\n");
+		} else {
+			g_string_append_printf(out, "%s\n", l);
+		}
+		g_strfreev(argv);
+	}
+	wipe_strv(lines);
+	if (*err) {
+		memset(out->str, 0, out->len);
+		g_string_free(out, TRUE);
+		wipe_free(*user);
+		wipe_free(*pass);
+		*user = *pass = NULL;
+		return NULL;
+	}
+	return g_string_free(out, FALSE);
+}
+
 static void on_import(GtkButton *b, gpointer d)
 {
 	GtkWidget *fc;
 	GtkFileFilter *f = gtk_file_filter_new();
-	char *path = NULL, *content = NULL, *out, name[32], *login = NULL;
+	char *path = NULL, *content = NULL, *out, name[32], *login = NULL, *keypass = NULL;
 	gsize len;
 	int ok, ovpn;
 
@@ -424,11 +628,37 @@ static void on_import(GtkButton *b, gpointer d)
 	name_from_file(path, name, sizeof name);
 	/* OpenVPN: .ovpn, or a .conf that is not a WireGuard one */
 	ovpn = g_str_has_suffix(path, ".ovpn") || !strstr(content, "[Interface]");
-	if (ovpn && wants_login(content)) {
-		login = ask_credentials(name);
-		if (!login) {
-			memset(content, 0, len);
-			g_free(content);
+	if (ovpn) {
+		char *dir = g_path_get_dirname(path), *user, *pass, *err, *full;
+
+		full = inline_files(content, dir, &user, &pass, &err);
+		g_free(dir);
+		wipe_free(content);
+		content = full;
+		if (content && strlen(content) > 120000) {
+			wipe_free(content);
+			content = NULL;
+			err = g_strdup(_("The config and the files it points to are too big."));
+		}
+		if (!content) {
+			message(GTK_MESSAGE_ERROR, _("Could not import this file."), err);
+			g_free(err);
+			g_free(path);
+			return;
+		}
+		len = strlen(content);
+		if (wants_login(content))
+			login = ask_credentials(name, user, pass);
+		wipe_free(user);
+		wipe_free(pass);
+		if (wants_login(content) && !login) {
+			wipe_free(content);
+			g_free(path);
+			return;
+		}
+		if (key_encrypted(content) && !(keypass = ask_key_password(name))) {
+			wipe_free(content);
+			wipe_free(login);
 			g_free(path);
 			return;
 		}
@@ -443,13 +673,10 @@ static void on_import(GtkButton *b, gpointer d)
 		answer = gtk_dialog_run(GTK_DIALOG(ask));
 		gtk_widget_destroy(ask);
 		if (answer != GTK_RESPONSE_ACCEPT) {
-			memset(content, 0, len);
-			g_free(content);
+			wipe_free(content);
+			wipe_free(login);
+			wipe_free(keypass);
 			g_free(path);
-			if (login) {
-				memset(login, 0, strlen(login));
-				g_free(login);
-			}
 			return;
 		}
 	}
@@ -465,10 +692,17 @@ static void on_import(GtkButton *b, gpointer d)
 			out = g_strdup(_("The user name and password could not be saved."));
 		}
 	}
-	if (login) {
-		memset(login, 0, strlen(login));
-		g_free(login);
+	if (ok && keypass) {
+		char *junk = ctl("keypass", name, keypass, &ok);
+
+		g_free(junk);
+		if (!ok) {
+			g_free(out);
+			out = g_strdup(_("The password of the private key could not be saved."));
+		}
 	}
+	wipe_free(login);
+	wipe_free(keypass);
 	if (ok) {
 		fill_list(name);
 		if (out && out[0])                 /* what was left out */
