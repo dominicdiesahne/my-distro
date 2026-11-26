@@ -15,6 +15,8 @@ them when something fails.
     python3 tests/t_secureboot.py ISO [SHOTDIR] [STEPS]
 
 STEPS (optional) replaces the key list for MokManager, e.g. "down,ret,ret".
+SB_LOGIN_FAIL_FIRST=1 types a wrong password on the first console login, to
+check that a failed login is tried again.
 Runs inside WSL; needs /usr/share/OVMF/OVMF_CODE_4M.secboot.fd and
 OVMF_VARS_4M.ms.fd (Kali/Debian package ovmf)."""
 import sys, time, os, subprocess
@@ -63,6 +65,49 @@ def grub_last_entry(secs=50):
     for t in (6, 20, 60):          # what GRUB or the kernel says right after Enter
         time.sleep(t); shot('after-enter')
 
+# The login prompt on tty1 gives up after 60 s and init starts a new one, all
+# the time: typing at a random moment can hit the end of a prompt, and the
+# password lands in the next one (keys that arrive late without KVM make it
+# worse). So each try first ends whatever runs on tty1 with Ctrl-D (the login
+# prompt or a shell; at a password prompt the first one only fails the login),
+# which gives a new prompt with its full 60 s, and each login is confirmed on
+# the serial line.
+LOGIN_FAIL_FIRST = os.environ.get('SB_LOGIN_FAIL_FIRST') == '1'   # tests the retry
+
+def console_login(tries=4):
+    keys('ctrl-alt-f1', 5)
+    for i in range(tries):
+        for _ in range(2):
+            vm.keys('ctrl-u'); time.sleep(0.5)   # drops what a late key left on the line
+            vm.keys('ctrl-d'); time.sleep(5)     # ends it; a failed login waits 3 s
+        password = 'wrong' if LOGIN_FAIL_FIRST and i == 0 else 'root'
+        vm.type('root\n'); time.sleep(5); vm.type(password + '\n'); time.sleep(8)
+        mark = 'LOGIN-OK-%d' % i
+        vm.type('echo %s >/dev/ttyS0\n' % mark)
+        try:
+            vm.expect(mark, 120)
+            print('logged in on the console (try %d)' % (i + 1), flush=True)
+            return True
+        except TimeoutError:
+            shot('login-failed')
+            print('console login %d failed, trying again from a fresh prompt' % (i + 1), flush=True)
+            time.sleep(10)         # keys still on their way arrive before the next try
+    return False
+
+def console_run(cmd, tries=2):
+    """Logs in, runs cmd with its output on the serial line; returns the
+    output up to SB-DONE, or None"""
+    if not console_login():
+        return None
+    for i in range(tries):
+        vm.type('(%s; echo SB-DONE) >/dev/ttyS0 2>&1\n' % cmd)
+        try:
+            return vm.expect('SB-DONE', 300)
+        except TimeoutError as e:
+            print(e, flush=True)
+            vm.keys('ctrl-c'); time.sleep(2); vm.keys('ctrl-u'); time.sleep(2)
+    return None
+
 # --- 1. first start: MokManager ------------------------------------------------
 vm = VM('sb', args)
 if not SB_OFF:
@@ -99,15 +144,13 @@ if SB_OFF:
         print(e, flush=True)
     time.sleep(300)
     shot('desktop')
-    keys('ctrl-alt-f1', 5)
-    vm.type('root\n'); time.sleep(3); vm.type('root\n'); time.sleep(5)
-    vm.type('(cat /sys/kernel/security/lockdown; my-secureboot status; echo SB-DONE) >/dev/ttyS0 2>&1\n')
-    try:
-        out = vm.expect('SB-DONE', 120)
+    out = console_run('cat /sys/kernel/security/lockdown; my-secureboot status')
+    if out is not None:
         print(out[-600:], flush=True)
         results.append(('not locked down', '[none]' in out))
-    except TimeoutError as e:
+    else:
         results.append(('console checks', False))
+    shot('console')
     print('\n== SUMMARY uefi without Secure Boot')
     for name, ok in results:
         print(('PASS ' if ok else 'FAIL ') + name)
@@ -129,19 +172,15 @@ print(out[-500:], flush=True)
 time.sleep(400)
 shot('desktop')
 # --- 3. a text console: check from there, the answers go to the serial line ----
-keys('ctrl-alt-f1', 5)
-vm.type('root\n'); time.sleep(3); vm.type('root\n'); time.sleep(5)
-vm.type('(mokutil --sb-state; cat /sys/kernel/security/lockdown; my-power hibernate --check; '
-        'my-secureboot status; echo SB-DONE) >/dev/ttyS0 2>&1\n')
-try:
-    out = vm.expect('SB-DONE', 120)
+out = console_run('mokutil --sb-state; cat /sys/kernel/security/lockdown; my-power hibernate --check; '
+                  'my-secureboot status')
+if out is not None:
     print(out[-1200:], flush=True)
     results.append(('mokutil: SecureBoot enabled', 'SecureBoot enabled' in out))
     results.append(('lockdown integrity', '[integrity]' in out))
     results.append(('hibernate refused with a reason', 'Secure Boot' in out))
     results.append(('key enrolled', 'enrolled = yes' in out))
-except TimeoutError as e:
-    print(e, flush=True)
+else:
     results.append(('console checks', False))
 shot('console')
 print('\n== SUMMARY secureboot')
