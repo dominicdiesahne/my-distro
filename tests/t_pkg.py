@@ -106,6 +106,17 @@ try:
            "&& break; sleep 15; done; podman images'", 900)
     check('rootless podman run alpine', "su dominic -c 'cd ~ && podman run --rm docker.io/library/alpine echo hi''podman'",
           'hipodman', timeout=900)
+    # 1.4.0: limits, inside the user's own control group (my-subids; my-login
+    # puts the desktop session there, this shell goes there by hand)
+    check('dominic has a control group of his own', 'ls -ld /sys/fs/cgroup/my-users/1000/session '
+          '/sys/fs/cgroup/my-users/1000/containers; cat /sys/fs/cgroup/my-users/1000/cgroup.subtree_control',
+          'memory')
+    check('rootless container with limits (--memory, --pids-limit)',
+          "echo $$ > /sys/fs/cgroup/my-users/1000/session/cgroup.procs; su dominic -c 'cd ~ && podman run --rm "
+          "--memory 64m --pids-limit 50 docker.io/library/alpine cat /sys/fs/cgroup/memory.max "
+          "/sys/fs/cgroup/pids.max 2>&1'; echo $$ > /sys/fs/cgroup/cgroup.procs", '67108864', timeout=900)
+    check('... and outside the session as before, without limits', "su dominic -c 'cd ~ && podman run --rm "
+          "docker.io/library/alpine echo hi''there'", 'hithere', timeout=900)
     check('rootless container reaches the internet (slirp4netns)', "su dominic -c 'cd ~ && podman run --rm "
           "docker.io/library/alpine wget -q -O /dev/null -T 20 http://example.com && echo NET''OK'", 'NETOK', timeout=900)
     check('remove podman (Docker keeps iptables)', 'my-pkg remove podman 2>&1 | tail -3; command -v podman || echo GONE; '

@@ -1,0 +1,49 @@
+From: my-distro
+Subject: [PATCH] rootless cgroupfs: use the control group my-distro hands the user
+
+Without systemd a rootless container got no control group, so limits
+(--memory, --cpus, --pids-limit) were ignored. my-distro gives every user
+/sys/fs/cgroup/my-users/UID/containers (delegated: owned by the user);
+podman takes it as the default cgroup parent when it is writable.
+---
+--- a/libpod/runtime_ctr.go	2026-11-26 21:03:16.076543647 +0100
++++ b/libpod/runtime_ctr.go	2026-11-26 21:03:16.076543647 +0100
+@@ -397,6 +397,10 @@
+ 					}
+ 				} else if !rootless.IsRootless() {
+ 					ctr.config.CgroupParent = CgroupfsDefaultCgroupParent
++				} else if p := myDistroUserCgroup(); p != "" {
++					// my-distro: the user's own control group, so limits
++					// (--memory, --cpus) work without systemd
++					ctr.config.CgroupParent = p
+ 				}
+ 			} else if strings.HasSuffix(path.Base(ctr.config.CgroupParent), ".slice") {
+ 				return nil, fmt.Errorf("systemd slice received as cgroup parent when using cgroupfs: %w", define.ErrInvalidArg)
+--- a/libpod/container_internal_linux.go	2026-11-26 21:03:16.086543648 +0100
++++ b/libpod/container_internal_linux.go	2026-11-26 21:03:16.086543648 +0100
+@@ -373,6 +373,25 @@
+ 	return nil
+ }
+ 
++// myDistroUserCgroup: the control group my-distro hands every user for
++// their rootless containers (/usr/sbin/my-subids makes it, owned by the
++// user), as a cgroup parent; "" if there is none, it isn't writable, or
++// podman doesn't run inside the user's own group (my-login puts the
++// desktop session into my-users/UID/session): cgroup v2 moves a process
++// only within a group its user owns.
++func myDistroUserCgroup() string {
++	base := fmt.Sprintf("/my-users/%d/", rootless.GetRootlessUID())
++	self, err := os.ReadFile("/proc/self/cgroup")
++	if err != nil || !strings.Contains(string(self), "0::"+base) {
++		return ""
++	}
++	p := base + "containers"
++	if unix.Access("/sys/fs/cgroup"+p+"/cgroup.subtree_control", unix.W_OK) != nil {
++		return ""
++	}
++	return p
++}
++
+ func isRootlessCgroupSet(cgroup string) bool {
+ 	// old versions of podman were setting the CgroupParent to CgroupfsDefaultCgroupParent
+ 	// by default.  Avoid breaking these versions and check whether the cgroup parent is

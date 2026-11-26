@@ -38,3 +38,41 @@ for f in /etc/subuid /etc/subgid; do
 		mv "$f.new" "$f"
 	fi
 done
+
+# 1.4.0: a control group of their own for every user, for limits of their
+# rootless containers (podman run --memory 512m, --cpus 2, --pids-limit).
+# Without systemd nobody else hands one out: /sys/fs/cgroup/my-users/UID
+# and its children session (my-login puts the desktop session there:
+# cgroup v2 moves a process only within a group its user owns) and
+# containers belong to the user (the directories and
+# cgroup.procs, cgroup.subtree_control, cgroup.threads: cgroup v2's
+# delegation); the cpu, memory, io and pids controllers are switched on
+# down to there. Podman puts each container into containers/libpod-ID
+# (desktop/patches/podman). Groups of users that are gone are removed when
+# they are empty.
+CG=/sys/fs/cgroup
+if grep -q " $CG cgroup2 " /proc/mounts; then
+	ctl=$(for c in cpu memory io pids; do
+		grep -qw "$c" "$CG/cgroup.controllers" 2>/dev/null && printf '+%s ' "$c"
+	done)
+	mkdir -p "$CG/my-users"
+	for c in $ctl; do
+		echo "$c" >"$CG/cgroup.subtree_control" 2>/dev/null
+		echo "$c" >"$CG/my-users/cgroup.subtree_control" 2>/dev/null
+	done
+	awk -F: '$3 >= 1000 && $3 < 60000 { print $3 }' /etc/passwd | while read -r uid; do
+		for d in "$CG/my-users/$uid" "$CG/my-users/$uid/session" "$CG/my-users/$uid/containers"; do
+			mkdir -p "$d" || continue
+			for c in $ctl; do
+				[ "$d" = "$CG/my-users/$uid" ] && echo "$c" >"$d/cgroup.subtree_control" 2>/dev/null
+			done
+			chown "$uid" "$d" "$d/cgroup.procs" "$d/cgroup.subtree_control" "$d/cgroup.threads"
+		done
+	done
+	for d in "$CG"/my-users/*/; do
+		uid=$(basename "$d")
+		awk -F: -v u="$uid" '$3 == u { f = 1 } END { exit !f }' /etc/passwd ||
+			{ rmdir "$d/containers" "$d/session" "$d" 2>/dev/null; }
+	done
+fi
+exit 0

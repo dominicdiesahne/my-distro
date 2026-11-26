@@ -1,7 +1,8 @@
 #!/bin/sh
 # Containers (1.0.0): what podman (a Software app package) needs from the
 # system, ready before it is installed, so it works right after installing:
-#   - subordinate IDs for every user (my-subids): rootless containers
+#   - subordinate IDs and a control group for every user (my-subids):
+#     rootless containers, with limits (1.4.0)
 #   - control groups v2 in /sys/fs/cgroup (S30cgroupfs2 of the Docker and
 #     podman packages does the same at the next start; only mounted once)
 #   - / as a shared mount (as with systemd): mounts made inside rootless
@@ -17,10 +18,10 @@ LIVE_CONF=/etc/containers/containers.conf.d/90-my-live.conf
 
 case "$1" in
 start)
-	/usr/sbin/my-subids
 	mkdir -p /sys/fs/cgroup
 	grep -q " /sys/fs/cgroup cgroup2 " /proc/mounts ||
 		mount -t cgroup2 none /sys/fs/cgroup 2>/dev/null
+	/usr/sbin/my-subids                 # (after the mount: the users' control groups)
 	mount --make-rshared / 2>/dev/null
 	modprobe -q tun 2>/dev/null
 	if grep -q "rdinit=" /proc/cmdline; then

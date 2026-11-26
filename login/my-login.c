@@ -770,6 +770,20 @@ static void run_session(struct passwd *pw)
 		} else {
 			runtime[0] = '\0';
 		}
+		/* 1.4.0: into the user's own control group (my-subids makes it),
+		 * so their rootless containers can have limits: cgroup v2 moves a
+		 * process only within a group its user owns */
+		{
+			char procs[96];
+			FILE *f;
+
+			snprintf(procs, sizeof procs, "/sys/fs/cgroup/my-users/%u/session/cgroup.procs",
+			         (unsigned)uid);
+			if ((f = fopen(procs, "w"))) {
+				fprintf(f, "%d\n", (int)getpid());
+				fclose(f);
+			}
+		}
 		/* Drop root: groups first, then the group, then the user. */
 		if (initgroups(name, gid) != 0 || setgid(gid) != 0 || setuid(uid) != 0)
 			_exit(1);

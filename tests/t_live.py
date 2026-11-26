@@ -295,6 +295,10 @@ check('EGL', as_user('eglinfo -B 2>&1 | grep -m3 -E "EGL vendor|renderer|Error"'
 
 # 1. PipeWire
 check('XDG_RUNTIME_DIR made by my-login', 'ls -ld /run/user/1000', 'dominic')
+# 1.4.0: the session in the user's own control group (limits for podman)
+check('the desktop session runs in the user\'s control group',
+      'cat /proc/$(pidof openbox | cut -d" " -f1)/cgroup; ls -l /sys/fs/cgroup/my-users/1000/containers/cgroup.procs',
+      '0::/my-users/1000/session')
 check('pipewire, wireplumber, pipewire-pulse run', 'ps | grep -v grep | grep -E "pipewire|wireplumber" | '
       'awk "{print \\$NF}" | sort -u | tr "\\n" " "', 'wireplumber')
 check('wpctl status', as_user('wpctl status 2>&1 | head -30'), 'Audio')
