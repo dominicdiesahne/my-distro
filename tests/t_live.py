@@ -387,7 +387,7 @@ vm.keys('tab'); time.sleep(4); vm.keys('tab'); time.sleep(6)
 vm.shot(SHOTS + '/05c-disks-as-root.png')
 check('root window without NO_AT_BRIDGE while the reader runs',
       'p=$(pidof my-disks | cut -d" " -f1); [ -n "$p" ] && '
-      'echo NAB=$(tr "\\0" "\\n" < /proc/$p/environ | grep -c NO_AT_BRIDGE) UID=$(stat -c %u /proc/$p)', 'NAB=0 UID=0')
+      'echo NAB=$(tr "\\0" "\\n" < /proc/$p/environ | grep -c NO_AT_BRIDGE) UID=$(awk "/^Uid:/{print \\$2}" /proc/$p/status)', 'NAB=0 UID=0')
 out = vm.run('cat /tmp/reader.log; echo FOCUS=$(grep -v -c Disks /tmp/reader.log)', 30)
 n = re.findall(r'FOCUS=(\d+)', out)              # (the echoed command has "FOCUS=$(")
 results.append(('reader spoke the focus in the root window (more than its title)',
@@ -416,7 +416,7 @@ print(('PASS ' if results[-1][1] else 'FAIL ') + results[-1][0], out[-300:], flu
 check('permissions: without a line it runs normally',
       as_user('my-run --menu "find /dev -maxdepth 1 -name video*"'), '/dev/video')
 # 1.3.0: without the microphone a program still plays sound (PipeWire's
-# play-only socket), but can't record or see the microphone and speakers;
+# play-only socket), but can't record or see the microphone (it sees the speakers);
 # and the permissions apply when it is started by name from anywhere
 # (my-run --sync's starters, first in PATH)
 vm.run("su dominic -c 'printf \"speaker-test camera=yes microphone=no home=full\\n"
@@ -433,11 +433,12 @@ check('the sandboxed program\'s sound reaches the speakers',
       as_user('pw-link -l | grep -A2 "alsa_playback.speaker-test"'), '|->')
 check('its PipeWire client is play-only', as_user('pw-cli ls Client | grep -o "my-play" | head -1'), 'my-play')
 vm.run('killall speaker-test; true', 30)
-out = vm.run(as_user('my-run pw-cli ls Node 2>&1 | grep -E "node.name|media.class"; echo END-OF-LIST'), 60)
+out = vm.run(as_user('timeout 20 my-run pw-cli ls Node >/tmp/nodes.txt 2>&1; echo PWCLI-RC=$?; '
+                       'grep -E "node.name|media.class" /tmp/nodes.txt; echo END-OF-LIST'), 60)
 body = VM.body(out)
-results.append(('the sandbox sees no microphone and no speakers',
-                'END-OF-LIST' in body and 'test-mic' not in body and 'alsa_output' not in body and
-                'Audio/Sink' not in body, body[-300:]))
+results.append(('the sandbox sees the speakers, but no microphone',
+                'END-OF-LIST' in body and 'PWCLI-RC=0' in body and 'test-mic' not in body and
+                'alsa_input' not in body and 'Audio/Source' not in body and 'Audio/Sink' in body, body[-300:]))
 print(('PASS ' if results[-1][1] else 'FAIL ') + results[-1][0] + '\n    ' + body[-300:], flush=True)
 # a recording: outside the sandbox it is linked to the microphone (the
 # control), from the sandbox its stream is removed and never linked

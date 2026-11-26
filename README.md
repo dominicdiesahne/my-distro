@@ -692,10 +692,10 @@ Sound without the microphone (1.3.0): PipeWire listens on a third socket,
 and marks its clients `pipewire.access = "my-play"`, which a client can't
 change. `my-run` puts that socket into the sandbox as `pipewire-0`. A
 WirePlumber script (`scripts/client/my-play-only.lua`) lets those clients
-see only their own nodes, so they can't link anything themselves (PipeWire
-links two nodes only for a client that sees both), removes any node of
-theirs that isn't a playback stream, and never links into one of their
-nodes. They play sound; they can't record the microphone, the speakers or
+see only their own nodes and the sinks (PipeWire links two nodes only for a
+client that sees both, and activates a link only if a stream's owner sees
+the other end), removes any node of theirs that isn't a playback stream,
+and never links into one of their nodes (a link into one is removed). They play sound; they can't record the microphone, the speakers or
 another program. Programs that only speak PulseAudio (none in the image;
 Software app packages may) get no sound that way.
 

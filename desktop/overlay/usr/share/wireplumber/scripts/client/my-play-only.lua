@@ -5,9 +5,12 @@
 -- (/usr/share/pipewire/pipewire.conf.d/50-my-play.conf; a program can't
 -- change that property). Those clients may play sound and nothing else:
 --
---   1. They see only their own nodes. PipeWire lets a client link two nodes
---      only if it sees both, so it can't connect itself to the microphone,
---      to the monitor of the speakers or to another program's sound.
+--   1. They see only their own nodes and the speakers (sinks). PipeWire
+--      lets a client link two nodes only if it sees both, so it can't
+--      connect itself to the microphone or to another program's sound;
+--      and it activates a link only if a stream's owner sees the node at
+--      the other end, so the sinks must stay visible for its sound to play.
+--      (Into a sink is the only way: 2. leaves them no node to receive in.)
 --   2. A node of theirs that isn't a playback stream (a capture stream, a
 --      virtual sink or source) is removed.
 --   3. WirePlumber never links into one of their nodes, and a link that ends
@@ -52,7 +55,12 @@ local function check_node (node)
   end
 end
 
--- 1.: hide the nodes of others
+local function is_sink (node)
+  local class = node.properties ["media.class"] or ""
+  return class:find ("^Audio/Sink") ~= nil
+end
+
+-- 1.: hide the nodes of others (but not the sinks)
 local function hide_nodes (client)
   local id = client ["bound-id"]
   client:update_permissions { ["any"] = "rx" }
@@ -61,7 +69,7 @@ local function hide_nodes (client)
   for node in nodes_om:iterate () do
     if owner_id (node) == id then
       check_node (node)
-    else
+    elseif not is_sink (node) then
       deny [node ["bound-id"]] = "-"
       n = n + 1
     end
@@ -83,6 +91,9 @@ nodes_om:connect ("object-added", function (om, node)
   local oid = owner_id (node)
   if play_client (oid) then
     check_node (node)
+  end
+  if is_sink (node) then
+    return
   end
   for client in clients_om:iterate () do
     if is_play (client) and client ["bound-id"] ~= oid then
