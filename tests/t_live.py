@@ -208,7 +208,11 @@ while True:
     s.sendto(p, ("255.255.255.255", 68))
     print("sent", rt, flush=True)
 ''').decode()
-vm.run('echo ' + DHCPD + ' | base64 -d > /tmp/vt/dhcpd.py; wc -l /tmp/vt/dhcpd.py', 60)
+# (in pieces: the serial console's line buffer is about 4 KB)
+vm.run('rm -f /tmp/vt/dhcpd.b64', 30)
+for i in range(0, len(DHCPD), 600):
+    vm.run('printf %s ' + DHCPD[i:i + 600] + ' >> /tmp/vt/dhcpd.b64', 30)
+vm.run('base64 -d /tmp/vt/dhcpd.b64 > /tmp/vt/dhcpd.py; wc -l /tmp/vt/dhcpd.py', 60)
 SRV = ('mode server\\ntls-server\\ndev tap9\\nproto udp4\\nlocal 127.0.0.1\\nport 11940\\n'
        'ca /tmp/vt/ca.crt\\ncert /tmp/vt/s.crt\\nkey /tmp/vt/s.key\\ndh none\\nkeepalive 5 30\\nverb 3\\n')
 
