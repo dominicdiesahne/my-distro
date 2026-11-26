@@ -11,6 +11,15 @@ rm -f "$T/etc/init.d/S40xorg"
 # my-keepalive and loads our rules.
 rm -f "$T/etc/init.d/S02auditd"
 
+# 1.4.0: xterm through the wrapper, so the screen reader can read terminals
+# (usr/lib/my-distro/xterm-wrapper, panel/my-term.c). The real one moves to
+# /usr/libexec/xterm (once: an incremental build keeps the moved one).
+if [ -f "$T/usr/bin/xterm" ] && ! grep -q "my-distro xterm wrapper" "$T/usr/bin/xterm"; then
+	mkdir -p "$T/usr/libexec"
+	mv "$T/usr/bin/xterm" "$T/usr/libexec/xterm"
+fi
+install -m 755 "$T/usr/lib/my-distro/xterm-wrapper" "$T/usr/bin/xterm"
+
 # Crontabs: only root may look into the folder (crontab -e works through
 # BusyBox's setuid crontab); root's own one has to be private too.
 mkdir -p "$T/etc/cron/crontabs"

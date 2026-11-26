@@ -397,7 +397,26 @@ n = re.findall(r'FOCUS=(\d+)', out)              # (the echoed command has "FOCU
 results.append(('reader spoke the focus in the root window (more than its title)',
                 bool(n) and int(n[-1]) > 0, out[-300:]))
 print(('PASS ' if results[-1][1] else 'FAIL ') + results[-1][0], out[-300:], flush=True)
-vm.run('killall my-disks; ' + as_user('my-reader --stop'), 30)
+vm.run('killall my-disks; true', 30)
+# 1.4.0: terminals: the xterm wrapper runs the shell through my-term while the
+# reader runs, which hands the output to it (only letters typed: the VM's
+# keyboard layout is German)
+vm.run('rm -f /tmp/reader.log', 30)
+vm.run(as_user('MY_READER_LOG=/tmp/reader.log my-reader --stop; MY_READER_LOG=/tmp/reader.log my-reader --toggle'), 60)
+time.sleep(10)
+vm.run(as_user('xterm -geometry 80x20+300+200 >/dev/null 2>&1 &'), 30)
+time.sleep(15)
+check('xterm runs the shell through my-term while the reader is on', 'ps | grep -v grep | grep my-term', 'my-term')
+vm.type('echo readable terminal\n'); time.sleep(10)
+vm.shot(SHOTS + '/05d-terminal-reader.png')
+check('reader spoke what the terminal wrote', 'cat /tmp/reader.log', 'readable terminal')
+vm.type('exit\n'); time.sleep(5)
+vm.run(as_user('my-reader --stop'), 30)
+time.sleep(3)
+vm.run(as_user('xterm -geometry 80x20+300+200 >/dev/null 2>&1 &'), 30)
+time.sleep(10)
+check('... and without the reader xterm starts as it is', 'echo N=$(ps | grep -v grep | grep -c my-term)', 'N=0')
+vm.run('pkill -f "^/usr/libexec/xterm -geometry 80x20"; true', 30)
 # 7. permissions: mpv may not use the camera nor see the home folder
 vm.run('modprobe vivid; sleep 3; ls /dev/video*', 60)
 vm.run("su dominic -c 'mkdir -p ~/.config/my-distro; echo \"ls camera=no microphone=yes home=none\" "

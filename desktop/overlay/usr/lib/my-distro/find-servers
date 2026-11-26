@@ -1,0 +1,128 @@
+#!/usr/bin/python3
+"""find-servers (1.4.0): the file servers of the local network, for Network
+share (my-share). Prints one line per server, NAME<tab>ADDRESS, within about
+four seconds:
+
+  - Samba servers and network drives (NAS) that announce themselves by mDNS
+    (_smb._tcp, through avahi-browse)
+  - Windows PCs (Windows 10 and newer announce themselves by WS-Discovery
+    only): a Probe to 239.255.255.250:3702; the name comes from the PC's
+    own description (a WS-Transfer Get to the address in its answer), or
+    the address stays the name
+
+usage: find-servers [SECONDS]
+"""
+import re, socket, struct, subprocess, sys, threading, time, uuid
+import urllib.request
+
+WAIT = float(sys.argv[1]) if len(sys.argv) > 1 else 3.0
+found = {}                                   # address -> name
+lock = threading.Lock()
+
+
+def add(name, addr):
+    with lock:
+        # a name beats a bare address; the first name stays
+        if addr not in found or found[addr] == addr:
+            found[addr] = name
+
+
+def mdns():
+    try:
+        out = subprocess.run(['avahi-browse', '-t', '-p', '-r', '-k', '_smb._tcp'], capture_output=True,
+                             text=True, timeout=WAIT + 2).stdout
+    except (OSError, subprocess.TimeoutExpired):
+        return
+    for line in out.splitlines():
+        f = line.split(';')
+        # =;eth0;IPv4;NAME;_smb._tcp;local;HOST.local;ADDRESS;445;"txt"
+        if len(f) >= 9 and f[0] == '=' and f[2] == 'IPv4':
+            add(f[3].replace('\\032', ' '), f[7])
+
+
+PROBE = '''<?xml version="1.0" encoding="utf-8"?>
+<soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope"
+ xmlns:wsa="http://schemas.xmlsoap.org/ws/2004/08/addressing"
+ xmlns:wsd="http://schemas.xmlsoap.org/ws/2005/04/discovery"
+ xmlns:wsdp="http://schemas.xmlsoap.org/ws/2006/02/devprof">
+<soap:Header>
+<wsa:To>urn:schemas-xmlsoap-org:ws:2005:04:discovery</wsa:To>
+<wsa:Action>http://schemas.xmlsoap.org/ws/2005/04/discovery/Probe</wsa:Action>
+<wsa:MessageID>urn:uuid:%s</wsa:MessageID>
+</soap:Header>
+<soap:Body><wsd:Probe><wsd:Types>wsdp:Device</wsd:Types></wsd:Probe></soap:Body>
+</soap:Envelope>'''
+
+GET = '''<?xml version="1.0" encoding="utf-8"?>
+<soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope"
+ xmlns:wsa="http://schemas.xmlsoap.org/ws/2004/08/addressing">
+<soap:Header>
+<wsa:To>%s</wsa:To>
+<wsa:Action>http://schemas.xmlsoap.org/ws/2004/09/transfer/Get</wsa:Action>
+<wsa:MessageID>urn:uuid:%s</wsa:MessageID>
+<wsa:ReplyTo><wsa:Address>http://schemas.xmlsoap.org/ws/2004/08/addressing/role/anonymous</wsa:Address></wsa:ReplyTo>
+</soap:Header>
+<soap:Body/>
+</soap:Envelope>'''
+
+
+def wsd_name(xaddr, endpoint, addr):
+    """The computer name from the device's metadata: <pub:Computer>NAME/..."""
+    try:
+        req = urllib.request.Request(xaddr, data=(GET % (endpoint, uuid.uuid4())).encode(),
+                                     headers={'Content-Type': 'application/soap+xml'})
+        body = urllib.request.urlopen(req, timeout=2).read(65536).decode('utf-8', 'replace')
+    except Exception:
+        return
+    m = re.search(r'<(?:\w+:)?Computer>([^<]+)</', body)
+    if m:
+        add(m.group(1).split('/')[0].split('\\')[-1].strip() or addr, addr)
+
+
+def wsd():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    try:
+        s.bind(('', 3703))                   # (the firewall lets the answers in there)
+    except OSError:
+        pass
+    s.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, struct.pack('b', 1))
+    s.settimeout(0.3)
+    msg = (PROBE % uuid.uuid4()).encode()
+    try:
+        s.sendto(msg, ('239.255.255.250', 3702))
+    except OSError:
+        return
+    end, again, threads = time.time() + WAIT, time.time() + 1, []
+    while time.time() < end:
+        if again and time.time() > again:    # (UDP: a second probe, like Windows)
+            s.sendto(msg, ('239.255.255.250', 3702))
+            again = None
+        try:
+            data, (ip, _) = s.recvfrom(65536)
+        except socket.timeout:
+            continue
+        text = data.decode('utf-8', 'replace')
+        if 'ProbeMatches' not in text:
+            continue
+        x = re.search(r'<(?:\w+:)?XAddrs>([^<]+)</', text)
+        e = re.search(r'<(?:\w+:)?EndpointReference>\s*<(?:\w+:)?Address>([^<]+)</', text)
+        add(ip, ip)
+        if x and e:
+            xaddr = next((a for a in x.group(1).split() if a.startswith('http://')), None)
+            if xaddr:
+                t = threading.Thread(target=wsd_name, args=(xaddr, e.group(1).strip(), ip), daemon=True)
+                t.start()
+                threads.append(t)
+    for t in threads:
+        t.join(2.5)
+
+
+jobs = [threading.Thread(target=f, daemon=True) for f in (mdns, wsd)]
+for j in jobs:
+    j.start()
+for j in jobs:
+    j.join(WAIT + 4)
+with lock:
+    for addr, name in sorted(found.items(), key=lambda i: i[1].lower()):
+        print('%s\t%s' % (name, addr))

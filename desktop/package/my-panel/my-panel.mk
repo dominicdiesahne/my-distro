@@ -3,7 +3,8 @@
 # my-panel: builds panel/my-panel.c (the taskbar), panel/my-screenshot.c,
 # panel/my-clipd.c (keeps copied text), panel/my-zoom.c (magnifier) and
 # panel/my-speak.c (reads the selected text aloud) and, since 0.9.7,
-# panel/my-reader.c (the screen reader) with Buildroot's compiler
+# panel/my-reader.c (the screen reader) and, since 1.4.0, panel/my-term.c
+# (terminals for the screen reader) with Buildroot's compiler
 #
 ################################################################################
 
@@ -37,6 +38,8 @@ define MY_PANEL_BUILD_CMDS
 		-I$(MY_PANEL_SHARED) -o $(@D)/my-reader $(@D)/my-reader.c \
 		$(MY_PANEL_SHARED)/settings.c \
 		$$($(PKG_CONFIG_HOST_BINARY) --cflags --libs x11 atspi-2 glib-2.0)
+	$(TARGET_CC) $(TARGET_CFLAGS) $(TARGET_LDFLAGS) -Wall -Wextra \
+		-o $(@D)/my-term $(@D)/my-term.c -lutil
 endef
 
 define MY_PANEL_INSTALL_TARGET_CMDS
@@ -46,6 +49,7 @@ define MY_PANEL_INSTALL_TARGET_CMDS
 	$(INSTALL) -D -m 0755 $(@D)/my-zoom $(TARGET_DIR)/usr/bin/my-zoom
 	$(INSTALL) -D -m 0755 $(@D)/my-speak $(TARGET_DIR)/usr/bin/my-speak
 	$(INSTALL) -D -m 0755 $(@D)/my-reader $(TARGET_DIR)/usr/bin/my-reader
+	$(INSTALL) -D -m 0755 $(@D)/my-term $(TARGET_DIR)/usr/bin/my-term
 endef
 
 $(eval $(generic-package))

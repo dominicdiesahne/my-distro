@@ -14,7 +14,9 @@
  *   - the letter you type into a text field
  *   - the highlighted entry of the Start menu (my-panel puts it into the
  *     root window's _MY_READER_TEXT property; the taskbar is not GTK)
- * It doesn't read: terminals (xterm), web page contents in NetSurf, and it
+ *   - (1.4.0) what programs write in a terminal (xterm), while it is the
+ *     active window: the xterm wrapper runs them through my-term
+ * It doesn't read: web page contents in NetSurf, and it
  * has no "read the whole window" or review commands like Orca. Something
  * new interrupts what is being said. (1.3.0: windows that run as root are
  * read while it runs, my-admin then leaves them on the accessibility bus;
@@ -32,11 +34,13 @@
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <atspi/atspi.h>
+#include <fcntl.h>
 #include <glib.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -286,6 +290,73 @@ static gboolean on_x(GIOChannel *ch, GIOCondition c, gpointer d)
 	return G_SOURCE_CONTINUE;
 }
 
+/* --- Terminals (1.4.0) ------------------------------------------------------------------ */
+
+/* xterm has no accessibility: while the reader runs, the xterm wrapper runs
+ * the program through my-term (panel/my-term.c), which sends what it writes
+ * here as "WINDOWID<tab>TEXT"; it is said while that xterm is active. */
+static char say_fifo[256];
+
+/* Is window W the active window or inside it (xterm's WINDOWID is its inner
+ * window)? */
+static int in_active(Window w)
+{
+	for (int depth = 0; w && w != root && depth < 16; depth++) {
+		Window r, parent, *kids = NULL;
+		unsigned int n;
+
+		if (w == last_active)
+			return 1;
+		if (!XQueryTree(dpy, w, &r, &parent, &kids, &n))
+			return 0;
+		if (kids)
+			XFree(kids);
+		w = parent;
+	}
+	return 0;
+}
+
+static gboolean on_term(GIOChannel *ch, GIOCondition c, gpointer d)
+{
+	char *line = NULL;
+	gsize len;
+
+	(void)c; (void)d;
+	while (g_io_channel_read_line(ch, &line, &len, NULL, NULL) == G_IO_STATUS_NORMAL && line) {
+		char *tab = strchr(line, '\t');
+
+		g_strchomp(line);
+		if (tab) {
+			*tab = '\0';
+			if (in_active((Window)strtoul(line, NULL, 10)) && g_utf8_validate(tab + 1, -1, NULL))
+				say(tab + 1);
+		}
+		g_free(line);
+		line = NULL;
+	}
+	return G_SOURCE_CONTINUE;
+}
+
+static void listen_terminals(void)
+{
+	const char *rt = getenv("XDG_RUNTIME_DIR");
+	GIOChannel *ch;
+	int fd;
+
+	if (!rt || !*rt)
+		return;
+	snprintf(say_fifo, sizeof say_fifo, "%s/my-reader.say", rt);
+	unlink(say_fifo);
+	if (mkfifo(say_fifo, 0600) != 0 || (fd = open(say_fifo, O_RDWR | O_NONBLOCK | O_CLOEXEC)) < 0) {
+		say_fifo[0] = '\0';               /* (O_RDWR: never an end of file) */
+		return;
+	}
+	ch = g_io_channel_unix_new(fd);
+	g_io_channel_set_encoding(ch, NULL, NULL);
+	g_io_channel_set_flags(ch, G_IO_FLAG_NONBLOCK, NULL);
+	g_io_add_watch(ch, G_IO_IN, on_term, NULL);
+}
+
 /* --- On, off, remembered ---------------------------------------------------------------- */
 
 static void pid_path(char *buf, size_t len)
@@ -339,6 +410,8 @@ static void quit(int sig)
 	hush();
 	pid_path(path, sizeof path);
 	unlink(path);
+	if (say_fifo[0])
+		unlink(say_fifo);
 	_exit(0);
 }
 
@@ -391,6 +464,7 @@ static int run(void)
 
 	ch = g_io_channel_unix_new(ConnectionNumber(dpy));
 	g_io_add_watch(ch, G_IO_IN, on_x, NULL);
+	listen_terminals();
 	say(_("Screen reader on"));
 	active_window_changed();
 	loop = g_main_loop_new(NULL, FALSE);

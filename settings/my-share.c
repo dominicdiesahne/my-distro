@@ -10,6 +10,10 @@
  * opens after the share is mounted; a share that is mounted already opens
  * at once, without this window.
  *
+ * 1.4.0: the window lists the servers of the network (Samba servers and
+ * NAS by mDNS, Windows PCs by WS-Discovery: /usr/lib/my-distro/find-servers);
+ * a click puts the server's address in, the share's name goes after it.
+ *
  * You type the share's address, a user name and password (empty = as a
  * guest). "my-power mount-share" (setuid root, see login/my-power.c) mounts
  * it with mount.cifs at /media/SERVER-SHARE, so that only you can open it;
@@ -199,6 +203,78 @@ static void on_connect(GtkButton *b, gpointer d)
 	g_free(rest);
 }
 
+/* 1.4.0: the servers of the network (/usr/lib/my-distro/find-servers: mDNS
+ * and WS-Discovery), as a list; one click puts smb://ADDRESS/ into the
+ * address field, and the share's name is typed after it. */
+static GtkWidget *servers, *servers_note;
+
+static void on_server(GtkListBox *l, GtkListBoxRow *r, gpointer d)
+{
+	const char *a = r ? g_object_get_data(G_OBJECT(r), "address") : NULL;
+	char *url;
+
+	(void)l;
+	(void)d;
+	if (!a)
+		return;
+	url = g_strdup_printf("smb://%s/", a);
+	gtk_entry_set_text(GTK_ENTRY(addr), url);
+	gtk_widget_grab_focus(addr);
+	gtk_editable_set_position(GTK_EDITABLE(addr), -1);
+	g_free(url);
+}
+
+static void on_found(GObject *src, GAsyncResult *res, gpointer d)
+{
+	char *out = NULL, **lines;
+	int n = 0;
+
+	(void)d;
+	if (!g_subprocess_communicate_utf8_finish(G_SUBPROCESS(src), res, &out, NULL, NULL))
+		out = NULL;
+	lines = g_strsplit(out ? out : "", "\n", -1);
+	for (int i = 0; lines[i]; i++) {
+		char **f = g_strsplit(lines[i], "\t", 2), *text;
+		GtkWidget *label, *r;
+
+		if (f[0] && f[1] && f[0][0] && f[1][0]) {
+			text = strcmp(f[0], f[1]) ? g_strdup_printf("%s (%s)", f[0], f[1]) : g_strdup(f[1]);
+			label = gtk_label_new(text);
+			gtk_label_set_xalign(GTK_LABEL(label), 0);
+			gtk_widget_set_margin_start(label, 6);
+			gtk_widget_set_margin_top(label, 3);
+			gtk_widget_set_margin_bottom(label, 3);
+			r = gtk_list_box_row_new();
+			gtk_container_add(GTK_CONTAINER(r), label);
+			g_object_set_data_full(G_OBJECT(r), "address", g_strdup(f[1]), g_free);
+			gtk_list_box_insert(GTK_LIST_BOX(servers), r, -1);
+			gtk_widget_show_all(r);
+			g_free(text);
+			n++;
+		}
+		g_strfreev(f);
+	}
+	g_strfreev(lines);
+	g_free(out);
+	gtk_label_set_text(GTK_LABEL(servers_note), n ? "" :
+		_("No servers found. Type the address of the share below."));
+	gtk_widget_set_visible(servers_note, n == 0);
+}
+
+static void find_servers(void)
+{
+	GSubprocess *p = g_subprocess_new(G_SUBPROCESS_FLAGS_STDOUT_PIPE | G_SUBPROCESS_FLAGS_STDERR_SILENCE,
+	                                  NULL, "/usr/lib/my-distro/find-servers", NULL);
+
+	if (!p) {
+		gtk_label_set_text(GTK_LABEL(servers_note),
+			_("No servers found. Type the address of the share below."));
+		return;
+	}
+	g_subprocess_communicate_utf8_async(p, NULL, NULL, on_found, NULL);
+	g_object_unref(p);
+}
+
 static GtkWidget *row(GtkWidget *grid, int y, const char *caption, GtkWidget *w)
 {
 	GtkWidget *l = gtk_label_new(caption);
@@ -249,6 +325,28 @@ int main(int argc, char **argv)
 	gtk_label_set_max_width_chars(GTK_LABEL(intro), 50);
 	gtk_label_set_xalign(GTK_LABEL(intro), 0);
 	gtk_box_pack_start(GTK_BOX(box), intro, FALSE, FALSE, 0);
+
+	/* the servers of the network (not when an address came along) */
+	if (argc < 2) {
+		GtkWidget *caption = gtk_label_new(_("Servers on the network")), *scroll;
+
+		gtk_label_set_xalign(GTK_LABEL(caption), 0);
+		gtk_box_pack_start(GTK_BOX(box), caption, FALSE, FALSE, 0);
+		servers = gtk_list_box_new();
+		g_signal_connect(servers, "row-activated", G_CALLBACK(on_server), NULL);
+		scroll = gtk_scrolled_window_new(NULL, NULL);
+		gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll), GTK_POLICY_NEVER,
+		                               GTK_POLICY_AUTOMATIC);
+		gtk_scrolled_window_set_shadow_type(GTK_SCROLLED_WINDOW(scroll), GTK_SHADOW_IN);
+		gtk_widget_set_size_request(scroll, -1, 110);
+		gtk_container_add(GTK_CONTAINER(scroll), servers);
+		gtk_box_pack_start(GTK_BOX(box), scroll, FALSE, FALSE, 0);
+		servers_note = gtk_label_new(_("Looking for servers..."));
+		gtk_label_set_xalign(GTK_LABEL(servers_note), 0);
+		gtk_label_set_line_wrap(GTK_LABEL(servers_note), TRUE);
+		gtk_box_pack_start(GTK_BOX(box), servers_note, FALSE, FALSE, 0);
+		find_servers();
+	}
 
 	grid = gtk_grid_new();
 	gtk_grid_set_row_spacing(GTK_GRID(grid), 8);
