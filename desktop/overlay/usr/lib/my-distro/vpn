@@ -14,7 +14,10 @@
 # OpenVPN: openvpn runs as a daemon on the interface ovpn0 and sets the
 # routes itself ("all traffic" is redirect-gateway def1, which works the
 # same way as the half routes above). Its route-up hook (this script,
-# "hook-up") applies the DNS servers the server pushes.
+# "hook-up") applies the DNS servers the server pushes. A tap VPN (1.3.0:
+# a bridge into the VPN's network) whose server pushes no address gets one
+# by DHCP over the tunnel: udhcpc with its own script (vpn-dhcp), which sets
+# the address and DNS but no default route.
 #
 # State while connected: /run/my-vpn (the name, the kind, the extra routes,
 # DNS). The DHCP client's hook (/usr/share/udhcpc/default.script.d/my-vpn)
@@ -60,6 +63,7 @@ stop_ovpn() {
 
 down() {
 	[ -d "$RUN" ] || { ip link del wg0 2>/dev/null; return 0; }
+	[ -f "$RUN/udhcpc.pid" ] && kill "$(cat "$RUN/udhcpc.pid")" 2>/dev/null
 	stop_ovpn
 	ip link del wg0 2>/dev/null        # its addresses and routes go with it
 	ip link del ovpn0 2>/dev/null
@@ -176,7 +180,22 @@ hook_up() {
 		esac
 	done
 	apply_dns "$servers" "$search"
+	# tap without a pushed address: DHCP over the tunnel. udhcpc tries for
+	# about 12 s, then goes on in the background (and renews the lease)
+	if [ "$(cat "$RUN/devtype" 2>/dev/null)" = tap ] && [ -n "$dev" ] &&
+	   [ -z "$(ip -4 -o address show dev "$dev" 2>/dev/null)" ]; then
+		udhcpc -i "$dev" -s /usr/lib/my-distro/vpn-dhcp -p "$RUN/udhcpc.pid" \
+			-t 6 -T 2 -b -S >/dev/null 2>&1
+	fi
 	: >"$RUN/up"
+}
+
+# vpn-dhcp passes on the DNS servers of a tap VPN's DHCP lease
+dhcp_dns() {
+	NAME=$(cat "$RUN/active" 2>/dev/null || cat "$RUN/active.try" 2>/dev/null)
+	search=
+	for d in $2; do search="$search $d"; done
+	apply_dns "$1" "$search"
 }
 
 up_ovpn() {
@@ -196,13 +215,18 @@ up_ovpn() {
 	fi
 	# a private key with a password: openvpn reads it from this file
 	[ -f "$DIR/$NAME.pass" ] && auth="$auth --askpass $DIR/$NAME.pass"
+	# tun or tap: "dev-type tap", or "dev tap" / "dev tap0"
+	devtype=$(awk 'tolower($1) == "dev-type" { t = $2 }
+		tolower($1) == "dev" && $2 ~ /^tap/ && t == "" { t = "tap" }
+		END { print (t ~ /^tap/ ? "tap" : "tun") }' "$CONF")
+	echo "$devtype" >"$RUN/devtype"
 	modprobe tun 2>/dev/null
 	# what openvpn logs when it gives up at once: a refused login, or a
 	# private key whose password is missing or wrong
 	FAILED='AUTH_FAILED|[Pp]rivate [Kk]ey [Pp]assword|[Ll]oad [Pp]rivate [Kk]ey'
 	# our options come after the file's, so they win; the file itself can't
 	# run commands (my-vpnctl leaves them out)
-	openvpn --config "$CONF" --dev ovpn0 --dev-type tun $auth --auth-nocache \
+	openvpn --config "$CONF" --dev ovpn0 --dev-type "$devtype" $auth --auth-nocache \
 		--script-security 2 --route-up "$SELF hook-up" \
 		--daemon my-openvpn --writepid "$RUN/ovpn.pid" --log "$RUN/ovpn.log" --verb 3
 	i=0
@@ -275,5 +299,6 @@ down) down; echo "Disconnected." ;;
 status) status ;;
 reconnect) reconnect ;;
 hook-up) hook_up ;;
+dhcp-dns) dhcp_dns "$2" "$3" ;;
 *) echo "usage: $0 up NAME | down | status | reconnect"; exit 1 ;;
 esac

@@ -14,10 +14,11 @@
  *   - the letter you type into a text field
  *   - the highlighted entry of the Start menu (my-panel puts it into the
  *     root window's _MY_READER_TEXT property; the taskbar is not GTK)
- * It doesn't read: terminals (xterm), web page contents in NetSurf, the
- * login and lock screens, windows that run as root (Users and system,
- * Disks), and it has no "read the whole window" or review commands like
- * Orca. Something new interrupts what is being said.
+ * It doesn't read: terminals (xterm), web page contents in NetSurf, and it
+ * has no "read the whole window" or review commands like Orca. Something
+ * new interrupts what is being said. (1.3.0: windows that run as root are
+ * read while it runs, my-admin then leaves them on the accessibility bus;
+ * the login and lock screens speak themselves, login/speech.h.)
  *
  *   my-reader             run (in the background of the session)
  *   my-reader --toggle    on/off (Super+Alt+S); remembered in the settings

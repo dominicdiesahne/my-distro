@@ -20,6 +20,10 @@
  *
  * Idle time comes from the X server's screen saver extension (libXss). A
  * video player that asks for no screen saver (mpv does) stops the lock.
+ *
+ * With the screen reader on (Settings, Accessibility), it says "Screen
+ * locked" and its messages itself (1.3.0, speech.h): my-reader can't follow
+ * a window that takes the keyboard. MY_READER_LOG=FILE writes it down too.
  */
 #define _GNU_SOURCE
 #include <X11/Xatom.h>
@@ -43,6 +47,7 @@
 #include <unistd.h>
 
 #include "settings.h"
+#include "speech.h"
 #include "i18n.h"
 
 #define PASS_MAX   128
@@ -274,6 +279,8 @@ static int key(XKeyEvent *e)
 		checking = 0;
 		memset(pass, 0, sizeof pass);
 		snprintf(message, sizeof message, "%s", _("Wrong password"));
+		if (cfg.screen_reader)
+			speech_say(message);
 		break;
 	case XK_BackSpace:
 		if (len)
@@ -346,6 +353,14 @@ static int lock(int ready_fd)
 	XSetSelectionOwner(dpy, XInternAtom(dpy, LOCK_ATOM, False), win, CurrentTime);
 	redraw();
 	XSync(dpy, False);
+	if (cfg.screen_reader) {
+		char said[160];
+
+		speech_language(getenv("LANGUAGE"));
+		speech_log = getenv("MY_READER_LOG");
+		snprintf(said, sizeof said, "%s. %s", _("Screen locked"), _("Password"));
+		speech_say(said);
+	}
 	if (ready_fd >= 0) {
 		if (write(ready_fd, "L", 1) < 0) {
 			/* the parent is gone: nothing to tell */
@@ -363,8 +378,10 @@ static int lock(int ready_fd)
 			XNextEvent(dpy, &e);
 			if (e.type == Expose && e.xexpose.count == 0)
 				redraw();
-			else if (e.type == KeyPress && key(&e.xkey))
+			else if (e.type == KeyPress && key(&e.xkey)) {
+				speech_hush();
 				return 0;
+			}
 			else if (e.type == ButtonPress && e.xbutton.x >= sw_x &&
 			         e.xbutton.x < sw_x + sw_w && e.xbutton.y >= sw_y &&
 			         e.xbutton.y < sw_y + sw_h)

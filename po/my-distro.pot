@@ -1840,13 +1840,6 @@ msgid "Welcome to my-distro"
 msgstr ""
 
 msgid ""
-"What each program may use, the next time you start it from the Start menu. A "
-"program without the microphone gets no sound at all (the sound server can't "
-"give it one without the other). Without the whole home folder it sees only "
-"Downloads (or nothing) and keeps its own settings separately."
-msgstr ""
-
-msgid ""
 "Where the sound plays (speakers, headphones, HDMI, Bluetooth), the "
 "microphone, and a volume for every program that plays: the Sound window. The "
 "speaker in the taskbar: scroll for louder or quieter, click to mute, right-"
@@ -2136,9 +2129,6 @@ msgstr ""
 msgid "The private key of the VPN \"%s\" is protected by a password. Enter it so the VPN can connect:"
 msgstr ""
 
-msgid "PKCS#12 files (.p12) are not supported. Ask your VPN service for the certificate and key as PEM files (.crt, .key)."
-msgstr ""
-
 #, c-format
 msgid "The config points to the file %s (%s), which could not be read. Put it in the same folder as the config."
 msgstr ""
@@ -2154,4 +2144,32 @@ msgid "The password of the private key could not be saved."
 msgstr ""
 
 msgid "Record screen with microphone"
+msgstr ""
+
+msgid "What each program may use, the next time it starts: from the Start menu, the run dialog, \"Open with\" or a terminal. A program without the microphone can still play sound, but can't record anything. Without the whole home folder it sees only Downloads (or nothing) and keeps its own settings separately."
+msgstr ""
+
+msgid "Password of the .p12 file"
+msgstr ""
+
+#, c-format
+msgid "Wrong password. Try again: the password of %s, for the VPN \"%s\"."
+msgstr ""
+
+#, c-format
+msgid "The certificate file %s of the VPN \"%s\" is protected by a password. Enter it once, to import the certificate and the key:"
+msgstr ""
+
+#, c-format
+msgid "%s could not be opened: the password is wrong, or it is not a .p12 file."
+msgstr ""
+
+#, c-format
+msgid "%s has no certificate with its key."
+msgstr ""
+
+msgid "Screen locked"
+msgstr ""
+
+msgid "empty"
 msgstr ""

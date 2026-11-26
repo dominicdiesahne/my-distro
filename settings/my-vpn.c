@@ -504,20 +504,188 @@ static char *pem_parts(const char *text)
 	return g_string_free(s, FALSE);
 }
 
+/* The password of a .p12 file. Returns it with a newline (wipe_free it), or
+ * NULL if cancelled. WRONG: say the last one was wrong. */
+static char *ask_p12_password(const char *name, const char *file, int wrong)
+{
+	GtkWidget *d, *box, *pass, *show, *t;
+	char *title, *result = NULL;
+
+	d = gtk_dialog_new_with_buttons(_("Password of the .p12 file"), GTK_WINDOW(win),
+		GTK_DIALOG_MODAL, _("Cancel"), GTK_RESPONSE_CANCEL, _("OK"), GTK_RESPONSE_OK, NULL);
+	box = gtk_dialog_get_content_area(GTK_DIALOG(d));
+	gtk_container_set_border_width(GTK_CONTAINER(box), 16);
+	gtk_box_set_spacing(GTK_BOX(box), 10);
+	title = g_strdup_printf(wrong ? _("Wrong password. Try again: the password of %s, for the "
+	                                  "VPN \"%s\".")
+	                              : _("The certificate file %s of the VPN \"%s\" is protected "
+	                                  "by a password. Enter it once, to import the certificate "
+	                                  "and the key:"), file, name);
+	t = gtk_label_new(title);
+	g_free(title);
+	gtk_label_set_xalign(GTK_LABEL(t), 0);
+	gtk_label_set_line_wrap(GTK_LABEL(t), TRUE);
+	gtk_label_set_max_width_chars(GTK_LABEL(t), 50);
+	gtk_box_pack_start(GTK_BOX(box), t, FALSE, FALSE, 0);
+	pass = gtk_entry_new();
+	gtk_entry_set_visibility(GTK_ENTRY(pass), FALSE);
+	gtk_entry_set_activates_default(GTK_ENTRY(pass), TRUE);
+	gtk_box_pack_start(GTK_BOX(box), pass, FALSE, FALSE, 0);
+	show = gtk_check_button_new_with_label(_("Show password"));
+	g_object_bind_property(show, "active", pass, "visibility", 0);
+	gtk_box_pack_start(GTK_BOX(box), show, FALSE, FALSE, 0);
+	gtk_dialog_set_default_response(GTK_DIALOG(d), GTK_RESPONSE_OK);
+	gtk_widget_show_all(d);
+	while (gtk_dialog_run(GTK_DIALOG(d)) == GTK_RESPONSE_OK) {
+		const char *p = gtk_entry_get_text(GTK_ENTRY(pass));
+
+		if (strchr(p, '\n'))
+			continue;
+		result = g_strdup_printf("%s\n", p);
+		break;
+	}
+	gtk_widget_destroy(d);
+	return result;
+}
+
+/* One part of a .p12 file as PEM, from openssl (the password on its stdin,
+ * never on the command line): WHAT is "-nokeys -cacerts", "-nokeys
+ * -clcerts" or "-nocerts -nodes". Old files need OpenSSL's legacy
+ * algorithms (RC2, 3DES): tried second. Returns NULL if openssl fails
+ * (wrong password, not a .p12 file); "" if the part is not in the file. */
+static char *p12_part(const char *path, const char *passline, const char *what)
+{
+	for (int legacy = 0; legacy < 2; legacy++) {
+		char **w = g_strsplit(what, " ", -1);
+		const char *argv[12] = { "openssl", "pkcs12", "-in", path, "-passin", "stdin" };
+		int n = 6, st = 0;
+		GSubprocess *p;
+		GBytes *in, *outb = NULL;
+		char *pem = NULL;
+
+		for (int i = 0; w[i] && n < 10; i++)
+			argv[n++] = w[i];
+		if (legacy)
+			argv[n++] = "-legacy";
+		argv[n] = NULL;
+		p = g_subprocess_newv(argv, G_SUBPROCESS_FLAGS_STDIN_PIPE |
+		                      G_SUBPROCESS_FLAGS_STDOUT_PIPE | G_SUBPROCESS_FLAGS_STDERR_SILENCE,
+		                      NULL);
+		g_strfreev(w);
+		if (!p)
+			return NULL;
+		in = g_bytes_new(passline, strlen(passline));
+		if (g_subprocess_communicate(p, in, NULL, &outb, NULL, NULL) &&
+		    g_subprocess_get_if_exited(p))
+			st = g_subprocess_get_exit_status(p);
+		else
+			st = 1;
+		g_bytes_unref(in);
+		g_object_unref(p);
+		if (st == 0 && outb) {
+			gsize len;
+			const char *data = g_bytes_get_data(outb, &len);
+			char *text = g_strndup(data, len);
+
+			pem = pem_parts(text);
+			wipe_free(text);
+			if (!pem)
+				pem = g_strdup("");
+		}
+		if (outb) {
+			gsize len;
+			char *data = (char *)g_bytes_get_data(outb, &len);
+
+			memset(data, 0, len);      /* the private key */
+			g_bytes_unref(outb);
+		}
+		if (pem)
+			return pem;
+	}
+	return NULL;
+}
+
+/* "pkcs12 FILE": the certificate, the key and the CA (unless the config has
+ * its own) out of the .p12 file, as blocks. OpenVPN gets the key without its
+ * password: the config is root's only (like a key in a block always was).
+ * NULL and *err when it can't be read, or *err NULL when cancelled. */
+static char *p12_blocks(const char *path, const char *file, const char *name, int has_ca,
+                        char **err)
+{
+	char *passline = g_strdup("\n"), *cert = NULL, *key = NULL, *ca = NULL, *res;
+	int tries = 0;
+	gsize n;
+	char *probe = NULL;
+
+	*err = NULL;
+	if (!g_file_get_contents(path, &probe, &n, NULL) || n > 64000) {
+		g_free(probe);
+		g_free(passline);
+		*err = g_strdup_printf(_("The config points to the file %s (%s), which could not be "
+			"read. Put it in the same folder as the config."), file, "pkcs12");
+		return NULL;
+	}
+	wipe_free(probe);
+	/* most .p12 files from VPN services have a password; some have none */
+	while (!(cert = p12_part(path, passline, "-nokeys -clcerts"))) {
+		wipe_free(passline);
+		if (tries++ >= 5) {
+			*err = g_strdup_printf(_("%s could not be opened: the password is wrong, or it "
+			                         "is not a .p12 file."), file);
+			return NULL;
+		}
+		if (!(passline = ask_p12_password(name, file, tries > 1)))
+			return NULL;             /* cancelled */
+	}
+	key = p12_part(path, passline, "-nocerts -nodes");
+	if (!has_ca)
+		ca = p12_part(path, passline, "-nokeys -cacerts");
+	wipe_free(passline);
+	if (!key || !key[0] || !cert[0]) {
+		wipe_free(cert);
+		wipe_free(key);
+		g_free(ca);
+		*err = g_strdup_printf(_("%s has no certificate with its key."), file);
+		return NULL;
+	}
+	res = g_strdup_printf("%s%s%s<cert>\n%s</cert>\n<key>\n%s</key>\n", ca && ca[0] ? "<ca>\n" : "",
+	                      ca && ca[0] ? ca : "", ca && ca[0] ? "</ca>\n" : "", cert, key);
+	wipe_free(cert);
+	wipe_free(key);
+	g_free(ca);
+	return res;
+}
+
+/* Does the config have the option OPT (a line or a block)? */
+static int has_option(char **lines, const char *opt)
+{
+	size_t n = strlen(opt);
+
+	for (int i = 0; lines[i]; i++) {
+		const char *l = lines[i] + strspn(lines[i], " \t");
+
+		if ((l[0] == '<' && strncasecmp(l + 1, opt, n) == 0 && l[n + 1] == '>') ||
+		    (strncasecmp(l, opt, n) == 0 && (l[n] == ' ' || l[n] == '\t')))
+			return 1;
+	}
+	return 0;
+}
+
 /* An OpenVPN config with the files it points to (ca ca.crt, tls-auth ta.key
- * 1, ...) put in as blocks, from the folder DIR the config is in. A user
- * name and password in the file "auth-user-pass FILE" names go to *user and
- * *pass (wipe_free them). Returns the new config (wipe_free it), or NULL
- * and *err (g_free it) when a file can't be used. */
-static char *inline_files(const char *content, const char *dir, char **user, char **pass,
-                          char **err)
+ * 1, pkcs12 client.p12, ...) put in as blocks, from the folder DIR the
+ * config is in. A user name and password in the file "auth-user-pass FILE"
+ * names go to *user and *pass (wipe_free them). Returns the new config
+ * (wipe_free it), or NULL and *err (g_free it) when a file can't be used;
+ * NULL and *err NULL when the user cancelled. */
+static char *inline_files(const char *content, const char *dir, const char *name, char **user,
+                          char **pass, char **err)
 {
 	GString *out = g_string_new(NULL);
 	char **lines = g_strsplit(content, "\n", -1);
-	int block = 0;
+	int block = 0, cancelled = 0, has_ca = has_option(lines, "ca");
 
 	*user = *pass = *err = NULL;
-	for (int i = 0; lines[i] && !*err; i++) {
+	for (int i = 0; lines[i] && !*err && !cancelled; i++) {
 		char *l = g_strstrip(lines[i]), **argv = NULL, *path, *text = NULL, *pem;
 		int argc = 0, is_file;
 		gsize n;
@@ -536,9 +704,19 @@ static char *inline_files(const char *content, const char *dir, char **user, cha
 		is_file = 0;
 		for (int k = 0; file_keys[k]; k++)
 			is_file |= strcasecmp(argv[0], file_keys[k]) == 0;
-		if (strcasecmp(argv[0], "pkcs12") == 0) {
-			*err = g_strdup(_("PKCS#12 files (.p12) are not supported. Ask your VPN service "
-			                  "for the certificate and key as PEM files (.crt, .key)."));
+		if (strcasecmp(argv[0], "pkcs12") == 0 && strcmp(argv[1], "[inline]") != 0) {
+			char *blocks;
+
+			path = g_path_is_absolute(argv[1]) ? g_strdup(argv[1]) :
+			       g_build_filename(dir, argv[1], NULL);
+			blocks = p12_blocks(path, argv[1], name, has_ca, err);
+			if (blocks) {
+				g_string_append(out, blocks);
+				wipe_free(blocks);
+			} else if (!*err) {
+				cancelled = 1;
+			}
+			g_free(path);
 		} else if (is_file && strcmp(argv[1], "[inline]") == 0) {
 			/* "tls-auth [inline] 1": the block is elsewhere in the file */
 			if (argc > 2)
@@ -586,7 +764,7 @@ static char *inline_files(const char *content, const char *dir, char **user, cha
 		g_strfreev(argv);
 	}
 	wipe_strv(lines);
-	if (*err) {
+	if (*err || cancelled) {
 		memset(out->str, 0, out->len);
 		g_string_free(out, TRUE);
 		wipe_free(*user);
@@ -631,7 +809,7 @@ static void on_import(GtkButton *b, gpointer d)
 	if (ovpn) {
 		char *dir = g_path_get_dirname(path), *user, *pass, *err, *full;
 
-		full = inline_files(content, dir, &user, &pass, &err);
+		full = inline_files(content, dir, name, &user, &pass, &err);
 		g_free(dir);
 		wipe_free(content);
 		content = full;
@@ -641,7 +819,8 @@ static void on_import(GtkButton *b, gpointer d)
 			err = g_strdup(_("The config and the files it points to are too big."));
 		}
 		if (!content) {
-			message(GTK_MESSAGE_ERROR, _("Could not import this file."), err);
+			if (err)                   /* else: cancelled */
+				message(GTK_MESSAGE_ERROR, _("Could not import this file."), err);
 			g_free(err);
 			g_free(path);
 			return;

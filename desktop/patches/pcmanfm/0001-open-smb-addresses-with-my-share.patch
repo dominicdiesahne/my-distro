@@ -1,0 +1,32 @@
+From: my-distro
+Subject: [PATCH] Open smb:// addresses with my-share
+
+my-distro has no gvfs, so PCManFM can't browse smb:// itself. An smb://
+or \\server\share address typed in the location bar goes to my-share,
+which mounts the share with mount.cifs and opens it.
+---
+--- a/src/main-win.c
++++ b/src/main-win.c
+@@ -181,7 +181,21 @@
+ 
+ static void on_location_activate(GtkEntry* entry, FmMainWin* win)
+ {
+-    FmPath* path = fm_path_entry_get_path(FM_PATH_ENTRY(entry));
++    FmPath* path;
++    const char* text = gtk_entry_get_text(entry);
++
++    /* my-distro: there is no gvfs, so PCManFM can't open smb:// itself;
++     * my-share mounts the share (mount.cifs) and opens it in a new window */
++    if (g_ascii_strncasecmp(text, "smb://", 6) == 0 ||
++        (text[0] == '\\' && text[1] == '\\'))
++    {
++        const char* argv[] = { "my-share", text, NULL };
++
++        g_spawn_async(NULL, (char**)argv, NULL, G_SPAWN_SEARCH_PATH,
++                      NULL, NULL, NULL, NULL);
++        return;
++    }
++    path = fm_path_entry_get_path(FM_PATH_ENTRY(entry));
+ 
+     /* bug #3615243 seems to be thread-related issue, let ref the path now */
+     fm_path_ref(path);

@@ -29,3 +29,12 @@ if [ -n "$_my_proxy" ]; then
 	export NO_PROXY="$no_proxy"
 fi
 unset _my_lang _my_proxy _my_noproxy
+
+# Programs with limited permissions (Settings, Permissions) start through
+# their starter, wherever they are started by name (1.3.0, see my-run)
+if [ "$(id -u)" != 0 ]; then
+	case ":$PATH:" in
+	*":$HOME/.local/share/my-run/bin:"*) ;;
+	*) export PATH="$HOME/.local/share/my-run/bin:$PATH" ;;
+	esac
+fi

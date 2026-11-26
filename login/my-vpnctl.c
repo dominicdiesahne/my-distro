@@ -363,9 +363,11 @@ static int import_ovpn(const char *name)
 			       "asks for the user name and password.\n");
 			goto bad;
 		}
+		/* tun (a tunnel) or, since 1.3.0, tap (a bridge to the VPN's network);
+		 * the vpn script names the interface ovpn0 either way */
 		if ((strcasecmp(key, "dev") == 0 || strcasecmp(key, "dev-type") == 0) &&
-		    strncmp(val, "tun", 3) != 0) {
-			printf("Only tunnels (dev tun) work, not bridges (tap).\n");
+		    strncmp(val, "tun", 3) != 0 && strncmp(val, "tap", 3) != 0) {
+			printf("Only the device types tun and tap work.\n");
 			goto bad;
 		}
 		if (strcasecmp(key, "http-proxy") == 0 && strchr(val, ' ') &&

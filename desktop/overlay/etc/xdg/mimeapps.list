@@ -1,6 +1,8 @@
 # Default programs for everyone (each user's ~/.config/mimeapps.list comes
-# first). Videos and music open in mpv.
+# first). Videos and music open in mpv; smb:// addresses in Network share
+# (my-share mounts the share and opens it in the file manager).
 [Default Applications]
+x-scheme-handler/smb=my-share.desktop
 video/mp4=mpv.desktop
 video/x-matroska=mpv.desktop
 video/webm=mpv.desktop

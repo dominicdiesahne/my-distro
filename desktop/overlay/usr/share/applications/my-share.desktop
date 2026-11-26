@@ -1,0 +1,16 @@
+[Desktop Entry]
+Type=Application
+Name=Network share
+Name[de]=Netzlaufwerk
+Name[fr]=Partage réseau
+Name[es]=Recurso compartido de red
+Name[it]=Condivisione di rete
+Name[tr]=Ağ paylaşımı
+Name[pl]=Udział sieciowy
+Name[ro]=Partajare în rețea
+Comment=Open a shared folder of a Windows PC or a NAS (smb://)
+Icon=folder-remote
+Exec=my-share %u
+Terminal=false
+Categories=Network;FileTransfer;
+MimeType=x-scheme-handler/smb;

@@ -1661,9 +1661,6 @@ msgstr "Hoş geldiniz"
 msgid "Welcome to my-distro"
 msgstr "my-distro'ya hoş geldiniz"
 
-msgid "What each program may use, the next time you start it from the Start menu. A program without the microphone gets no sound at all (the sound server can't give it one without the other). Without the whole home folder it sees only Downloads (or nothing) and keeps its own settings separately."
-msgstr "Her programın, Başlat menüsünden bir sonraki başlatılışında neleri kullanabileceği. Mikrofonu olmayan bir program hiç ses alamaz (ses sunucusu birini diğeri olmadan veremez). Ev klasörünün tamamı olmadan yalnızca İndirilenler'i (ya da hiçbir şeyi) görür ve kendi ayarlarını ayrı tutar."
-
 msgid "Where the sound plays (speakers, headphones, HDMI, Bluetooth), the microphone, and a volume for every program that plays: the Sound window. The speaker in the taskbar: scroll for louder or quieter, click to mute, right-click for the Sound window."
 msgstr "Sesin nereden çıktığı (hoparlörler, kulaklık, HDMI, Bluetooth), mikrofon ve çalan her program için bir ses düzeyi: Ses penceresi. Görev çubuğundaki hoparlör: sesi açmak ya da kısmak için kaydırın, sessize almak için tıklayın, Ses penceresi için sağ tıklayın."
 
@@ -1983,9 +1980,6 @@ msgstr "Özel anahtar parolası"
 msgid "The private key of the VPN \"%s\" is protected by a password. Enter it so the VPN can connect:"
 msgstr "\"%s\" VPN'inin özel anahtarı bir parolayla korunuyor. VPN'in bağlanabilmesi için parolayı girin:"
 
-msgid "PKCS#12 files (.p12) are not supported. Ask your VPN service for the certificate and key as PEM files (.crt, .key)."
-msgstr "PKCS#12 dosyaları (.p12) desteklenmiyor. VPN hizmetinizden sertifikayı ve anahtarı PEM dosyaları (.crt, .key) olarak isteyin."
-
 #, c-format
 msgid "The config points to the file %s (%s), which could not be read. Put it in the same folder as the config."
 msgstr "Yapılandırma %s (%s) dosyasını gösteriyor, ancak dosya okunamadı. Dosyayı yapılandırmayla aynı klasöre koyun."
@@ -2002,3 +1996,31 @@ msgstr "Özel anahtarın parolası kaydedilemedi."
 
 msgid "Record screen with microphone"
 msgstr "Ekranı mikrofonla kaydet"
+
+msgid "What each program may use, the next time it starts: from the Start menu, the run dialog, \"Open with\" or a terminal. A program without the microphone can still play sound, but can't record anything. Without the whole home folder it sees only Downloads (or nothing) and keeps its own settings separately."
+msgstr "Her programın bir sonraki başlatılışında neleri kullanabileceği: Başlat menüsünden, Çalıştır penceresinden, \"Birlikte aç\" ile veya bir terminalden. Mikrofonu olmayan bir program ses çalmaya devam edebilir ama hiçbir şey kaydedemez. Ev klasörünün tamamı olmadan yalnızca İndirilenler'i (ya da hiçbir şeyi) görür ve kendi ayarlarını ayrı tutar."
+
+msgid "Password of the .p12 file"
+msgstr ".p12 dosyasının parolası"
+
+#, c-format
+msgid "Wrong password. Try again: the password of %s, for the VPN \"%s\"."
+msgstr "Yanlış parola. Tekrar deneyin: %s dosyasının parolası (\"%s\" VPN'i için)."
+
+#, c-format
+msgid "The certificate file %s of the VPN \"%s\" is protected by a password. Enter it once, to import the certificate and the key:"
+msgstr "%s sertifika dosyası (\"%s\" VPN'i) bir parolayla korunuyor. Sertifikayı ve anahtarı içe aktarmak için bir kez girin:"
+
+#, c-format
+msgid "%s could not be opened: the password is wrong, or it is not a .p12 file."
+msgstr "%s açılamadı: parola yanlış ya da bu bir .p12 dosyası değil."
+
+#, c-format
+msgid "%s has no certificate with its key."
+msgstr "%s, anahtarıyla birlikte bir sertifika içermiyor."
+
+msgid "Screen locked"
+msgstr "Ekran kilitli"
+
+msgid "empty"
+msgstr "boş"

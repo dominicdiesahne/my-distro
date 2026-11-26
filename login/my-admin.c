@@ -38,6 +38,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 #define MY_PKG  "/usr/bin/my-pkg"
@@ -122,6 +123,43 @@ static int plain(const char *v, int is_language)
 	return 1;
 }
 
+/* Does UID's screen reader run (my-reader's PID file, its runtime folder or
+ * /tmp)? Then the window may talk to the accessibility bus (1.3.0): the bus
+ * lets root in (at-spi2's accessibility.conf), and GTK finds it through the
+ * X root window's AT_SPI_BUS. Without the reader it stays off, as before. */
+static int reader_runs(uid_t uid)
+{
+	char path[2][64], exe[64], link[256];
+	struct stat st;
+
+	snprintf(path[0], sizeof path[0], "/run/user/%u/my-reader.pid", (unsigned)uid);
+	snprintf(path[1], sizeof path[1], "/tmp/my-reader.%u", (unsigned)uid);
+	for (int i = 0; i < 2; i++) {
+		FILE *f = fopen(path[i], "r");
+		int pid = 0;
+		ssize_t n;
+
+		if (!f)
+			continue;
+		if (fscanf(f, "%d", &pid) != 1)
+			pid = 0;
+		fclose(f);
+		if (pid <= 0)
+			continue;
+		snprintf(exe, sizeof exe, "/proc/%d", pid);
+		if (stat(exe, &st) != 0 || st.st_uid != uid)
+			continue;                       /* someone else's process */
+		snprintf(exe, sizeof exe, "/proc/%d/exe", pid);
+		n = readlink(exe, link, sizeof link - 1);
+		if (n > 0) {
+			link[n] = '\0';
+			if (strstr(link, "/my-reader"))
+				return 1;
+		}
+	}
+	return 0;
+}
+
 /* A package name from the list: a-z, 0-9, - _ . +, starting with a letter or digit */
 static int valid_package(const char *s)
 {
@@ -204,6 +242,7 @@ int main(int argc, char **argv)
 	for (int i = 0; pass_on[i]; i++)
 		if (plain(getenv(pass_on[i]), i < 2))
 			snprintf(kept[i], sizeof kept[i], "%s", getenv(pass_on[i]));
+	int reader = reader_runs(getuid());
 
 	if (setgid(0) != 0 || setuid(0) != 0)
 		return 1;
@@ -215,7 +254,8 @@ int main(int argc, char **argv)
 	for (int i = 0; pass_on[i]; i++)
 		if (kept[i][0])
 			setenv(pass_on[i], kept[i], 1);
-	setenv("NO_AT_BRIDGE", "1", 1);
+	if (!reader)
+		setenv("NO_AT_BRIDGE", "1", 1);
 	setenv("MY_SETUP_USER", user, 1);   /* who asked (my-setup: can't remove themselves) */
 
 	if (strcmp(mode, "--update") == 0)

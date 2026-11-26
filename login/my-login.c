@@ -27,6 +27,14 @@
  * time is not used up. While a session runs, my-login counts its minutes
  * (/var/lib/my-distro/usage), shows a notice 5 and 1 minutes before the
  * end and then ends the session.
+ *
+ * Screen reader (1.3.0, speech.h): when /var/lib/my-distro/login-reader
+ * exists, this screen says the field that has the keyboard, the letters
+ * typed into the user name (not the password's) and its messages. Super+Alt+S
+ * here switches it on and off, like in the session; it also comes on after
+ * a user with the screen reader on logs out. No sound server runs before
+ * login, so it plays straight on the sound card (ALSA's sysdefault).
+ * What it says goes to /run/my-login/speech.log too (for the tests).
  */
 #define _GNU_SOURCE
 #include <X11/Xatom.h>
@@ -42,6 +50,7 @@
 #include <fcntl.h>
 #include <glob.h>
 #include <grp.h>
+#include <limits.h>
 #include <pwd.h>
 #include <shadow.h>
 #include <signal.h>
@@ -56,6 +65,9 @@
 
 #include "settings.h"
 #include "i18n.h"
+#include "speech.h"
+
+#define LOGIN_READER "/var/lib/my-distro/login-reader"
 
 #define CARD_W    380
 #define CARD_H    400
@@ -643,6 +655,60 @@ static void grab_keyboard(void)
 	}
 }
 
+/* --- Screen reader (1.3.0) --------------------------------------------------- */
+
+static int reader_on(void)
+{
+	return access(LOGIN_READER, F_OK) == 0;
+}
+
+/* "User, anna" or "Password", after BEFORE ("Log in. User, anna") */
+static void say_focus(const char *before)
+{
+	char said[256];
+
+	if (!reader_on())
+		return;
+	snprintf(said, sizeof said, "%s%s%s%s%s", before ? before : "", before ? ". " : "",
+	         focus == F_USER ? _("User") : _("Password"), focus == F_USER ? ", " : "",
+	         focus == F_USER ? (user[0] ? user : _("empty")) : "");
+	speech_say(said);
+}
+
+static void reader_setup(void)
+{
+	char lang[64] = "";
+	FILE *f = fopen("/etc/my-distro/language", "r");
+
+	if (f) {
+		if (!fgets(lang, sizeof lang, f))
+			lang[0] = '\0';
+		fclose(f);
+	}
+	speech_language(lang[0] ? lang : getenv("LANG"));
+	speech_device = "sysdefault";        /* no sound server before login */
+	mkdir("/run/my-login", 0755);
+	speech_log = "/run/my-login/speech.log";
+	if (truncate(speech_log, 0) != 0) {
+		/* not there yet */
+	}
+}
+
+/* Super+Alt+S */
+static void reader_toggle(void)
+{
+	if (reader_on()) {
+		speech_say(_("Screen reader off"));
+		unlink(LOGIN_READER);
+	} else {
+		int fd = open(LOGIN_READER, O_WRONLY | O_CREAT, 0644);
+
+		if (fd >= 0)
+			close(fd);
+		say_focus(_("Screen reader on"));
+	}
+}
+
 static void show(void)
 {
 	XMapRaised(dpy, win);
@@ -650,6 +716,7 @@ static void show(void)
 	grab_keyboard();
 	XSetInputFocus(dpy, win, RevertToParent, CurrentTime);
 	redraw();
+	say_focus(_("Log in"));
 }
 
 static void hide(void)
@@ -800,7 +867,23 @@ static void submit(void)
 	if (pw->pw_uid != 0 && minutes_left(pw->pw_name, error, sizeof error) == 0)
 		return;                              /* parental controls: not now */
 	error[0] = '\0';
+	speech_hush();
+	char home[PATH_MAX];
+
+	snprintf(home, sizeof home, "%s", pw->pw_dir);
 	run_session(pw);
+	/* they use the screen reader: this screen speaks from now on, too */
+	{
+		struct settings s;
+
+		settings_load(&s, home);
+		if (s.screen_reader && !reader_on()) {
+			int fd = open(LOGIN_READER, O_WRONLY | O_CREAT, 0644);
+
+			if (fd >= 0)
+				close(fd);
+		}
+	}
 	if (once)
 		exit(0);              /* "Switch user" screen: one session only */
 	default_user();
@@ -825,8 +908,13 @@ static void key(XKeyEvent *e)
 	int n = XLookupString(e, typed, sizeof typed - 1, &ks, NULL);
 	char *dst = focus == F_USER ? user : pass;
 	size_t max = focus == F_USER ? USER_MAX : PASS_MAX;
+	int was = focus, said_letter = 0;
 
 	typed[n > 0 ? n : 0] = '\0';
+	if ((ks == XK_s || ks == XK_S) && (e->state & Mod4Mask) && (e->state & Mod1Mask)) {
+		reader_toggle();                     /* Super+Alt+S, as in the session */
+		return;
+	}
 	error[0] = '\0';
 	switch (ks) {
 	case XK_Tab: case XK_Down: case XK_Up: case XK_ISO_Left_Tab:
@@ -851,12 +939,23 @@ static void key(XKeyEvent *e)
 			if ((unsigned char)typed[i] >= 0x80)
 				typed[i] = '\0';
 		type_into(dst, max, typed);
+		/* the letter, in the user name only */
+		said_letter = focus == F_USER && typed[0] >= 0x20 && typed[0] != 0x7f;
 	}
 	redraw();
+	if (error[0] && reader_on())
+		speech_say(error);
+	else if (focus != was || ks == XK_Escape)
+		say_focus(NULL);
+	else if (said_letter && reader_on())
+		speech_say(typed);
 }
 
 static void click(int x, int y)
 {
+	int was = focus;
+
+	error[0] = '\0';
 	if (inside(&r_user, x, y))
 		focus = F_USER;
 	else if (inside(&r_pass, x, y))
@@ -872,6 +971,10 @@ static void click(int x, int y)
 	else if (inside(&r_keyboard, x, y))
 		toggle_keyboard();
 	redraw();
+	if (error[0] && reader_on())
+		speech_say(error);
+	else if (focus != was)
+		say_focus(NULL);
 }
 
 int main(int argc, char **argv)
@@ -931,6 +1034,7 @@ int main(int argc, char **argv)
 	XDefineCursor(dpy, win, XCreateFontCursor(dpy, XC_left_ptr));
 	XDefineCursor(dpy, root, XCreateFontCursor(dpy, XC_left_ptr));
 
+	reader_setup();
 	if (!once)
 		first_boot_setup();
 	default_user();

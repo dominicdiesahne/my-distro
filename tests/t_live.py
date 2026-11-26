@@ -7,7 +7,7 @@ takes a few minutes to boot.
 
 Screenshots go to SHOTDIR (default /tmp/vm-live), BUILD is the build folder
 (default ~/my-distro-build-hw)."""
-import sys, time, os
+import sys, time, os, re, base64
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from vm import VM
 
@@ -43,7 +43,7 @@ vm.send('root\n'); vm.expect('Password: ', 60); vm.send('root\n')
 vm.expect(r'# ', 120)
 vm.send('stty cols 200; export PS1="# "\n'); vm.expect(r'# ', 30)
 
-check('version 1.2.0', 'cat /etc/my-distro/version', '1.2.0')
+check('version 1.3.0', 'cat /etc/my-distro/version', '1.3.0')
 for _ in range(120):
     if 'my-setup' in vm.run('ps | grep -v grep | grep my-setup || true', 30): break
     time.sleep(10)
@@ -161,6 +161,84 @@ check('vpn status: disconnected', "su dominic -c 'my-vpnctl status'", 'disconnec
 check('vpn reconnect without a VPN does nothing', '/usr/lib/my-distro/vpn reconnect; echo RC=$?', 'RC=0')
 check('DHCP hook runs on a new lease', 'sh /usr/share/udhcpc/default.script.d/my-vpn bound; echo RC=$?', 'RC=0')
 check('my-vpnctl removes it', "su dominic -c 'my-vpnctl remove tt'; ls /etc/my-distro/vpn/ | grep -c '^tt'; true", '0')
+# 1.3.0: .p12 files. The VPN window runs "openssl pkcs12" with the password on
+# its stdin (tried on the build machine with real files); here: the image's
+# openssl, and old files with -legacy.
+vm.run('mkdir -p /tmp/vt && cd /tmp/vt && '
+       'openssl req -x509 -newkey rsa:2048 -nodes -keyout ca.key -out ca.crt -subj /CN=vtca -days 2 2>/dev/null && '
+       'for n in s c; do openssl req -newkey rsa:2048 -nodes -keyout $n.key -out $n.csr -subj /CN=$n 2>/dev/null && '
+       'openssl x509 -req -in $n.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out $n.crt -days 2 2>/dev/null; done; '
+       'openssl pkcs12 -export -legacy -in c.crt -inkey c.key -certfile ca.crt -out old.p12 -passout pass:pw; '
+       'openssl pkcs12 -export -in c.crt -inkey c.key -certfile ca.crt -out new.p12 -passout pass:pw; ls; cd /', 300)
+check('openssl reads a .p12 (password on stdin)',
+      'echo pw | openssl pkcs12 -in /tmp/vt/new.p12 -passin stdin -nocerts -nodes 2>/dev/null | grep -c "BEGIN PRIVATE KEY"',
+      '1')
+check('openssl reads an old .p12 with -legacy',
+      'echo pw | openssl pkcs12 -in /tmp/vt/old.p12 -passin stdin -nocerts -nodes -legacy 2>/dev/null | '
+      'grep -c "BEGIN PRIVATE KEY"', '1')
+check('openssl refuses a wrong .p12 password',
+      'echo no | openssl pkcs12 -in /tmp/vt/new.p12 -passin stdin -nocerts -nodes >/dev/null 2>&1; echo RC=$?', 'RC=1')
+# 1.3.0: tap VPNs, against an OpenVPN server in this VM: one that pushes the
+# address, one that leaves it to DHCP (a few lines of Python answer on its side)
+DHCPD = base64.b64encode(b'''import socket, struct, sys
+s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+s.setsockopt(socket.SOL_SOCKET, 25, sys.argv[1].encode() + b"\\0")
+s.bind(("0.0.0.0", 67))
+ip, me = socket.inet_aton("10.9.0.50"), socket.inet_aton("10.9.0.1")
+while True:
+    d, a = s.recvfrom(2048)
+    if len(d) < 240 or d[0] != 1:
+        continue
+    o, i, mt = d[240:], 0, 0
+    while i < len(o) and o[i] != 255:
+        if o[i] == 0:
+            i += 1
+            continue
+        if o[i] == 53:
+            mt = o[i + 2]
+        i += 2 + o[i + 1]
+    if mt not in (1, 3):
+        continue
+    rt = 2 if mt == 1 else 5
+    p = bytes([2, 1, 6, 0]) + d[4:8] + b"\\0\\0\\x80\\0" + b"\\0" * 4 + ip + me + b"\\0" * 4 + d[28:44]
+    p += b"\\0" * 192 + b"\\x63\\x82\\x53\\x63" + bytes([53, 1, rt, 54, 4]) + me + bytes([51, 4])
+    p += struct.pack("!I", 3600) + bytes([1, 4, 255, 255, 255, 0, 6, 4]) + socket.inet_aton("10.9.0.53") + bytes([255])
+    s.sendto(p, ("255.255.255.255", 68))
+    print("sent", rt, flush=True)
+''').decode()
+vm.run('echo ' + DHCPD + ' | base64 -d > /tmp/vt/dhcpd.py; wc -l /tmp/vt/dhcpd.py', 60)
+SRV = ('mode server\\ntls-server\\ndev tap9\\nproto udp4\\nlocal 127.0.0.1\\nport 11940\\n'
+       'ca /tmp/vt/ca.crt\\ncert /tmp/vt/s.crt\\nkey /tmp/vt/s.key\\ndh none\\nkeepalive 5 30\\nverb 3\\n')
+
+def vpn_server(extra):
+    vm.run("kill $(cat /tmp/vt/srv.pid 2>/dev/null) 2>/dev/null; sleep 2; printf '" + SRV + extra + "' > /tmp/vt/srv.conf; "
+           'openvpn --config /tmp/vt/srv.conf --daemon vt-server --writepid /tmp/vt/srv.pid --log /tmp/vt/srv.log; '
+           'sleep 10; ip address add 10.9.0.1/24 dev tap9; ip link set tap9 up; ip -4 -o address show tap9', 90)
+
+vm.run('cd /tmp/vt && { printf "client\\ndev tap\\nproto udp4\\nremote 127.0.0.1 11940\\nnobind\\n<ca>\\n"; cat ca.crt; '
+       'printf "</ca>\\n<cert>\\n"; cat c.crt; printf "</cert>\\n<key>\\n"; cat c.key; printf "</key>\\n"; } > tap.ovpn; cd /',
+       30)
+check('my-vpnctl imports a tap VPN',
+      "su dominic -c 'my-vpnctl import-ovpn tp < /tmp/vt/tap.ovpn'; grep -c '^dev tap' /etc/my-distro/vpn/tp.ovpn", '1')
+vpn_server('server-bridge 10.9.0.1 255.255.255.0 10.9.0.10 10.9.0.20\\n')
+check('vpn: a tap VPN connects (address pushed)', '/usr/lib/my-distro/vpn up tp; tail -3 /tmp/vt/srv.log',
+      'Connected to tp', timeout=240)
+check('vpn: ovpn0 is a tap device', 'ip -d link show ovpn0 | grep -o "tun type tap"', 'tun type tap')
+check('vpn: the pushed address', 'ip -4 -o address show ovpn0', 'inet 10.9.0.1')
+vm.run('/usr/lib/my-distro/vpn down', 60)
+vpn_server('server-bridge\\n')                       # no address: the clients use DHCP
+vm.run('(python3 /tmp/vt/dhcpd.py tap9 >/tmp/vt/dhcpd.log 2>&1 &); sleep 3', 30)
+check('vpn: a tap VPN connects (no address pushed)', '/usr/lib/my-distro/vpn up tp', 'Connected to tp', timeout=240)
+time.sleep(30)
+check('vpn: tap address by DHCP over the VPN', 'ip -4 -o address show ovpn0; tail -3 /tmp/vt/dhcpd.log', 'inet 10.9.0.50')
+check('vpn: the lease\'s DNS server is used', 'cat /etc/resolv.conf', '10.9.0.53')
+check('vpn: no default route through the tap VPN', 'echo DEF=$(ip route show default | grep -c ovpn0)', 'DEF=0')
+vm.run('/usr/lib/my-distro/vpn down', 60)
+check('vpn down: udhcpc stopped, DNS back',
+      'echo UD=$(ps | grep -v grep | grep -c "udhcpc -i ovpn0") NS=$(grep -c 10.9.0.53 /etc/resolv.conf)', 'UD=0 NS=0')
+vm.run("kill $(cat /tmp/vt/srv.pid); pkill -f dhcpd.py; su dominic -c 'my-vpnctl remove tp'; true", 30)
 # Wi-Fi with certificates (EAP-TLS): the files go to a root-only place
 check('my-wificert saves a key root-only', "echo KEYDATA | su dominic -c 'my-wificert save 6162 key'; "
       "ls -l /etc/my-distro/wifi-certs/", '-rw-------')
@@ -180,12 +258,24 @@ check('wpa_supplicant reads an EAP-TLS network block',
       '&& echo PARSE-OK', 'PARSE-OK', timeout=60)
 
 # --- the desktop ----------------------------------------------------------------
-vm.run('echo skipped > /etc/my-distro/setup-done; killall my-setup; true', 60)
+# 1.3.0: the login screen speaks for the screen reader while this file exists
+vm.run('touch /var/lib/my-distro/login-reader; '
+       'echo skipped > /etc/my-distro/setup-done; killall my-setup; true', 60)
 time.sleep(20)
 vm.shot(SHOTS + '/02-login.png')
+vm.keys('shift-tab'); time.sleep(3)            # to the user name: "User, dominic"
+vm.keys('tab'); time.sleep(3)                  # back to the password
 vm.type('dominic\n')                           # the password; the user is filled in
 time.sleep(150)
 vm.shot(SHOTS + '/03-desktop.png')
+out = vm.run('cat /run/my-login/speech.log; echo END', 30)
+body = VM.body(out)
+said = [l.strip() for l in body.splitlines() if l.strip() and not l.startswith('END')]
+results.append(('login screen speaks its fields (never the password)',
+                any('Log in' in l for l in said) and any('User, dominic' in l for l in said) and
+                not any(len(l) == 1 for l in said), body[-300:]))
+print(('PASS ' if results[-1][1] else 'FAIL ') + results[-1][0] + '\n    ' + body[-300:], flush=True)
+vm.run('rm -f /var/lib/my-distro/login-reader', 30)
 
 # 0. OpenGL through libglvnd (1.1): libGL/libEGL hand the calls to Mesa
 check('libglvnd and Mesa\'s vendor libraries', 'test -e /usr/lib/libGLdispatch.so.0 && test -e /usr/lib/libGLX_mesa.so.0 '
@@ -267,7 +357,33 @@ vm.keys('meta_l'); time.sleep(8); vm.keys('down'); time.sleep(3); vm.keys('down'
 vm.shot(SHOTS + '/06-startmenu.png')
 vm.keys('esc')
 check('reader spoke the Start menu', 'tail -3 /tmp/reader.log', '')
-vm.run('killall my-settings; ' + as_user('my-reader --stop'), 30)
+vm.run('killall my-settings; true', 30)
+# 1.3.0: the lock screen speaks while the reader is on
+vm.run(as_user('MY_READER_LOG=/tmp/lock.log my-lock --background'), 60)
+time.sleep(10)
+vm.type('wrong\n'); time.sleep(10)
+vm.shot(SHOTS + '/05b-lock.png')
+for _ in range(3):                             # unlock (the next tests need the keyboard)
+    vm.type('dominic\n'); time.sleep(10)
+    if 'LOCKED' not in vm.run('ps | grep -v grep | grep -q "my-lock --background" && echo LOCK""ED; true', 30):
+        break
+check('lock screen spoke "Screen locked" and "Wrong password"', 'cat /tmp/lock.log', 'Wrong password')
+check('... and "Screen locked"', 'cat /tmp/lock.log', 'Screen locked')
+check('unlocked again', 'echo N=$(ps | grep -v grep | grep -c "my-lock --background")', 'N=0')
+# 1.3.0: a window that runs as root (Disks, through my-admin) is read too
+vm.run(': > /tmp/reader.log; ' + as_user('echo root | my-admin --disks >/dev/null 2>&1 &'), 30)
+time.sleep(60)
+vm.keys('tab'); time.sleep(4); vm.keys('tab'); time.sleep(6)
+vm.shot(SHOTS + '/05c-disks-as-root.png')
+check('root window without NO_AT_BRIDGE while the reader runs',
+      'p=$(pidof my-disks | cut -d" " -f1); [ -n "$p" ] && '
+      'echo NAB=$(tr "\\0" "\\n" < /proc/$p/environ | grep -c NO_AT_BRIDGE) UID=$(stat -c %u /proc/$p)', 'NAB=0 UID=0')
+out = vm.run('cat /tmp/reader.log; echo FOCUS=$(grep -v -c Disks /tmp/reader.log)', 30)
+n = re.findall(r'FOCUS=(\d+)', out)              # (the echoed command has "FOCUS=$(")
+results.append(('reader spoke the focus in the root window (more than its title)',
+                bool(n) and int(n[-1]) > 0, out[-300:]))
+print(('PASS ' if results[-1][1] else 'FAIL ') + results[-1][0], out[-300:], flush=True)
+vm.run('killall my-disks; ' + as_user('my-reader --stop'), 30)
 # 7. permissions: mpv may not use the camera nor see the home folder
 vm.run('modprobe vivid; sleep 3; ls /dev/video*', 60)
 vm.run("su dominic -c 'mkdir -p ~/.config/my-distro; echo \"ls camera=no microphone=yes home=none\" "
@@ -289,6 +405,46 @@ print(('PASS ' if results[-1][1] else 'FAIL ') + results[-1][0], out[-300:], flu
 # (a program without a line in the permissions file: find, not ls)
 check('permissions: without a line it runs normally',
       as_user('my-run --menu "find /dev -maxdepth 1 -name video*"'), '/dev/video')
+# 1.3.0: without the microphone a program still plays sound (PipeWire's
+# play-only socket), but can't record or see the microphone and speakers;
+# and the permissions apply when it is started by name from anywhere
+# (my-run --sync's starters, first in PATH)
+vm.run("su dominic -c 'printf \"speaker-test camera=yes microphone=no home=full\\n"
+       "arecord camera=yes microphone=no home=full\\npw-cli camera=yes microphone=no home=full\\n\" "
+       "> ~/.config/my-distro/permissions'", 30)
+check('my-run --sync makes the starters', as_user('my-run --sync; ls ~/.local/share/my-run/bin | tr "\\n" " "'),
+      'speaker-test')
+check('the starter calls my-run with the real program', as_user('cat ~/.local/share/my-run/bin/arecord'),
+      'my-run /usr/bin/arecord')
+check('PipeWire\'s play-only socket', 'ls -l /run/user/1000/pipewire-0-play', 'pipewire-0-play')
+vm.run(as_user('(PATH=$HOME/.local/share/my-run/bin:$PATH speaker-test -t sine -c 2 >/tmp/st.log 2>&1 &); sleep 10'), 60)
+check('started by name, speaker-test runs in the sandbox', 'ps | grep -v grep | grep bwrap', 'speaker-test')
+check('the sandboxed program\'s sound reaches the speakers',
+      as_user('pw-link -l | grep -A2 "alsa_playback.speaker-test"'), '|->')
+check('its PipeWire client is play-only', as_user('pw-cli ls Client | grep -o "my-play" | head -1'), 'my-play')
+vm.run('killall speaker-test; true', 30)
+out = vm.run(as_user('my-run pw-cli ls Node 2>&1 | grep -E "node.name|media.class"; echo END-OF-LIST'), 60)
+body = VM.body(out)
+results.append(('the sandbox sees no microphone and no speakers',
+                'END-OF-LIST' in body and 'test-mic' not in body and 'alsa_output' not in body and
+                'Audio/Sink' not in body, body[-300:]))
+print(('PASS ' if results[-1][1] else 'FAIL ') + results[-1][0] + '\n    ' + body[-300:], flush=True)
+# a recording: outside the sandbox it is linked to the microphone (the
+# control), from the sandbox its stream is removed and never linked
+vm.run(as_user('(/usr/bin/arecord -f cd /tmp/ctrl.wav >/dev/null 2>&1 &); sleep 8'), 60)
+out = vm.run(as_user('echo LINKS=$(pw-link -l | grep -c "alsa_capture.arecord")'), 30)
+n = re.findall(r'LINKS=(\d+)', out)              # (the echoed command has "LINKS=$(")
+results.append(('control: an unrestricted recording is linked', bool(n) and int(n[-1]) > 0, out[-200:]))
+print(('PASS ' if results[-1][1] else 'FAIL ') + results[-1][0], out[-200:], flush=True)
+vm.run('killall arecord; true', 30)
+vm.run(as_user('(PATH=$HOME/.local/share/my-run/bin:$PATH arecord -f cd /tmp/rec.wav >/tmp/arec.log 2>&1 &); sleep 10'), 60)
+check('a sandboxed recording is never linked, its stream removed',
+      as_user('echo LINKS=$(pw-link -l | grep -c "alsa_capture.arecord") '
+              'NODES=$(pw-cli ls Node | grep -c "alsa_capture.arecord")'), 'LINKS=0 NODES=0')
+print('arecord in the sandbox said:', vm.run('killall arecord; sleep 1; head -5 /tmp/arec.log; true', 30)[-300:],
+      flush=True)
+vm.run("su dominic -c 'rm -f ~/.config/my-distro/permissions'; " + as_user('my-run --sync'), 30)
+check('no starters left without permissions', as_user('echo N=$(ls ~/.local/share/my-run/bin | wc -l)'), 'N=0')
 vm.run(as_user('my-settings --page permissions >/dev/null 2>&1 &'), 30)
 time.sleep(40)
 vm.shot(SHOTS + '/07-settings-permissions.png')
@@ -299,6 +455,24 @@ time.sleep(30)
 vm.shot(SHOTS + '/08-sharing.png')
 check('sharing status without Samba', '/usr/lib/my-distro/sharing status', 'installed = no')
 vm.run('killall my-sharing; true', 30)
+# 1.3.0: smb:// addresses open in Network share (my-share): links (the
+# x-scheme-handler) and the file manager's address bar (our PCManFM patch)
+check('smb:// links open with my-share',
+      as_user('gio mime x-scheme-handler/smb 2>/dev/null || grep smb /etc/xdg/mimeapps.list'), 'my-share.desktop')
+vm.run(as_user('pcmanfm /tmp >/dev/null 2>&1 &'), 30)
+time.sleep(30)
+vm.keys('ctrl-l'); time.sleep(3)
+vm.type('smb://anna@nas/files/photos\n'); time.sleep(20)
+vm.shot(SHOTS + '/08b-smb-from-file-manager.png')
+check('PCManFM hands smb:// to my-share', 'ps | grep -v grep | grep my-share', 'smb://anna@nas/files/photos')
+vm.run('killall my-share; true', 30)
+# a share that is mounted already opens at once, without the window
+vm.run('mkdir -p /media/nas-files && mount -t tmpfs tmpfs /media/nas-files && mkdir /media/nas-files/photos', 30)
+vm.run(as_user('my-share smb://nas/files/photos >/dev/null 2>&1 &'), 30)
+time.sleep(15)
+vm.shot(SHOTS + '/08c-smb-mounted-already.png')
+check('a mounted share opens without asking', 'echo N=$(ps | grep -v grep | grep -c "my-share smb")', 'N=0')
+vm.run('umount -l /media/nas-files; rmdir /media/nas-files; true', 30)
 # 9. a French session's Settings window
 vm.run("su dominic -c 'sed -i \"s/^language = .*/language = fr_FR.UTF-8/\" ~/.config/my-distro/settings'; "
        "grep language /home/dominic/.config/my-distro/settings", 30)

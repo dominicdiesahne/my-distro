@@ -223,6 +223,14 @@ desktop: $(BR_DIR)/Makefile
 > # Nor changes to BusyBox's (it builds in a minute, so start it again)
 > if ! cmp -s desktop/busybox.fragment $(BR_OUT)/.busybox.fragment; then \
 >   $(BR_MAKE) busybox-dirclean; fi
+> # Nor changes to our patches (desktop/patches/PACKAGE, 1.3.0): they are
+> # applied only to a fresh source folder, so start such a package again
+> for d in desktop/patches/*/; do \
+>   n=$$(basename "$$d"); \
+>   cat "$$d"*.patch > $(BR_OUT)/.patches-$$n.now; \
+>   if ! cmp -s $(BR_OUT)/.patches-$$n.now $(BR_OUT)/.patches-$$n; then \
+>     $(BR_MAKE) $$n-dirclean; fi; \
+> done
 > # Nor changes to a package's own options (EAP for wpa_supplicant in 0.9.4,
 > # screen capture for FFmpeg; 0.9.5: Mesa's drivers, the parts of libdrm
 > # they need, Bluetooth firmware, fsck.fat, JPEG for imlib2): build these
@@ -244,6 +252,7 @@ desktop: $(BR_DIR)/Makefile
 > $(BR_MAKE)
 > cp desktop/linux-gui.fragment $(BR_OUT)/.linux-gui.fragment
 > cp desktop/busybox.fragment $(BR_OUT)/.busybox.fragment
+> for f in $(BR_OUT)/.patches-*.now; do [ -f "$$f" ] && mv "$$f" "$${f%.now}"; done; true
 > cp $(BR_OUT)/.config $(BR_OUT)/.config.last
 > mkdir -p out
 > # Buildroot's ISO only boots from a CD. Make it again from the same files

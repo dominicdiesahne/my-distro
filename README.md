@@ -98,7 +98,12 @@ the taskbar, the login screen, the file history daemon and the search indexer.
   the user and puts them in as blocks, so the root part never opens a file
   for you. A private key with a password asks for it once (kept root-only as
   `NAME.pass`, given to openvpn with `--askpass`), so reconnecting after a
-  network change needs nothing. `login/my-vpnctl.c` does the root part (for members of
+  network change needs nothing. A certificate file `.p12` (`pkcs12
+  client.p12`) asks for its password once; `openssl pkcs12` takes the
+  certificate, the key and the CA out of it and they go in as blocks.
+  Tunnels (`dev tun`) and bridges (`dev tap`) both work; a bridge whose
+  server hands out no address gets one by DHCP over the VPN.
+  `login/my-vpnctl.c` does the root part (for members of
   `netdev`, like Wi-Fi) and never runs commands from the file (`PostUp` & co,
   OpenVPN's `up`, `down`, `plugin`, `script-security`... are left out). The
   DNS servers of the VPN (WireGuard `DNS`, OpenVPN's pushed
@@ -242,15 +247,18 @@ the taskbar, the login screen, the file history daemon and the search indexer.
   read-only, its own home folder and your `~/Downloads` only. Start menu,
   *Web browser (sandbox)*. **App permissions** (Settings, *Permissions*):
   per program, whether it may use the camera and the microphone and how
-  much of your home folder it sees; the Start menu starts it through
-  `my-run`, which puts it into such a sandbox when it lacks one of them. Kernel hardening (Yama ptrace scope, Landlock,
+  much of your home folder it sees; wherever it starts by its name (Start
+  menu, run dialog, *Open with*, a terminal) it goes through `my-run`,
+  which puts it into such a sandbox when it lacks one of them. Without the
+  microphone it can still play sound, but not record. Kernel hardening (Yama ptrace scope, Landlock,
   hidden kernel addresses, protected links in `/tmp`) and an **audit log**
   (auditd: changes to users, passwords, sudo rules, every sudo; *System
   logs*, *Audit*, as root).
 - **Proxy** (Settings, *Network*): for the whole session (web browser,
   system updates, pip, git). **Windows shares** (Start menu, *Network share*,
   `my-share`): opens a shared folder of a PC or NAS (SMB) in the file
-  manager. **Sharing** (Start menu, `settings/my-sharing.c`): shares a
+  manager; `smb://SERVER/SHARE` typed into the file manager's address bar
+  or clicked as a link opens there too. **Sharing** (Start menu, `settings/my-sharing.c`): shares a
   folder of your home and the printers with the other computers of your
   network (Samba, installed from the Software app when you first switch it
   on); off by default, and the firewall opens only while it is on, only for
@@ -613,10 +621,24 @@ in the session's language:
 - the highlighted entry of the Start menu (the taskbar is not GTK: it puts
   the entry into the root window's `_MY_READER_TEXT`)
 
+Windows that run as root (Users and system, Disks, the Software app's
+installer) are read too (1.3.0): while the reader runs, `my-admin` lets
+them talk to the accessibility bus (at-spi2 lets root in), which it
+otherwise switches off (`NO_AT_BRIDGE`).
+
+The login and lock screens are no GTK programs and take the keyboard, so
+they speak themselves (1.3.0, `login/speech.h`): the field that has the
+keyboard, the letters typed into the user name (never the password's) and
+their messages ("Wrong password"). The lock screen does it while your
+reader is on. The login screen does it while
+`/var/lib/my-distro/login-reader` exists: Super+Alt+S there switches it on
+and off, and it comes on by itself after a user with the reader on logs
+out. No sound server runs before login, so it plays straight on the sound
+card (ALSA's `sysdefault`).
+
 It is not Orca (which needs Python bindings Buildroot doesn't have): it
-doesn't read terminals, web page contents in NetSurf, the login and lock
-screens, or windows that run as root (Users and system, Disks), and it has
-no commands to read a whole window or move a review cursor. Tab and the
+doesn't read terminals or web page contents in NetSurf, and it has no
+commands to read a whole window or move a review cursor. Tab and the
 arrow keys move the focus; what gets it is spoken. `MY_READER_LOG=FILE`
 also writes everything it says into FILE.
 
@@ -636,19 +658,46 @@ link-local). Off by default; `/etc/init.d/S91sharing` starts it at boot
 only when it is on. Windows: `\\ADDRESS\FOLDER`; Mac and Linux:
 `smb://ADDRESS/FOLDER`.
 
+The other way round, `smb://` addresses open with `my-share` (1.3.0): it is
+the handler of `x-scheme-handler/smb` (`/etc/xdg/mimeapps.list`), so links
+and `xdg-open smb://...` reach it, and a patch to PCManFM
+(`desktop/patches/pcmanfm`) hands an `smb://` or `\\server\share` address
+typed into the address bar to it, as there is no gvfs. It takes
+`smb://USER@SERVER/SHARE/FOLDER` (the user filled in, the folder opened
+after the share is mounted) and opens a share that is mounted already
+without asking.
+
 ### Permissions
 
 `~/.config/my-distro/permissions` (Settings, *Permissions*) has a line per
 program that lacks a permission: `mpv camera=no microphone=yes home=read`.
 The Start menu starts programs through `my-run`; a program with a line runs
 in a bubblewrap sandbox like `my-sandbox`: without `/dev/video*` (camera),
-without the sound devices and PipeWire's sockets (microphone: PipeWire
-can't give a program playback without recording, so a program without the
-microphone has no sound at all), and with the home folder read-only, only
+without the sound devices and with only PipeWire's play-only socket
+(microphone, see below), and with the home folder read-only, only
 `~/Downloads`, or nothing (its own settings then live in
 `~/.local/share/my-sandbox/PROGRAM`). Programs without a line start
-normally. Programs started another way (a terminal, the file manager) are
-not affected.
+normally.
+
+Other ways to start a program (1.3.0): `my-run --sync` (run by Settings
+after each change and at every login) puts a starter for each program of
+the file into `~/.local/share/my-run/bin`, which comes first in `PATH`
+(`session-env`, `/etc/profile.d/my-run.sh`). So the run dialog, *Open
+with*, desktop icons, `xdg-open` and a terminal start it through `my-run`
+too. Started by its full path (`/usr/bin/mpv`) it still runs without the
+sandbox.
+
+Sound without the microphone (1.3.0): PipeWire listens on a third socket,
+`pipewire-0-play` (`/usr/share/pipewire/pipewire.conf.d/50-my-play.conf`),
+and marks its clients `pipewire.access = "my-play"`, which a client can't
+change. `my-run` puts that socket into the sandbox as `pipewire-0`. A
+WirePlumber script (`scripts/client/my-play-only.lua`) lets those clients
+see only their own nodes, so they can't link anything themselves (PipeWire
+links two nodes only for a client that sees both), removes any node of
+theirs that isn't a playback stream, and never links into one of their
+nodes. They play sound; they can't record the microphone, the speakers or
+another program. Programs that only speak PulseAudio (none in the image;
+Software app packages may) get no sound that way.
 
 ## IDE (LazyVim)
 
@@ -911,6 +960,7 @@ http.server`, and in the VM put `url = http://10.0.2.2:8000/` into
 | `panel/my-zoom.c`, `panel/my-speak.c`, `desktop/overlay/usr/bin/my-keyboard` | Magnifier, read aloud, on-screen keyboard |
 | `desktop/overlay/etc/cups/`, `usr/lib/cups/backend/my-pdf`, `etc/init.d/S81cupsd`, `S41bluealsa` | Printing settings, the PDF printer, start scripts |
 | `desktop/overlay/usr/lib/my-distro/vpn` | Connects and disconnects a WireGuard or OpenVPN VPN, reconnects it after a network change (run by `my-vpnctl` and the DHCP hook) |
+| `desktop/overlay/usr/lib/my-distro/vpn-dhcp` | udhcpc's script for a tap VPN: the lease's address and DNS, no default route |
 | `desktop/overlay/usr/sbin/my-reset`, `etc/init.d/S00reset`, `desktop/post-fakeroot.sh` | Factory reset, and the factory copy it puts back |
 | `desktop/overlay/usr/bin/my-record`, `my-camera` | Screen recording, webcam |
 | `desktop/overlay/usr/sbin/my-install` | Installer (shell script) |
@@ -927,7 +977,10 @@ http.server`, and in the VM put `url = http://10.0.2.2:8000/` into
 | `settings/my-sound.c`, `desktop/overlay/usr/lib/my-distro/sound` | The Sound window and what it asks PipeWire |
 | `settings/my-sharing.c`, `desktop/overlay/usr/lib/my-distro/sharing`, `etc/init.d/S91sharing` | Sharing (Samba) |
 | `panel/my-reader.c` | Screen reader |
-| `desktop/overlay/usr/bin/my-run` | Starts Start menu programs with their permissions |
+| `desktop/overlay/usr/bin/my-run` | Starts programs with their permissions; `--sync` makes their starters in `~/.local/share/my-run/bin` |
+| `desktop/overlay/usr/share/wireplumber/scripts/client/my-play-only.lua` | Programs without the microphone may only play sound (clients of `pipewire-0-play`) |
+| `desktop/patches/pcmanfm/` | PCManFM: `smb://` in the address bar goes to `my-share` |
+| `login/speech.h` | Speech of the login and lock screens for the screen reader |
 | `desktop/overlay/usr/sbin/my-secureboot`, `desktop/package/my-secureboot`, `desktop/secureboot/` | Secure Boot: enrolling the key, shim, the certificate, GRUB's SBAT |
 | `desktop/overlay/usr/lib/my-distro/firmware`, `esp-mount` | Firmware updates (fwupd); mounting the EFI partition |
 | `desktop/package/my-wireplumber`, `my-lua54`, `tinycc`, `osslsigncode` | WirePlumber with its own Lua, the C compiler package, the signing tool |
@@ -1040,15 +1093,17 @@ make run    # boots in the terminal; quit with Ctrl-A, then X
 - NetSurf has limited JavaScript; big web apps (YouTube, Google Docs) don't work.
 - Only x86-64. Tested in VirtualBox and QEMU; the drivers for real PCs are
   in, but not yet tried on one (see [On a real PC](#on-a-real-pc)).
-- OpenVPN: tap (bridge) mode, PKCS#12 files (`.p12`), scripts and plugins
-  are not supported (scripts and plugins on purpose: they would run as root).
+- OpenVPN: scripts and plugins are not supported, on purpose (they would
+  run as root); neither is a `.p12` file put inside the `.ovpn` (`<pkcs12>`).
 - The digital microphones of some new laptops (Intel SOF) don't work yet.
   Bluetooth headset microphones (HFP) and Bluetooth audio in general are
   untested on real hardware.
 - The screen reader is small (see [Screen reader](#screen-reader)): no
-  terminals, web page contents, login screen or root windows.
-- App permissions apply to programs started from the Start menu; a program
-  without the microphone gets no sound at all.
+  terminals, no web page contents; the login and lock screens only say
+  their fields and messages.
+- App permissions don't apply to a program started by its full path
+  (`/usr/bin/mpv`). Without the microphone, a program that only speaks
+  PulseAudio gets no sound.
 - Video decoding with the graphics chip on Intel chips since ~2020 needs
   the iHD driver from the Software app (big, so not in the image); it was
   only checked in a VM, without Intel graphics.
@@ -1059,8 +1114,9 @@ make run    # boots in the terminal; quit with Ctrl-A, then X
   UEFI capsule is untried.
 - Docker: for administrators (sudo). Rootless containers: with podman;
   without systemd they can't have resource limits (`--memory`, `--cpus`).
-- Shares open through `mount.cifs` (Network share), not as `smb://` in the
-  file manager (that needs gvfs with Samba, too big).
+- Shares are mounted with `mount.cifs` (Network share): `smb://` in the
+  file manager mounts the whole share in `/media` instead of browsing it
+  the gvfs way (too big), and it can't list the servers of the network.
 
 ## License
 

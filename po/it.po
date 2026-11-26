@@ -1661,9 +1661,6 @@ msgstr "Benvenuto"
 msgid "Welcome to my-distro"
 msgstr "Benvenuto in my-distro"
 
-msgid "What each program may use, the next time you start it from the Start menu. A program without the microphone gets no sound at all (the sound server can't give it one without the other). Without the whole home folder it sees only Downloads (or nothing) and keeps its own settings separately."
-msgstr "Cosa può usare ogni programma, la prossima volta che lo avvii dal menu Start. Un programma senza microfono non ha nessun audio (il server audio non può dargli l'uno senza l'altro). Senza l'intera cartella personale vede solo Scaricati (o niente) e tiene le sue impostazioni a parte."
-
 msgid "Where the sound plays (speakers, headphones, HDMI, Bluetooth), the microphone, and a volume for every program that plays: the Sound window. The speaker in the taskbar: scroll for louder or quieter, click to mute, right-click for the Sound window."
 msgstr "Dove esce l'audio (altoparlanti, cuffie, HDMI, Bluetooth), il microfono e un volume per ogni programma che suona: la finestra Audio. L'altoparlante nella barra delle applicazioni: scorri per alzare o abbassare, fai clic per silenziare, clic destro per la finestra Audio."
 
@@ -1983,9 +1980,6 @@ msgstr "Password della chiave privata"
 msgid "The private key of the VPN \"%s\" is protected by a password. Enter it so the VPN can connect:"
 msgstr "La chiave privata della VPN «%s» è protetta da una password. Inseriscila perché la VPN possa connettersi:"
 
-msgid "PKCS#12 files (.p12) are not supported. Ask your VPN service for the certificate and key as PEM files (.crt, .key)."
-msgstr "I file PKCS#12 (.p12) non sono supportati. Chiedi al tuo servizio VPN il certificato e la chiave come file PEM (.crt, .key)."
-
 #, c-format
 msgid "The config points to the file %s (%s), which could not be read. Put it in the same folder as the config."
 msgstr "La configurazione rimanda al file %s (%s), che non è stato possibile leggere. Mettilo nella stessa cartella della configurazione."
@@ -2002,3 +1996,31 @@ msgstr "Non è stato possibile salvare la password della chiave privata."
 
 msgid "Record screen with microphone"
 msgstr "Registra lo schermo con il microfono"
+
+msgid "What each program may use, the next time it starts: from the Start menu, the run dialog, \"Open with\" or a terminal. A program without the microphone can still play sound, but can't record anything. Without the whole home folder it sees only Downloads (or nothing) and keeps its own settings separately."
+msgstr "Cosa può usare ogni programma al prossimo avvio: dal menu Start, dalla finestra Esegui, da «Apri con» o da un terminale. Un programma senza microfono può ancora riprodurre l'audio, ma non può registrare nulla. Senza l'intera cartella personale vede solo Download (o niente) e tiene le proprie impostazioni a parte."
+
+msgid "Password of the .p12 file"
+msgstr "Password del file .p12"
+
+#, c-format
+msgid "Wrong password. Try again: the password of %s, for the VPN \"%s\"."
+msgstr "Password errata. Riprova: la password di %s, per la VPN «%s»."
+
+#, c-format
+msgid "The certificate file %s of the VPN \"%s\" is protected by a password. Enter it once, to import the certificate and the key:"
+msgstr "Il file di certificato %s della VPN «%s» è protetto da una password. Inseriscila una volta per importare il certificato e la chiave:"
+
+#, c-format
+msgid "%s could not be opened: the password is wrong, or it is not a .p12 file."
+msgstr "Impossibile aprire %s: la password è errata, oppure non è un file .p12."
+
+#, c-format
+msgid "%s has no certificate with its key."
+msgstr "%s non contiene un certificato con la sua chiave."
+
+msgid "Screen locked"
+msgstr "Schermo bloccato"
+
+msgid "empty"
+msgstr "vuoto"

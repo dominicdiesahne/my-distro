@@ -1,0 +1,21 @@
+#!/bin/sh
+# udhcpc's script for a tap VPN (1.3.0, started by "vpn hook-up"): the
+# address of the lease on the VPN interface and its DNS servers. No default
+# route: the way to the VPN server must stay the normal one (a config that
+# wants all traffic through the VPN says so with redirect-gateway, which
+# openvpn handles).
+PATH=/usr/sbin:/usr/bin:/sbin:/bin
+
+case "$1" in
+deconfig)
+	ip -4 address flush dev "$interface" 2>/dev/null
+	;;
+bound | renew)
+	ip -4 address flush dev "$interface" 2>/dev/null
+	ip address add "$ip/${mask:-24}" ${broadcast:+broadcast "$broadcast"} dev "$interface"
+	ip link set dev "$interface" up
+	[ -n "$dns" ] && /usr/lib/my-distro/vpn dhcp-dns "$dns" "$domain"
+	logger -t my-vpn "address $ip/${mask:-24} on $interface by DHCP"
+	;;
+esac
+exit 0

@@ -6,6 +6,7 @@
 # my-keepalive starts a part again if it crashes (see my-keepalive).
 
 my-settings --apply                  # colors, wallpaper, window theme, display
+my-run --sync                        # starters for programs with limited permissions
 # Sound server (0.9.7): PipeWire, its session manager WirePlumber (finds
 # the sound cards and Bluetooth headphones, remembers volumes) and its
 # PulseAudio part, for programs that speak PulseAudio. ALSA programs reach

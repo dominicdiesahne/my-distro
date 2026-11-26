@@ -1117,8 +1117,11 @@ static void build_sound(GtkWidget *stack)
 /*
  * Per program: may it use the camera, the microphone, and how much of the
  * home folder may it see. Saved in ~/.config/my-distro/permissions; my-run
- * applies it (with a sandbox) when the Start menu starts the program. A
- * program with every permission has no line there and starts as it always
+ * applies it (with a sandbox) when the Start menu starts the program, and
+ * since 1.3.0 also when it is started by its name from anywhere else (the
+ * run dialog, "Open with", a terminal): "my-run --sync" puts a small
+ * starter for it in ~/.local/share/my-run/bin, which comes first in PATH.
+ * A program with every permission has no line there and starts as it always
  * did. The list: the Start menu's programs (system tools left out: they
  * need the system).
  */
@@ -1135,8 +1138,8 @@ static int nperms;
 static void perm_save(void)
 {
 	char *path = g_build_filename(g_get_home_dir(), PERM_FILE, NULL), *dir;
-	GString *s = g_string_new("# Permissions of programs started from the Start menu "
-		"(Settings, Permissions; my-run applies them).\n# PROGRAM camera=yes|no "
+	GString *s = g_string_new("# Permissions of programs (Settings, Permissions; my-run "
+		"applies them).\n# PROGRAM camera=yes|no "
 		"microphone=yes|no home=full|read|downloads|none\n");
 
 	for (int i = 0; i < nperms; i++)
@@ -1147,6 +1150,8 @@ static void perm_save(void)
 	dir = g_path_get_dirname(path);
 	g_mkdir_with_parents(dir, 0755);
 	g_file_set_contents(path, s->str, -1, NULL);
+	/* the starters that apply them outside the Start menu, too */
+	g_spawn_command_line_async("my-run --sync", NULL);
 	g_free(dir);
 	g_free(path);
 	g_string_free(s, TRUE);
@@ -1236,10 +1241,10 @@ static void on_perm_home(GtkComboBox *c, gpointer d)
 static void build_permissions(GtkWidget *stack)
 {
 	GtkWidget *g = page(stack, "permissions", _("Permissions"));
-	GtkWidget *l = gtk_label_new(_("What each program may use, the next time you start it from "
-		"the Start menu. A program without the microphone gets no sound at all (the sound "
-		"server can't give it one without the other). Without the whole home folder it sees "
-		"only Downloads (or nothing) and keeps its own settings separately."));
+	GtkWidget *l = gtk_label_new(_("What each program may use, the next time it starts: from "
+		"the Start menu, the run dialog, \"Open with\" or a terminal. A program without the "
+		"microphone can still play sound, but can't record anything. Without the whole home "
+		"folder it sees only Downloads (or nothing) and keeps its own settings separately."));
 	int y = 1;
 
 	gtk_label_set_line_wrap(GTK_LABEL(l), TRUE);

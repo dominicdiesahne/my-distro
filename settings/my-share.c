@@ -2,7 +2,13 @@
  * my-share: opens a shared folder of a Windows PC or a NAS (SMB/CIFS) in
  * the file manager (GTK 3). Start menu, "Network share", or:
  *
- *     my-share [smb://SERVER/SHARE | \\SERVER\SHARE]
+ *     my-share [smb://[USER@]SERVER/SHARE[/FOLDER] | \\SERVER\SHARE[\FOLDER]]
+ *
+ * 1.3.0: smb:// addresses open here from anywhere: links (xdg-open, this is
+ * the handler of x-scheme-handler/smb) and the file manager's address bar
+ * (a patch to PCManFM, desktop/patches/pcmanfm). A folder inside the share
+ * opens after the share is mounted; a share that is mounted already opens
+ * at once, without this window.
  *
  * You type the share's address, a user name and password (empty = as a
  * guest). "my-power mount-share" (setuid root, see login/my-power.c) mounts
@@ -21,24 +27,107 @@
 
 static GtkWidget *win, *addr, *user, *pass, *status, *connect_btn;
 
-/* "smb://srv/share/", "\\srv\share" or "srv/share" -> "//srv/share";
- * NULL if it doesn't name a server and a share. */
-static char *unc_of(const char *in)
+/* "smb://[user@]srv/share/dir/", "\\srv\share\dir" or "srv/share" ->
+ * "//srv/share", with the folder inside the share ("dir", or "") in *rest
+ * and the user name of the address (or NULL) in *user, if those are given
+ * (g_free them). NULL if it doesn't name a server and a share. */
+static char *unc_of(const char *in, char **rest, char **user)
 {
-	char *s = g_strstrip(g_strdup(in)), *p = s, *out = NULL;
+	char *s = g_strstrip(g_strdup(in)), *p = s, *out = NULL, *slash, *at, *dir = NULL;
 
+	if (rest)
+		*rest = NULL;
+	if (user)
+		*user = NULL;
 	g_strdelimit(s, "\\", '/');
-	if (g_str_has_prefix(p, "smb://"))
+	if (g_ascii_strncasecmp(p, "smb://", 6) == 0) {
+		char *u;
+
 		p += 6;
+		/* %20 and the like in links */
+		if ((u = g_uri_unescape_string(p, NULL))) {
+			memmove(s, u, strlen(u) + 1);
+			p = s;
+			g_free(u);
+		}
+		/* user@server */
+		slash = strchr(p, '/');
+		if ((at = strchr(p, '@')) && (!slash || at < slash)) {
+			if (user)
+				*user = g_strndup(p, at - p);
+			p = at + 1;
+		}
+	}
 	while (*p == '/')
 		p++;
 	while (*p && p[strlen(p) - 1] == '/')
 		p[strlen(p) - 1] = '\0';
-	/* server/share, nothing deeper (a folder inside: open it in Files) */
-	if (*p && strchr(p, '/') && strchr(p, '/')[1] && !strchr(strchr(p, '/') + 1, '/'))
+	if (*p && (slash = strchr(p, '/')) && slash[1]) {
+		char *deeper = strchr(slash + 1, '/');
+
+		if (deeper) {
+			dir = g_strdup(deeper + 1);
+			*deeper = '\0';
+		}
 		out = g_strdup_printf("//%s", p);
+	}
+	if (rest && out)
+		*rest = dir ? dir : g_strdup("");
+	else
+		g_free(dir);
+	if (!out && user) {
+		g_free(*user);
+		*user = NULL;
+	}
 	g_free(s);
 	return out;
+}
+
+/* Where my-power mounts it: /media/SERVER-SHARE (spaces and $ as _) */
+static char *mount_dir(const char *unc)
+{
+	char *d = g_strdup_printf("/media/%s", unc + 2), *c;
+
+	for (c = d + 7; *c; c++)
+		if (*c == '/')
+			*c = '-';
+		else if (*c == ' ' || *c == '$')
+			*c = '_';
+	return d;
+}
+
+static int is_mounted(const char *dir)
+{
+	char *text = NULL, **lines;
+	int found = 0;
+
+	if (!g_file_get_contents("/proc/mounts", &text, NULL, NULL))
+		return 0;
+	lines = g_strsplit(text, "\n", -1);
+	for (int i = 0; lines[i] && !found; i++) {
+		char **f = g_strsplit(lines[i], " ", 3);
+
+		found = f[0] && f[1] && strcmp(f[1], dir) == 0;
+		g_strfreev(f);
+	}
+	g_strfreev(lines);
+	g_free(text);
+	return found;
+}
+
+/* The file manager in DIR, or in the folder REST inside it if that exists */
+static void open_folder(const char *dir, const char *rest)
+{
+	char *path = rest && *rest ? g_build_filename(dir, rest, NULL) : g_strdup(dir);
+	const char *files[] = { "pcmanfm", NULL, NULL };
+
+	if (!g_file_test(path, G_FILE_TEST_IS_DIR)) {
+		g_free(path);
+		path = g_strdup(dir);
+	}
+	files[1] = path;
+	g_spawn_async(NULL, (char **)files, NULL, G_SPAWN_SEARCH_PATH, NULL, NULL, NULL, NULL);
+	g_free(path);
 }
 
 static void say(const char *msg)
@@ -48,7 +137,7 @@ static void say(const char *msg)
 
 static void on_connect(GtkButton *b, gpointer d)
 {
-	char *unc = unc_of(gtk_entry_get_text(GTK_ENTRY(addr)));
+	char *rest = NULL, *unc = unc_of(gtk_entry_get_text(GTK_ENTRY(addr)), &rest, NULL);
 	const char *name = gtk_entry_get_text(GTK_ENTRY(user));
 	const char *argv[] = { "/usr/bin/my-power", "mount-share", unc, name[0] ? name : NULL, NULL };
 	char *out = NULL, *err = NULL, *pw;
@@ -97,9 +186,7 @@ static void on_connect(GtkButton *b, gpointer d)
 	gtk_widget_set_sensitive(connect_btn, TRUE);
 
 	if (g_spawn_check_wait_status(st, NULL) && out && out[0] == '/') {
-		const char *files[] = { "pcmanfm", g_strstrip(out), NULL };
-
-		g_spawn_async(NULL, (char **)files, NULL, G_SPAWN_SEARCH_PATH, NULL, NULL, NULL, NULL);
+		open_folder(g_strstrip(out), rest);
 		gtk_main_quit();
 	} else {
 		say(err && err[0] ? g_strstrip(err)
@@ -109,6 +196,7 @@ static void on_connect(GtkButton *b, gpointer d)
 	g_free(out);
 	g_free(err);
 	g_free(unc);
+	g_free(rest);
 }
 
 static GtkWidget *row(GtkWidget *grid, int y, const char *caption, GtkWidget *w)
@@ -125,9 +213,27 @@ static GtkWidget *row(GtkWidget *grid, int y, const char *caption, GtkWidget *w)
 int main(int argc, char **argv)
 {
 	GtkWidget *box, *grid, *intro, *buttons, *cancel;
+	char *url_user = NULL;
 
 	i18n_init();
 	gtk_init(&argc, &argv);
+	/* a share that is mounted already: open it, no questions */
+	if (argc > 1) {
+		char *rest = NULL, *unc = unc_of(argv[1], &rest, &url_user);
+
+		if (unc) {
+			char *dir = mount_dir(unc);
+			int done = is_mounted(dir);
+
+			if (done)
+				open_folder(dir, rest);
+			g_free(dir);
+			g_free(unc);
+			g_free(rest);
+			if (done)
+				return 0;
+		}
+	}
 	win = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	gtk_window_set_title(GTK_WINDOW(win), _("Network share"));
 	gtk_window_set_icon_name(GTK_WINDOW(win), "folder-remote");
@@ -156,6 +262,12 @@ int main(int argc, char **argv)
 	gtk_entry_set_activates_default(GTK_ENTRY(addr), TRUE);
 	if (argc > 1)
 		gtk_entry_set_text(GTK_ENTRY(addr), argv[1]);
+	if (argc > 1)                      /* the address is there: the login next */
+		gtk_widget_grab_focus(url_user ? pass : user);
+	if (url_user) {
+		gtk_entry_set_text(GTK_ENTRY(user), url_user);
+		g_free(url_user);
+	}
 	gtk_box_pack_start(GTK_BOX(box), grid, FALSE, FALSE, 0);
 
 	status = gtk_label_new("");

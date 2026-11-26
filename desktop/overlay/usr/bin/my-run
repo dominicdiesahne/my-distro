@@ -3,15 +3,27 @@
 # permissions you gave it in Settings, Permissions (0.9.7). The Start menu
 # starts everything through it.
 #
+# my-run --sync (1.3.0): makes a small starter in ~/.local/share/my-run/bin
+# for each program in the permissions file ("exec my-run /usr/bin/PROGRAM").
+# That folder comes first in PATH (session-env, /etc/profile.d/my-run.sh),
+# so the permissions apply wherever the program is started by its name: the
+# run dialog, "Open with", desktop icons, xdg-open, a terminal. Started by
+# its full path (/usr/bin/PROGRAM), it still runs without them. Settings
+# runs it after each change, the session at every login.
+#
 # ~/.config/my-distro/permissions has one line per program:
 #     PROGRAM camera=yes|no microphone=yes|no home=full|read|downloads|none
 # A program without a line (the default) has all of them and starts
 # normally, as before 0.9.7. Otherwise it runs in a sandbox (bubblewrap,
 # like my-sandbox) that leaves out what it may not have:
 #   camera=no       no webcams (/dev/video*)
-#   microphone=no   no sound devices and no sound server: the program can't
-#                   record, and can't play sound either (PipeWire can't
-#                   give a program one without the other)
+#   microphone=no   no sound devices; the sound server only through its
+#                   socket pipewire-0-play (1.3.0), on which WirePlumber
+#                   lets a program play sound and nothing else: no
+#                   microphone, no recording of the speakers or of other
+#                   programs (scripts/client/my-play-only.lua). Programs
+#                   that only speak PulseAudio get no sound (the image has
+#                   no PulseAudio library; Software app packages may)
 #   home=read       your home folder read-only, except ~/Downloads
 #   home=downloads  only ~/Downloads; its own settings live in
 #                   ~/.local/share/my-sandbox/PROGRAM
@@ -19,15 +31,48 @@
 # The rest of the system is read-only in the sandbox; the network, the
 # screen (X11) and the session D-Bus stay.
 CONF="$HOME/.config/my-distro/permissions"
+WRAP="$HOME/.local/share/my-run/bin"
+
+# real NAME: the program's path in PATH without the starters' folder (a
+# starter would start my-run again)
+real() {
+	_p=$(printf ':%s:' "$PATH" | sed "s#:$WRAP:#:#g; s#^:##; s#:\$##")
+	(PATH=$_p; command -v "$1")
+}
+
+if [ "$1" = --sync ]; then
+	mkdir -p "$WRAP" || exit 1
+	for w in "$WRAP"/*; do
+		grep -q '^# my-run starter' "$w" 2>/dev/null && rm -f "$w"
+	done
+	awk '$1 !~ /^#/ && NF > 1 { print $1 }' "$CONF" 2>/dev/null | sort -u |
+	while read -r p; do
+		case $p in */* | .* | my-*) continue ;; esac
+		r=$(real "$p") || continue
+		case $r in /*) ;; *) continue ;; esac   # a shell builtin or alias
+		printf '#!/bin/sh\n# my-run starter: %s starts with its permissions (Settings, Permissions)\nexec /usr/bin/my-run %s "$@"\n' \
+			"$p" "$r" > "$WRAP/$p" && chmod 755 "$WRAP/$p"
+	done
+	exit 0
+fi
 
 if [ "$1" = --menu ]; then
 	cmd=$2
-	set -- sh -c "$cmd"
 	# the program: the command's first word ("netsurf-gtk3", "mpv ...")
-	prog=$(basename "${cmd%% *}")
+	first=${cmd%% *}
+	prog=$(basename "$first")
+	case $first in
+	*/*) ;;
+	*) r=$(real "$first") && case $r in /*) cmd="$r${cmd#"$first"}" ;; esac ;;
+	esac
+	set -- sh -c "$cmd"
 else
-	[ $# -gt 0 ] || { echo "usage: my-run [--menu COMMAND] | PROGRAM [ARGS]" >&2; exit 2; }
+	[ $# -gt 0 ] || { echo "usage: my-run [--sync] | [--menu COMMAND] | PROGRAM [ARGS]" >&2; exit 2; }
 	prog=$(basename "$1")
+	case $1 in
+	*/*) ;;
+	*) r=$(real "$1") && case $r in /*) shift; set -- "$r" "$@" ;; esac ;;
+	esac
 fi
 
 line=$(awk -v p="$prog" '$1 == p { print; exit }' "$CONF" 2>/dev/null)
@@ -65,6 +110,9 @@ if [ "$mic" = yes ]; then
 			[ -e "$XDG_RUNTIME_DIR/$s" ] && sound="$sound --bind $XDG_RUNTIME_DIR/$s $XDG_RUNTIME_DIR/$s"
 		done
 	fi
+elif [ -n "$XDG_RUNTIME_DIR" ] && [ -S "$XDG_RUNTIME_DIR/pipewire-0-play" ]; then
+	# play only: the program finds it under the usual name
+	sound="--bind $XDG_RUNTIME_DIR/pipewire-0-play $XDG_RUNTIME_DIR/pipewire-0"
 fi
 
 # shellcheck disable=SC2086 # the lists above are meant to be split

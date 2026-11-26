@@ -11,6 +11,9 @@ BR2_TARGET_GENERIC_ISSUE="Welcome to my-distro"
 BR2_ROOTFS_DEVICE_CREATION_DYNAMIC_EUDEV=y
 BR2_ROOTFS_OVERLAY="$(BR2_EXTERNAL_MY_DISTRO_PATH)/overlay"
 BR2_ROOTFS_POST_BUILD_SCRIPT="board/qemu/x86_64/post-build.sh $(BR2_EXTERNAL_MY_DISTRO_PATH)/post-build.sh"
+# Our patches to Buildroot's packages (1.3.0: PCManFM opens smb:// with
+# my-share), next to the QEMU board's own
+BR2_GLOBAL_PATCH_DIR="board/qemu/patches $(BR2_EXTERNAL_MY_DISTRO_PATH)/patches"
 # Inside each image, with the final owners: the factory-reset copy
 BR2_ROOTFS_POST_FAKEROOT_SCRIPT="$(BR2_EXTERNAL_MY_DISTRO_PATH)/post-fakeroot.sh"
 # (the disk image for make run-desktop; 2G since 0.9.5 brought 3D graphics,
