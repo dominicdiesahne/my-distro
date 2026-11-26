@@ -540,18 +540,22 @@ vm.run('base64 -d /tmp/wsd.b64 > /tmp/wsd_fake.py', 30)
 vm.run('cp /etc/avahi/avahi-daemon.conf /tmp/avahi.conf; sed -i "s/^disable-publishing=yes/disable-publishing=no/; '
        's/^disable-user-service-publishing=yes/disable-user-service-publishing=no/; '
        's/^publish-addresses=no/publish-addresses=yes/" /etc/avahi/avahi-daemon.conf; '
-       '/etc/init.d/S50avahi-daemon restart >/dev/null 2>&1; sleep 5; '
-       '(avahi-publish-service "Test NAS" _smb._tcp 445 >/dev/null 2>&1 &); '
+       'avahi-daemon -k; sleep 2; avahi-daemon -D; sleep 5; '
+       '(avahi-publish -a -R nas.local 10.0.2.15 >/dev/null 2>&1 &); sleep 2; '
+       '(avahi-publish-service -H nas.local "Test NAS" _smb._tcp 445 >/dev/null 2>&1 &); sleep 3; '
        'ip addr add 10.0.2.200/24 dev eth0; '
+       # (the pretend PC is in this VM: its own firewall would drop the
+       # question to it, which a real PC on the network gets)
+       'nft insert rule inet my-firewall input udp dport 3702 accept; '
        '(python3 /tmp/wsd_fake.py 10.0.2.200 WINPC 120 >/tmp/wsd.log 2>&1 &); sleep 5', 60)
 check('find-servers finds the NAS (mDNS) and the Windows PC (WS-Discovery)',
       as_user('/usr/lib/my-distro/find-servers | tr "\\t" "="'), 'WINPC=10.0.2.200')
-check('... both', as_user('/usr/lib/my-distro/find-servers | tr "\\t" "="'), 'Test NAS=10.0.2.')
+check('... both', as_user('/usr/lib/my-distro/find-servers | tr "\\t" "="'), 'Test NAS=10.0.2.15')
 vm.run(as_user('my-share >/dev/null 2>&1 &'), 30)
 time.sleep(25)
 vm.shot(SHOTS + '/08d-share-servers.png')
-vm.run('killall my-share avahi-publish-service; pkill -f wsd_fake; cp /tmp/avahi.conf /etc/avahi/avahi-daemon.conf; '
-       'ip addr del 10.0.2.200/24 dev eth0; /etc/init.d/S50avahi-daemon restart >/dev/null 2>&1; true', 60)
+vm.run('killall my-share avahi-publish-service avahi-publish; pkill -f wsd_fake; cp /tmp/avahi.conf /etc/avahi/avahi-daemon.conf; '
+       'ip addr del 10.0.2.200/24 dev eth0; avahi-daemon -k; sleep 2; avahi-daemon -D; true', 60)
 # 9. a French session's Settings window
 vm.run("su dominic -c 'sed -i \"s/^language = .*/language = fr_FR.UTF-8/\" ~/.config/my-distro/settings'; "
        "grep language /home/dominic/.config/my-distro/settings", 30)

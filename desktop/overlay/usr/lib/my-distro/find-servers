@@ -29,15 +29,17 @@ def add(name, addr):
 
 def mdns():
     try:
-        out = subprocess.run(['avahi-browse', '-t', '-p', '-r', '-k', '_smb._tcp'], capture_output=True,
+        out = subprocess.run(['avahi-browse', '-t', '-p', '-r', '_smb._tcp'], capture_output=True,
                              text=True, timeout=WAIT + 2).stdout
     except (OSError, subprocess.TimeoutExpired):
         return
     for line in out.splitlines():
         f = line.split(';')
         # =;eth0;IPv4;NAME;_smb._tcp;local;HOST.local;ADDRESS;445;"txt"
-        if len(f) >= 9 and f[0] == '=' and f[2] == 'IPv4':
-            add(f[3].replace('\\032', ' '), f[7])
+        # (NAME with its special characters as \DDD: "Test\032NAS")
+        # (not this computer's own loopback)
+        if len(f) >= 9 and f[0] == '=' and f[2] == 'IPv4' and f[1] != 'lo' and not f[7].startswith('127.'):
+            add(re.sub(r'\\(\d{3})', lambda m: chr(int(m.group(1))), f[3]), f[7])
 
 
 PROBE = '''<?xml version="1.0" encoding="utf-8"?>
