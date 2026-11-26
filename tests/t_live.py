@@ -234,7 +234,11 @@ check('vpn: ovpn0 is a tap device', 'ip -d link show ovpn0 | grep -o "tun type t
 check('vpn: the pushed address', 'ip -4 -o address show ovpn0', 'inet 10.9.0.1')
 vm.run('/usr/lib/my-distro/vpn down', 60)
 vpn_server('server-bridge\\n')                       # no address: the clients use DHCP
-vm.run('(python3 /tmp/vt/dhcpd.py tap9 >/tmp/vt/dhcpd.log 2>&1 &); sleep 3', 30)
+# (the server's side is in this VM too, behind this computer's firewall,
+# which lets no DHCP requests in: open it for tap9, as on a real server.
+# The client's udhcpc needs nothing: it reads the answers before the firewall)
+vm.run('nft insert rule inet my-firewall input iifname tap9 accept; '
+       '(python3 /tmp/vt/dhcpd.py tap9 >/tmp/vt/dhcpd.log 2>&1 &); sleep 3', 30)
 check('vpn: a tap VPN connects (no address pushed)', '/usr/lib/my-distro/vpn up tp', 'Connected to tp', timeout=240)
 time.sleep(30)
 check('vpn: tap address by DHCP over the VPN', 'ip -4 -o address show ovpn0; tail -3 /tmp/vt/dhcpd.log', 'inet 10.9.0.50')
@@ -376,7 +380,7 @@ check('lock screen spoke "Screen locked" and "Wrong password"', 'cat /tmp/lock.l
 check('... and "Screen locked"', 'cat /tmp/lock.log', 'Screen locked')
 check('unlocked again', 'echo N=$(ps | grep -v grep | grep -c "my-lock --background")', 'N=0')
 # 1.3.0: a window that runs as root (Disks, through my-admin) is read too
-vm.run(': > /tmp/reader.log', 30)
+vm.run('rm -f /tmp/reader.log', 30)               # (root can't write the user's file in /tmp)
 vm.run(as_user('echo root | my-admin --disks >/dev/null 2>&1 &'), 180)
 time.sleep(60)
 vm.keys('tab'); time.sleep(4); vm.keys('tab'); time.sleep(6)
