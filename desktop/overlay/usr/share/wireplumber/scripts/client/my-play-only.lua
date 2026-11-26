@@ -33,8 +33,14 @@ local function owner_id (node)
   return tonumber (node.properties ["client.id"])
 end
 
+-- (1.4.0) A PulseAudio program on pipewire-pulse's socket pulse/native-play
+-- gets pipewire.client.access = "my-play" from the server
+-- (pipewire-pulse.conf.d/50-my-play.conf); it can't change it
+-- (desktop/patches/pipewire). A native client that sets it itself only
+-- restricts itself.
 local function is_play (client)
-  return client ~= nil and client.properties ["pipewire.access"] == "my-play"
+  return client ~= nil and (client.properties ["pipewire.access"] == "my-play" or
+      client.properties ["pipewire.client.access"] == "my-play")
 end
 
 local function play_client (id)

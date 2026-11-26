@@ -454,6 +454,23 @@ check('a sandboxed recording is never linked, its stream removed',
               'NODES=$(pw-cli ls Node | grep -c "alsa_capture.arecord")'), 'LINKS=0 NODES=0')
 print('arecord in the sandbox said:', vm.run('killall arecord; sleep 1; head -5 /tmp/arec.log; true', 30)[-300:],
       flush=True)
+# 1.4.0: a PulseAudio program without the microphone: pulse/native-play,
+# play-only like pipewire-0-play, and its own property list can't undo that
+# (tests/pa_probe.py speaks the PulseAudio protocol; the image has no libpulse)
+PROBE = base64.b64encode(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'pa_probe.py'), 'rb').read()).decode()
+vm.run('rm -f /tmp/probe.b64', 30)
+for i in range(0, len(PROBE), 600):
+    vm.run('printf %s ' + PROBE[i:i + 600] + ' >> /tmp/probe.b64', 30)
+vm.run('base64 -d /tmp/probe.b64 > /home/dominic/pa_probe.py; chown dominic /home/dominic/pa_probe.py', 30)
+check('PulseAudio\'s play-only socket', 'ls -l /run/user/1000/pulse/native-play', 'native-play')
+check('control: an unrestricted PulseAudio client sees the microphone',
+      as_user('python3 ~/pa_probe.py /run/user/1000/pulse/native'), 'SINKS-HAVE-OUTPUT=1 SOURCES-HAVE-INPUT=1')
+vm.run("su dominic -c 'echo \"python3 camera=yes microphone=no home=full\" >> ~/.config/my-distro/permissions'", 30)
+vm.run(as_user('(my-run python3 ~/pa_probe.py /run/user/1000/pulse/native 20 >/tmp/pa.log 2>&1 &); sleep 8'), 60)
+check('a sandboxed PulseAudio client is play-only, even when it says otherwise',
+      as_user('pw-cli ls Client | grep -B12 -A12 pa-probe | grep -o "client.access = \\"[a-z-]*\\""'), 'my-play')
+time.sleep(14)
+check('... it sees the speakers, but no microphone', 'cat /tmp/pa.log', 'SINKS-HAVE-OUTPUT=1 SOURCES-HAVE-INPUT=0')
 vm.run("su dominic -c 'rm -f ~/.config/my-distro/permissions'; " + as_user('my-run --sync'), 30)
 check('no starters left without permissions', as_user('echo N=$(ls ~/.local/share/my-run/bin | wc -l)'), 'N=0')
 vm.run(as_user('my-settings --page permissions >/dev/null 2>&1 &'), 30)

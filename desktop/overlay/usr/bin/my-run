@@ -22,8 +22,8 @@
 #                   lets a program play sound and nothing else: no
 #                   microphone, no recording of the speakers or of other
 #                   programs (scripts/client/my-play-only.lua). Programs
-#                   that only speak PulseAudio get no sound (the image has
-#                   no PulseAudio library; Software app packages may)
+#                   that speak PulseAudio get pulse/native-play the same
+#                   way (1.4.0)
 #   home=read       your home folder read-only, except ~/Downloads
 #   home=downloads  only ~/Downloads; its own settings live in
 #                   ~/.local/share/my-sandbox/PROGRAM
@@ -110,9 +110,12 @@ if [ "$mic" = yes ]; then
 			[ -e "$XDG_RUNTIME_DIR/$s" ] && sound="$sound --bind $XDG_RUNTIME_DIR/$s $XDG_RUNTIME_DIR/$s"
 		done
 	fi
-elif [ -n "$XDG_RUNTIME_DIR" ] && [ -S "$XDG_RUNTIME_DIR/pipewire-0-play" ]; then
-	# play only: the program finds it under the usual name
-	sound="--bind $XDG_RUNTIME_DIR/pipewire-0-play $XDG_RUNTIME_DIR/pipewire-0"
+elif [ -n "$XDG_RUNTIME_DIR" ]; then
+	# play only: the program finds the sockets under the usual names
+	[ -S "$XDG_RUNTIME_DIR/pipewire-0-play" ] &&
+		sound="--bind $XDG_RUNTIME_DIR/pipewire-0-play $XDG_RUNTIME_DIR/pipewire-0"
+	[ -S "$XDG_RUNTIME_DIR/pulse/native-play" ] &&
+		sound="$sound --bind $XDG_RUNTIME_DIR/pulse/native-play $XDG_RUNTIME_DIR/pulse/native"
 fi
 
 # shellcheck disable=SC2086 # the lists above are meant to be split

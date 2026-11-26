@@ -1,0 +1,60 @@
+From: my-distro
+Subject: [PATCH] pulse-server: a client may not change its client access
+
+The server sets pipewire.client.access from the client.access of the
+address the client connected to. The client's own property list (set
+client name, update client proplist) could overwrite it before the
+PipeWire connection is made. my-distro's play-only socket (native-play)
+relies on it.
+---
+--- a/src/modules/module-protocol-pulse/pulse-server.c	2026-11-26 20:57:20.113545430 +0100
++++ b/src/modules/module-protocol-pulse/pulse-server.c	2026-11-26 20:57:20.113545430 +0100
+@@ -1029,6 +1029,21 @@
+ 	.object_data_timeout = manager_object_data_timeout,
+ };
+ 
++/* my-distro: the access the server gave a client, kept across its own
++ * properties */
++static char *keep_access(struct client *client)
++{
++	const char *a = pw_properties_get(client->props, PW_KEY_CLIENT_ACCESS);
++
++	return a ? strdup(a) : NULL;
++}
++
++static void restore_access(struct client *client, char *access)
++{
++	pw_properties_set(client->props, PW_KEY_CLIENT_ACCESS, access);
++	free(access);
++}
++
+ static int do_set_client_name(struct client *client, uint32_t command, uint32_t tag, struct message *m)
+ {
+ 	struct impl *impl = client->impl;
+@@ -1044,9 +1059,15 @@
+ 			changed += pw_properties_set(client->props,
+ 					PW_KEY_APP_NAME, name);
+ 	} else {
+-		if (message_get(m,
++		/* my-distro: the server sets the client's access (client.access of
++		 * its address); a client may not change it with its own properties */
++		char *access = keep_access(client);
++
++		res = message_get(m,
+ 				TAG_PROPLIST, client->props,
+-				TAG_INVALID) < 0)
++				TAG_INVALID);
++		restore_access(client, access);
++		if (res < 0)
+ 			return -EPROTO;
+ 		changed++;
+ 	}
+@@ -3269,6 +3290,8 @@
+ 		if (pw_stream_update_properties(stream->stream, &props->dict) > 0)
+ 			stream_update_tag_param(stream);
+ 	} else {
++		/* my-distro: not the access the server gave it (see keep_access) */
++		pw_properties_set(props, PW_KEY_CLIENT_ACCESS, NULL);
+ 		if (pw_properties_update(client->props, &props->dict) > 0) {
+ 			client_update_quirks(client);
+ 			client->name = pw_properties_get(client->props, PW_KEY_APP_NAME);
