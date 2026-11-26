@@ -204,7 +204,8 @@ while True:
     rt = 2 if mt == 1 else 5
     p = bytes([2, 1, 6, 0]) + d[4:8] + b"\\0\\0\\x80\\0" + b"\\0" * 4 + ip + me + b"\\0" * 4 + d[28:44]
     p += b"\\0" * 192 + b"\\x63\\x82\\x53\\x63" + bytes([53, 1, rt, 54, 4]) + me + bytes([51, 4])
-    p += struct.pack("!I", 3600) + bytes([1, 4, 255, 255, 255, 0, 6, 4]) + socket.inet_aton("10.9.0.53") + bytes([255])
+    p += struct.pack("!I", 3600) + bytes([1, 4, 255, 255, 255, 0, 3, 4]) + me
+    p += bytes([6, 4]) + socket.inet_aton("10.9.0.53") + bytes([255])
     s.sendto(p, ("255.255.255.255", 68))
     print("sent", rt, flush=True)
 ''').decode()
@@ -263,7 +264,7 @@ check('wpa_supplicant reads an EAP-TLS network block',
 
 # --- the desktop ----------------------------------------------------------------
 # 1.3.0: the login screen speaks for the screen reader while this file exists
-vm.run('touch /var/lib/my-distro/login-reader; '
+vm.run('mkdir -p /var/lib/my-distro; touch /var/lib/my-distro/login-reader; '
        'echo skipped > /etc/my-distro/setup-done; killall my-setup; true', 60)
 time.sleep(20)
 vm.shot(SHOTS + '/02-login.png')
@@ -375,7 +376,8 @@ check('lock screen spoke "Screen locked" and "Wrong password"', 'cat /tmp/lock.l
 check('... and "Screen locked"', 'cat /tmp/lock.log', 'Screen locked')
 check('unlocked again', 'echo N=$(ps | grep -v grep | grep -c "my-lock --background")', 'N=0')
 # 1.3.0: a window that runs as root (Disks, through my-admin) is read too
-vm.run(': > /tmp/reader.log; ' + as_user('echo root | my-admin --disks >/dev/null 2>&1 &'), 30)
+vm.run(': > /tmp/reader.log', 30)
+vm.run(as_user('echo root | my-admin --disks >/dev/null 2>&1 &'), 180)
 time.sleep(60)
 vm.keys('tab'); time.sleep(4); vm.keys('tab'); time.sleep(6)
 vm.shot(SHOTS + '/05c-disks-as-root.png')

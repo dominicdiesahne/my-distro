@@ -16,8 +16,9 @@
 # same way as the half routes above). Its route-up hook (this script,
 # "hook-up") applies the DNS servers the server pushes. A tap VPN (1.3.0:
 # a bridge into the VPN's network) whose server pushes no address gets one
-# by DHCP over the tunnel: udhcpc with its own script (vpn-dhcp), which sets
-# the address and DNS but no default route.
+# by DHCP over the tunnel, started by the --up hook ("hook-dev"): udhcpc
+# with its own script (vpn-dhcp), which sets the address and DNS but no
+# default route.
 #
 # State while connected: /run/my-vpn (the name, the kind, the extra routes,
 # DNS). The DHCP client's hook (/usr/share/udhcpc/default.script.d/my-vpn)
@@ -180,14 +181,24 @@ hook_up() {
 		esac
 	done
 	apply_dns "$servers" "$search"
-	# tap without a pushed address: DHCP over the tunnel. udhcpc tries for
-	# about 12 s, then goes on in the background (and renews the lease)
-	if [ "$(cat "$RUN/devtype" 2>/dev/null)" = tap ] && [ -n "$dev" ] &&
-	   [ -z "$(ip -4 -o address show dev "$dev" 2>/dev/null)" ]; then
-		udhcpc -i "$dev" -s /usr/lib/my-distro/vpn-dhcp -p "$RUN/udhcpc.pid" \
-			-t 6 -T 2 -b -S >/dev/null 2>&1
-	fi
 	: >"$RUN/up"
+}
+
+# openvpn runs this when a tap VPN's interface is there (--up), before the
+# routes: without a pushed address, DHCP over the tunnel. It must start
+# here, not in hook-up: a bridge server says "route-gateway dhcp", and then
+# openvpn holds the routes (and hook-up) back until DHCP has found the
+# gateway. udhcpc runs on its own from the start: openvpn passes no packets
+# while this hook runs, so a udhcpc waiting here would wait forever. It
+# keeps the lease renewed; "down" stops it.
+hook_dev() {
+	[ -n "$dev" ] || return 0
+	[ -n "$(ip -4 -o address show dev "$dev" 2>/dev/null)" ] && return 0
+	[ -f "$RUN/udhcpc.pid" ] && kill -0 "$(cat "$RUN/udhcpc.pid")" 2>/dev/null && return 0
+	ip link set dev "$dev" up
+	(udhcpc -f -i "$dev" -s /usr/lib/my-distro/vpn-dhcp -p "$RUN/udhcpc.pid" \
+		-t 6 -T 2 -A 5 -S </dev/null >/dev/null 2>&1 &)
+	return 0
 }
 
 # vpn-dhcp passes on the DNS servers of a tap VPN's DHCP lease
@@ -226,11 +237,18 @@ up_ovpn() {
 	FAILED='AUTH_FAILED|[Pp]rivate [Kk]ey [Pp]assword|[Ll]oad [Pp]rivate [Kk]ey'
 	# our options come after the file's, so they win; the file itself can't
 	# run commands (my-vpnctl leaves them out)
+	# tap: DHCP from the --up hook, and more time (the DHCP round comes first)
+	set --
+	wait=45
+	if [ "$devtype" = tap ]; then
+		set -- --up "$SELF hook-dev"
+		wait=75
+	fi
 	openvpn --config "$CONF" --dev ovpn0 --dev-type "$devtype" $auth --auth-nocache \
-		--script-security 2 --route-up "$SELF hook-up" \
+		--script-security 2 --route-up "$SELF hook-up" "$@" \
 		--daemon my-openvpn --writepid "$RUN/ovpn.pid" --log "$RUN/ovpn.log" --verb 3
 	i=0
-	while [ $i -lt 45 ]; do
+	while [ $i -lt $wait ]; do
 		[ -f "$RUN/up" ] && break
 		grep -q -E "$FAILED" "$RUN/ovpn.log" 2>/dev/null && break
 		if [ -f "$RUN/ovpn.pid" ] && ! kill -0 "$(cat "$RUN/ovpn.pid")" 2>/dev/null; then
@@ -244,7 +262,8 @@ up_ovpn() {
 		elif grep -q -E "$FAILED" "$RUN/ovpn.log" 2>/dev/null; then
 			echo "The password of the private key is wrong or missing: import the file again."
 		else
-			echo "Could not connect: $(grep -iE 'error|fail|cannot' "$RUN/ovpn.log" | tail -n 1 | cut -c1-200)"
+			echo "Could not connect: $(grep -iE 'error|fail|cannot' "$RUN/ovpn.log" | grep -v -E 'Note:|WARNING' |
+				tail -n 1 | cut -c1-200)"
 		fi
 		down >/dev/null
 		exit 1
@@ -299,6 +318,7 @@ down) down; echo "Disconnected." ;;
 status) status ;;
 reconnect) reconnect ;;
 hook-up) hook_up ;;
+hook-dev) hook_dev ;;
 dhcp-dns) dhcp_dns "$2" "$3" ;;
 *) echo "usage: $0 up NAME | down | status | reconnect"; exit 1 ;;
 esac

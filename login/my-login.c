@@ -662,6 +662,16 @@ static int reader_on(void)
 	return access(LOGIN_READER, F_OK) == 0;
 }
 
+static void reader_enable(void)
+{
+	int fd;
+
+	mkdir("/var/lib/my-distro", 0755);   /* not there before the first login */
+	fd = open(LOGIN_READER, O_WRONLY | O_CREAT, 0644);
+	if (fd >= 0)
+		close(fd);
+}
+
 /* "User, anna" or "Password", after BEFORE ("Log in. User, anna") */
 static void say_focus(const char *before)
 {
@@ -701,10 +711,7 @@ static void reader_toggle(void)
 		speech_say(_("Screen reader off"));
 		unlink(LOGIN_READER);
 	} else {
-		int fd = open(LOGIN_READER, O_WRONLY | O_CREAT, 0644);
-
-		if (fd >= 0)
-			close(fd);
+		reader_enable();
 		say_focus(_("Screen reader on"));
 	}
 }
@@ -877,12 +884,8 @@ static void submit(void)
 		struct settings s;
 
 		settings_load(&s, home);
-		if (s.screen_reader && !reader_on()) {
-			int fd = open(LOGIN_READER, O_WRONLY | O_CREAT, 0644);
-
-			if (fd >= 0)
-				close(fd);
-		}
+		if (s.screen_reader && !reader_on())
+			reader_enable();
 	}
 	if (once)
 		exit(0);              /* "Switch user" screen: one session only */
