@@ -473,7 +473,12 @@ check('smb:// links open with my-share',
 vm.run(as_user('pcmanfm /tmp >/dev/null 2>&1 &'), 30)
 time.sleep(30)
 vm.keys('ctrl-l'); time.sleep(3)
+# (vm.type sends US key codes; the session has the German layout here, which
+# would type "smbÖ--anna"nas...")
+layout = re.findall(r'layout:\s+(\S+)', vm.run(as_user('setxkbmap -query'), 30))
+vm.run(as_user('setxkbmap us'), 30)
 vm.type('smb://anna@nas/files/photos\n'); time.sleep(20)
+vm.run(as_user('setxkbmap ' + (layout[-1] if layout else 'us')), 30)
 vm.shot(SHOTS + '/08b-smb-from-file-manager.png')
 check('PCManFM hands smb:// to my-share', 'ps | grep -v grep | grep my-share', 'smb://anna@nas/files/photos')
 vm.run('killall my-share; true', 30)
