@@ -82,7 +82,7 @@ vm.run('sfdisk /dev/vda <<EOF\nlabel: gpt\n'
 vm.run('mkdir -p /mnt/e /mnt/w; mount /dev/vda1 /mnt/e; mkdir -p /mnt/e/EFI/Microsoft/Boot /mnt/e/EFI/BOOT; '
        'head -c 1500000 /dev/urandom > /mnt/e/EFI/Microsoft/Boot/bootmgfw.efi; '
        'cp /mnt/e/EFI/Microsoft/Boot/bootmgfw.efi /mnt/e/EFI/BOOT/BOOTX64.EFI; '
-       'ntfs-3g /dev/vda3 /mnt/w; mkdir -p /mnt/w/Users/anna; head -c 5000000 /dev/urandom > /mnt/w/Users/anna/photo.jpg; '
+       'mount -t ntfs3 /dev/vda3 /mnt/w; mkdir -p /mnt/w/Users/anna; head -c 5000000 /dev/urandom > /mnt/w/Users/anna/photo.jpg; '
        'sync; umount /mnt/w /mnt/e', 300)
 before = check('the "Windows" disk', 'sfdisk -d /dev/vda | grep "^/dev"; '
                'echo SUMS; sha256sum /dev/vda1 /dev/vda2 /dev/vda3 | cut -c1-16', 'SUMS', 600)
@@ -114,7 +114,7 @@ print('before', sums, 'after', sums2, flush=True)
 check('... its start files too, and my-distro\'s are in EFI/my-distro',
       'mount /dev/vda1 /mnt/e; cmp /mnt/e/EFI/Microsoft/Boot/bootmgfw.efi /mnt/e/EFI/BOOT/BOOTX64.EFI && echo WINDOWS-INTACT; '
       'ls /mnt/e/EFI/my-distro | tr "\\n" " "', 'WINDOWS-INTACT')
-check('... and its NTFS files', 'ntfs-3g -o ro /dev/vda3 /mnt/w && ls -l /mnt/w/Users/anna; umount /mnt/w', 'photo.jpg')
+check('... and its NTFS files', 'mount -t ntfs3 -o ro /dev/vda3 /mnt/w && ls -l /mnt/w/Users/anna; umount /mnt/w', 'photo.jpg')
 check('a firmware boot entry for my-distro, first', 'efibootmgr', 'my-distro')
 # (the installed system's console on the serial line too, test only)
 vm.run('umount /mnt/e; mkdir -p /mnt/r; mount /dev/vda4 /mnt/r; '

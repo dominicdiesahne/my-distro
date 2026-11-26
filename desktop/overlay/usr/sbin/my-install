@@ -461,6 +461,8 @@ else
 	WHERE="the system partition (GRUB found it there)"
 fi
 
+# (next to another system no BIOS GRUB made the folder: grub-install does)
+mkdir -p "${CFG%/*}" || die "could not make ${CFG%/*}"
 cat >"$CFG" <<EOF
 # Boot menu of the installed my-distro, written by my-install.
 # The kernel is $KERNEL on $WHERE.
@@ -497,6 +499,7 @@ menuentry "my-distro (recovery mode)" {
 	$INITRD
 }
 EOF
+[ -s "$CFG" ] || die "could not write the boot menu $CFG"
 
 # Next to another system: its start files on the shared EFI partition get
 # an entry each (Windows' boot manager; another Linux's shim or GRUB), so
