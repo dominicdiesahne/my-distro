@@ -529,6 +529,29 @@ time.sleep(15)
 vm.shot(SHOTS + '/08c-smb-mounted-already.png')
 check('a mounted share opens without asking', 'echo N=$(ps | grep -v grep | grep -c "my-share smb")', 'N=0')
 vm.run('umount -l /media/nas-files; rmdir /media/nas-files; true', 30)
+# 1.4.0: the servers of the network: a NAS announced by mDNS (this VM's own
+# Avahi, which may announce for the test) and a Windows PC that answers
+# WS-Discovery (tests/wsd_fake.py)
+FAKE = base64.b64encode(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'wsd_fake.py'), 'rb').read()).decode()
+vm.run('rm -f /tmp/wsd.b64', 30)
+for i in range(0, len(FAKE), 600):
+    vm.run('printf %s ' + FAKE[i:i + 600] + ' >> /tmp/wsd.b64', 30)
+vm.run('base64 -d /tmp/wsd.b64 > /tmp/wsd_fake.py', 30)
+vm.run('cp /etc/avahi/avahi-daemon.conf /tmp/avahi.conf; sed -i "s/^disable-publishing=yes/disable-publishing=no/; '
+       's/^disable-user-service-publishing=yes/disable-user-service-publishing=no/; '
+       's/^publish-addresses=no/publish-addresses=yes/" /etc/avahi/avahi-daemon.conf; '
+       '/etc/init.d/S50avahi-daemon restart >/dev/null 2>&1; sleep 5; '
+       '(avahi-publish-service "Test NAS" _smb._tcp 445 >/dev/null 2>&1 &); '
+       'ip addr add 10.0.2.200/24 dev eth0; '
+       '(python3 /tmp/wsd_fake.py 10.0.2.200 WINPC 120 >/tmp/wsd.log 2>&1 &); sleep 5', 60)
+check('find-servers finds the NAS (mDNS) and the Windows PC (WS-Discovery)',
+      as_user('/usr/lib/my-distro/find-servers | tr "\\t" "="'), 'WINPC=10.0.2.200')
+check('... both', as_user('/usr/lib/my-distro/find-servers | tr "\\t" "="'), 'Test NAS=10.0.2.')
+vm.run(as_user('my-share >/dev/null 2>&1 &'), 30)
+time.sleep(25)
+vm.shot(SHOTS + '/08d-share-servers.png')
+vm.run('killall my-share avahi-publish-service; pkill -f wsd_fake; cp /tmp/avahi.conf /etc/avahi/avahi-daemon.conf; '
+       'ip addr del 10.0.2.200/24 dev eth0; /etc/init.d/S50avahi-daemon restart >/dev/null 2>&1; true', 60)
 # 9. a French session's Settings window
 vm.run("su dominic -c 'sed -i \"s/^language = .*/language = fr_FR.UTF-8/\" ~/.config/my-distro/settings'; "
        "grep language /home/dominic/.config/my-distro/settings", 30)
