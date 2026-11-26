@@ -57,11 +57,15 @@ grub_cfg_fix() {
 		'configfile $prefix/grub.cfg' >"$1.new" && mv "$1.new" "$1"
 }
 
-# The installation's EFI partition, if it starts through shim already
+# The installation's folder on the EFI partition, if it starts through shim
+# already: EFI/BOOT, or EFI/my-distro when it was installed next to another
+# system (1.4.0; that system's EFI/BOOT stays as it is)
 shim_dir() {
 	esp=$(/usr/lib/my-distro/esp-mount 2>/dev/null) || return 1
-	[ -f "$esp/EFI/BOOT/my-distro-secureboot.cer" ] || return 1
-	echo "$esp/EFI/BOOT"
+	for d in "$esp/EFI/my-distro" "$esp/EFI/BOOT"; do
+		[ -f "$d/my-distro-secureboot.cer" ] && { echo "$d"; return 0; }
+	done
+	return 1
 }
 
 case "$1" in

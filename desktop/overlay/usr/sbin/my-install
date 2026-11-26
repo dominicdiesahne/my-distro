@@ -3,7 +3,8 @@
 # from the disk and keeps your files and settings after a reboot.
 #
 # What it does:
-#   1. you pick a disk; it is wiped completely
+#   1. you pick a disk; it is wiped completely, or (1.4.0) my-distro goes
+#      into its free space next to Windows or another Linux (step 1a)
 #   2. GPT partitions: 1 MiB "BIOS boot" (GRUB for BIOS PCs), 256 MiB EFI
 #      system partition (GRUB for UEFI PCs), the rest ext4 for the system
 #   3. copies the root filesystem (everything that runs from RAM now) and the
@@ -128,8 +129,69 @@ DISK=/dev/$NAME
 
 # Partition names: sda -> sda1, nvme0n1 -> nvme0n1p1 (name ends in a digit)
 case "$NAME" in *[0-9]) P=${DISK}p ;; *) P=$DISK ;; esac
-ESP=${P}2
-ROOT=${P}3
+ESP_N=2
+ROOT_N=3
+
+# --- 1a. Next to the system on the disk (1.4.0) -----------------------------------
+# A disk with partitions: erase it, or install into its free space next to
+# Windows or another Linux, which stay as they are. That needs a GPT disk,
+# this computer started with UEFI (the other system starts that way too), an
+# EFI system partition (shared: my-distro's files go to EFI/my-distro) and
+# 8 GB of free space in one piece. my-install doesn't shrink partitions
+# itself: Windows does that safely (Disk Management, Shrink Volume).
+MODE=whole
+BESIDE_MIN_MB=8192
+SECTOR=$(cat "/sys/block/$NAME/queue/logical_block_size" 2>/dev/null)
+case "$SECTOR" in ''|*[!0-9]*) SECTOR=512 ;; esac
+DUMP=$(sfdisk -d "$DISK" 2>/dev/null)
+if printf '%s\n' "$DUMP" | grep -q "^$P[0-9]* : "; then
+	echo
+	echo "$DISK already has partitions:"
+	lsblk -o NAME,SIZE,FSTYPE,LABEL "$DISK" 2>/dev/null | sed 's/^/  /'
+	why=""
+	if [ ! -d /sys/firmware/efi ]; then
+		why="this computer was started without UEFI (BIOS mode)"
+	elif ! printf '%s\n' "$DUMP" | grep -q '^label: gpt'; then
+		why="the disk has an MBR (DOS) partition table, not GPT"
+	else
+		# the EFI system partition: its number
+		ESP_N=$(printf '%s\n' "$DUMP" | grep -i 'type=C12A7328-F81F-11D2-BA4B-00A0C93EC93B' |
+			head -n 1 | sed "s#^$P\([0-9]*\) :.*#\1#")
+		case "$ESP_N" in ''|*[!0-9]*) why="it has no EFI system partition" ;; esac
+	fi
+	# the largest free space: its first sector and size (sectors)
+	FREE=$(sfdisk -F "$DISK" 2>/dev/null | awk '$1 ~ /^[0-9]+$/ && $3 ~ /^[0-9]+$/ { print $1, $3 }' |
+		sort -k2 -n | tail -n 1)
+	FREE_START=${FREE% *}
+	FREE_SECTORS=${FREE#* }
+	FREE_MB=0
+	[ -n "$FREE" ] && FREE_MB=$((FREE_SECTORS / (1048576 / SECTOR)))
+	if [ -z "$why" ] && [ "$FREE_MB" -lt "$BESIDE_MIN_MB" ]; then
+		why="it has only $((FREE_MB / 1024)) GB of free space in one piece (8 GB are needed)"
+	fi
+	echo
+	echo "  1) Erase the whole disk and install my-distro alone"
+	if [ -z "$why" ]; then
+		echo "  2) Install next to what is on it, in its free space ($((FREE_MB / 1024)) GB):"
+		echo "     everything on the disk stays, and a menu at the start lets you choose"
+		printf "Which? Number (1-2): "
+		read -r how
+		case "$how" in
+		1) ;;
+		2) MODE=beside ;;
+		*) echo "Cancelled, nothing was changed."; quit ;;
+		esac
+	else
+		echo "  (Next to it is not possible: $why. To make room next to Windows:"
+		echo "   in Windows, Disk Management, right-click the C: partition, Shrink"
+		echo "   Volume, at least 8 GB; then start this installer again.)"
+		printf "Erase the whole disk? Type 1 to continue: "
+		read -r how
+		[ "$how" = 1 ] || { echo "Cancelled, nothing was changed."; quit; }
+	fi
+fi
+ESP=$P$ESP_N
+ROOT=$P$ROOT_N
 
 # --- 1b. Encryption (optional) ---------------------------------------------------
 
@@ -169,8 +231,35 @@ if [ "$ENCRYPT" = 1 ]; then
 	PASS2=
 fi
 
+# Next to another system, encrypted: the kernel and the start-up system go
+# onto the shared EFI partition (often only 100 MB, Windows' own files are
+# on it too)
+if [ "$MODE" = beside ] && [ "$ENCRYPT" = 1 ]; then
+	need_mb=$(( ($(wc -c </boot/bzImage) / 1048576) * 2 + 40 ))
+	mkdir -p /mnt/esp-check
+	esp_free=0
+	if mount -t vfat -o ro "$ESP" /mnt/esp-check 2>>"$LOG"; then
+		esp_free=$(df -m /mnt/esp-check | awk 'END { print $(NF - 2) }')
+		umount /mnt/esp-check
+	fi
+	case "$esp_free" in ''|*[!0-9]*) esp_free=0 ;; esac
+	if [ "$esp_free" -lt "$need_mb" ]; then
+		echo
+		echo "Encrypted next to another system needs $need_mb MB free on the EFI"
+		echo "partition $ESP for the kernel; it has $esp_free MB. Install without"
+		echo "encryption, or erase the whole disk."
+		quit
+	fi
+fi
+
 echo
-echo "ALL DATA ON $DISK WILL BE DELETED."
+if [ "$MODE" = beside ]; then
+	echo "my-distro goes into the free space of $DISK. The partitions that are"
+	echo "there stay as they are; the EFI partition $ESP gets my-distro's start"
+	echo "files in EFI/my-distro. (A backup of important files never hurts.)"
+else
+	echo "ALL DATA ON $DISK WILL BE DELETED."
+fi
 printf "Type yes to continue: "
 read -r answer
 [ "$answer" = yes ] || { echo "Cancelled, nothing was changed."; quit; }
@@ -179,12 +268,31 @@ read -r answer
 
 echo
 echo "[1/5] Partitioning $DISK"
-run sfdisk --wipe always --wipe-partitions always "$DISK" <<EOF
+if [ "$MODE" = beside ]; then
+	# one new partition in the free space (from its first MiB on); the
+	# others keep their numbers, the new one gets the next free number
+	# (partitions of the disk that are open in the file manager: closed first,
+	# so the kernel can take the new partition table)
+	awk -v p="$P" 'index($1, p) == 1 { print $2 }' /proc/mounts | while read -r m; do
+		umount "$m" 2>>"$LOG"
+	done
+	align=$((1048576 / SECTOR))
+	start=$(( (FREE_START + align - 1) / align * align ))
+	size=$(( (FREE_SECTORS - (start - FREE_START)) / align * align ))
+	run sfdisk --append "$DISK" <<EOF
+start=$start, size=$size, type=0FC63DAF-8483-4772-8E79-3D69D8477DE4, name="my-distro"
+EOF
+	ROOT_N=$(sfdisk -d "$DISK" | grep "start= *$start," | sed "s#^$P\([0-9]*\) :.*#\1#")
+	case "$ROOT_N" in ''|*[!0-9]*) die "the new partition did not appear" ;; esac
+	ROOT=$P$ROOT_N
+else
+	run sfdisk --wipe always --wipe-partitions always "$DISK" <<EOF
 label: gpt
 size=1MiB, type=21686148-6449-6E6F-744E-656564454649, name="bios-boot"
 size=256MiB, type=C12A7328-F81F-11D2-BA4B-00A0C93EC93B, name="efi"
 type=0FC63DAF-8483-4772-8E79-3D69D8477DE4, name="my-distro"
 EOF
+fi
 
 # udev needs a moment to create the device files for the new partitions
 for _ in 1 2 3 4 5 6 7 8 9 10; do
@@ -193,7 +301,8 @@ for _ in 1 2 3 4 5 6 7 8 9 10; do
 done
 [ -b "$ROOT" ] || die "$ROOT did not appear"
 
-run mkfs.fat -F 32 -n EFI "$ESP"
+# (next to another system the EFI partition is that system's too: kept)
+[ "$MODE" = beside ] || run mkfs.fat -F 32 -n EFI "$ESP"
 
 # Encrypted: the partition becomes a LUKS2 volume; opened, it appears as
 # /dev/mapper/my-distro-root, and the filesystem goes in there. The
@@ -280,8 +389,19 @@ else
 	GRUB_DIR="$T/boot"
 fi
 # BIOS: GRUB's first stage goes into the disk's first sector, the rest into
-# the BIOS boot partition.
-run grub-install --target=i386-pc --boot-directory="$GRUB_DIR" "$DISK"
+# the BIOS boot partition. (Next to another system: UEFI only, the disk's
+# first sector stays as it is.)
+[ "$MODE" = beside ] ||
+	run grub-install --target=i386-pc --boot-directory="$GRUB_DIR" "$DISK"
+# Where the UEFI start files go: EFI/BOOT, the path every firmware starts by
+# itself; next to another system EFI/my-distro, with an entry in the
+# firmware's boot list (efibootmgr, below), and the other system's files stay
+if [ "$MODE" = beside ]; then
+	EFIDIR=EFI/my-distro
+else
+	EFIDIR=EFI/BOOT
+fi
+B="$T/boot/efi/$EFIDIR"
 # UEFI: EFI/BOOT/BOOTX64.EFI is the path every UEFI firmware starts by
 # itself, so no boot entry in the firmware is needed. Since 0.9.7 that is
 # shim (signed by Microsoft), which starts GRUB (grubx64.efi, signed with
@@ -292,9 +412,14 @@ run grub-install --target=i386-pc --boot-directory="$GRUB_DIR" "$DISK"
 E=/usr/lib/my-distro/efi
 if [ -f "$E/BOOTX64.EFI" ] && [ -f "$E/grubx64.efi" ]; then
 	SHIM=1
-	mkdir -p "$T/boot/efi/EFI/BOOT"
-	run cp "$E/BOOTX64.EFI" "$E/grubx64.efi" "$E/mmx64.efi" "$E/my-distro-secureboot.cer" \
-		"$T/boot/efi/EFI/BOOT/"
+	LOADER=BOOTX64.EFI
+	mkdir -p "$B"
+	run cp "$E/BOOTX64.EFI" "$E/grubx64.efi" "$E/mmx64.efi" "$E/my-distro-secureboot.cer" "$B/"
+elif [ "$MODE" = beside ]; then
+	SHIM=0
+	LOADER=grubx64.efi
+	run grub-install --target=x86_64-efi --efi-directory="$T/boot/efi" \
+		--boot-directory="$GRUB_DIR" --bootloader-id=my-distro --no-nvram
 else
 	SHIM=0
 	run grub-install --target=x86_64-efi --efi-directory="$T/boot/efi" \
@@ -303,7 +428,7 @@ fi
 
 # The kernel finds its root filesystem by the partition's unique ID, so it
 # doesn't matter whether the disk is called sda, vda or nvme0n1 at boot.
-PARTUUID=$(sfdisk --part-uuid "$DISK" 3)
+PARTUUID=$(sfdisk --part-uuid "$DISK" "$ROOT_N")
 [ -n "$PARTUUID" ] || die "could not read the partition ID of $ROOT"
 
 if [ "$ENCRYPT" = 1 ]; then
@@ -311,7 +436,7 @@ if [ "$ENCRYPT" = 1 ]; then
 	# and starts /sbin/my-init from it (see my-mkinitramfs). It reads what it
 	# needs from /etc/my-distro/crypt; installed-fixups makes it again after
 	# every update, with the new kernel.
-	ESP_UUID=$(sfdisk --part-uuid "$DISK" 2)
+	ESP_UUID=$(sfdisk --part-uuid "$DISK" "$ESP_N")
 	[ -n "$ESP_UUID" ] || die "could not read the partition ID of $ESP"
 	cat >"$T/etc/my-distro/crypt" <<EOF
 # This system is encrypted (my-install). my-mkinitramfs reads this and puts
@@ -340,7 +465,7 @@ cat >"$CFG" <<EOF
 # Boot menu of the installed my-distro, written by my-install.
 # The kernel is $KERNEL on $WHERE.
 set default="0"
-set timeout="3"
+set timeout="$([ "$MODE" = beside ] && echo 5 || echo 3)"
 
 insmod all_video
 set gfxpayload="1280x800,1024x768,auto"
@@ -373,6 +498,36 @@ menuentry "my-distro (recovery mode)" {
 }
 EOF
 
+# Next to another system: its start files on the shared EFI partition get
+# an entry each (Windows' boot manager; another Linux's shim or GRUB), so
+# this menu starts them too. GRUB hands over to them (chainloader); with
+# Secure Boot on, shim checks them (Windows' is signed by Microsoft).
+if [ "$MODE" = beside ]; then
+	ESP_FSUUID=$(blkid -s UUID -o value "$ESP" | tr A-F a-f)
+	other() {   # other TITLE PATH-ON-THE-ESP
+		cat >>"$CFG" <<EOF
+
+menuentry "$1" {
+	insmod part_gpt
+	insmod fat
+	insmod chain
+	search --no-floppy --fs-uuid --set=root $ESP_FSUUID
+	chainloader $2
+}
+EOF
+		echo "      Boot menu: $1 ($2)"
+	}
+	[ -f "$T/boot/efi/EFI/Microsoft/Boot/bootmgfw.efi" ] &&
+		other "Windows" /EFI/Microsoft/Boot/bootmgfw.efi
+	for d in "$T"/boot/efi/EFI/*/; do
+		n=$(basename "$d")
+		case "$n" in BOOT|Boot|boot|Microsoft|my-distro) continue ;; esac
+		for f in shimx64.efi grubx64.efi; do
+			[ -f "$d$f" ] && { other "$n" "/EFI/$n/$f"; break; }
+		done
+	done
+fi
+
 # UEFI GRUB (shim's, see above): where the boot menu is. The ext4 system
 # filesystem's /boot/grub, or (encrypted) the EFI partition's /grub. By
 # filesystem ID, like the BIOS GRUB that grub-install made: that ID is this
@@ -392,7 +547,7 @@ if [ "$SHIM" = 1 ]; then
 	# GRUB writes a FAT ID (the EFI partition, encrypted systems) in lower case
 	# and compares it exactly
 	FSUUID=$(printf %s "$FSUUID" | tr A-F a-f)
-	cat >"$T/boot/efi/EFI/BOOT/grub.cfg" <<EOF
+	cat >"$B/grub.cfg" <<EOF
 # Read by my-distro's UEFI GRUB (grubx64.efi, started by shim): where the
 # boot menu is. Written by my-install.
 search --no-floppy --fs-uuid --set=root $FSUUID
@@ -413,7 +568,25 @@ fi
 # The EFI partition's ID, for firmware updates and Secure Boot
 # (/usr/lib/my-distro/esp-mount; encrypted systems have it in crypt)
 printf '# The EFI system partition (my-install)\nesp_partuuid = %s\n' \
-	"$(sfdisk --part-uuid "$DISK" 2)" >"$T/etc/my-distro/esp"
+	"$(sfdisk --part-uuid "$DISK" "$ESP_N")" >"$T/etc/my-distro/esp"
+
+# Next to another system: an entry in the firmware's boot list, first in
+# the order (the other system's own entry stays, second). Where the firmware
+# forgets it (some do), the boot menu of the firmware (F12 or similar at the
+# start) still lists the disk; and a free EFI/BOOT gets the files too.
+if [ "$MODE" = beside ]; then
+	grep -q " /sys/firmware/efi/efivars efivarfs" /proc/mounts ||
+		mount -t efivarfs efivarfs /sys/firmware/efi/efivars 2>>"$LOG"
+	loader=$(printf '\\%s\\%s' "$EFIDIR" "$LOADER" | tr / '\\')
+	# (an entry of an earlier my-distro installation: replaced)
+	efibootmgr 2>/dev/null | sed -n 's/^Boot\([0-9A-Fa-f]\{4\}\)\*\{0,1\} my-distro$/\1/p' |
+		while read -r num; do efibootmgr -b "$num" -B >>"$LOG" 2>&1; done
+	run efibootmgr -c -d "$DISK" -p "$ESP_N" -L my-distro -l "$loader"
+	if [ ! -e "$T/boot/efi/EFI/BOOT/BOOTX64.EFI" ] && [ "$SHIM" = 1 ]; then
+		mkdir -p "$T/boot/efi/EFI/BOOT"
+		cp "$B/BOOTX64.EFI" "$B/grubx64.efi" "$B/mmx64.efi" "$B/grub.cfg" "$T/boot/efi/EFI/BOOT/" 2>>"$LOG"
+	fi
+fi
 
 # Again, now that the swap file is there: Hibernate in the Start menu
 run /usr/lib/my-distro/installed-fixups "$T"
@@ -443,6 +616,7 @@ umount "$T" || die "could not unmount $T"
 
 echo
 echo "Done. my-distro is installed on $DISK."
+[ "$MODE" = beside ] && echo "At every start a menu lets you choose my-distro or the other system."
 [ "$ENCRYPT" = 1 ] && echo "It is encrypted: at every start it asks for your passphrase."
 echo "Power off, remove the ISO from the (virtual) CD drive and start again:"
 echo "it boots from the disk, and your files stay after a reboot."

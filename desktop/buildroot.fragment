@@ -450,6 +450,9 @@ BR2_PACKAGE_LIBARCHIVE=y
 # make desktop-secureboot), mokutil to enroll that key once
 BR2_PACKAGE_MY_SECUREBOOT=y
 BR2_PACKAGE_MOKUTIL=y
+# 1.4.0: installed next to another system (my-install), my-distro gets an
+# entry of its own in the firmware's boot list
+BR2_PACKAGE_EFIBOOTMGR=y
 
 # Screen reader (my-reader, panel/my-reader.c): speaks what has the focus
 # in GTK programs through AT-SPI (at-spi2-core, in the image already for
