@@ -2024,3 +2024,12 @@ msgstr "Ekran kilitli"
 
 msgid "empty"
 msgstr "boş"
+
+msgid "Servers on the network"
+msgstr "Ağdaki sunucular"
+
+msgid "Looking for servers..."
+msgstr "Sunucular aranıyor…"
+
+msgid "No servers found. Type the address of the share below."
+msgstr "Sunucu bulunamadı. Paylaşımın adresini aşağıya yazın."

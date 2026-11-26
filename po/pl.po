@@ -2026,3 +2026,12 @@ msgstr "Ekran zablokowany"
 
 msgid "empty"
 msgstr "puste"
+
+msgid "Servers on the network"
+msgstr "Serwery w sieci"
+
+msgid "Looking for servers..."
+msgstr "Szukanie serwerów…"
+
+msgid "No servers found. Type the address of the share below."
+msgstr "Nie znaleziono serwerów. Wpisz poniżej adres udziału."

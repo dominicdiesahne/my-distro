@@ -2024,3 +2024,12 @@ msgstr "Schermo bloccato"
 
 msgid "empty"
 msgstr "vuoto"
+
+msgid "Servers on the network"
+msgstr "Server della rete"
+
+msgid "Looking for servers..."
+msgstr "Ricerca dei server…"
+
+msgid "No servers found. Type the address of the share below."
+msgstr "Nessun server trovato. Scrivi qui sotto l’indirizzo della condivisione."

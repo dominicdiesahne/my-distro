@@ -2173,3 +2173,12 @@ msgstr ""
 
 msgid "empty"
 msgstr ""
+
+msgid "Servers on the network"
+msgstr ""
+
+msgid "Looking for servers..."
+msgstr ""
+
+msgid "No servers found. Type the address of the share below."
+msgstr ""

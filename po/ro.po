@@ -2026,3 +2026,12 @@ msgstr "Ecran blocat"
 
 msgid "empty"
 msgstr "gol"
+
+msgid "Servers on the network"
+msgstr "Servere din rețea"
+
+msgid "Looking for servers..."
+msgstr "Se caută servere…"
+
+msgid "No servers found. Type the address of the share below."
+msgstr "Nu s-a găsit niciun server. Scrie mai jos adresa partajării."

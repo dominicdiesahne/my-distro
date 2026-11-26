@@ -112,7 +112,11 @@ the taskbar, the login screen, the file history daemon and the search indexer.
   changes (another Wi-Fi, a cable) a connected VPN connects again by itself
   (the DHCP client's hook runs `vpn reconnect` on a new lease).
 - **Installer** (`my-install`): copies the live system onto a hard disk with
-  GRUB for BIOS and UEFI, so your files and settings survive a reboot.
+  GRUB for BIOS and UEFI, so your files and settings survive a reboot. On a
+  disk with Windows or another Linux it can install **next to it** (1.4.0):
+  into the free space of a GPT disk, with its start files in
+  `EFI/my-distro` on the shared EFI partition, an entry in the firmware's
+  boot list (`efibootmgr`) and the other systems in its boot menu.
 - **Sound** (PipeWire with WirePlumber): a speaker in the taskbar shows the
   volume. Scroll on it for louder/quieter, click to mute, right-click for
   the **Sound** window (`settings/my-sound.c`): which output plays
@@ -259,7 +263,9 @@ the taskbar, the login screen, the file history daemon and the search indexer.
   system updates, pip, git). **Windows shares** (Start menu, *Network share*,
   `my-share`): opens a shared folder of a PC or NAS (SMB) in the file
   manager; `smb://SERVER/SHARE` typed into the file manager's address bar
-  or clicked as a link opens there too. **Sharing** (Start menu, `settings/my-sharing.c`): shares a
+  or clicked as a link opens there too. Its window lists the servers of the
+  network (1.4.0: Samba servers and NAS by mDNS, Windows PCs by WS-Discovery,
+  `/usr/lib/my-distro/find-servers`); a click puts one into the address. **Sharing** (Start menu, `settings/my-sharing.c`): shares a
   folder of your home and the printers with the other computers of your
   network (Samba, installed from the Software app when you first switch it
   on); off by default, and the firewall opens only while it is on, only for
@@ -621,6 +627,14 @@ in the session's language:
   manager, the web browser's window and all of my-distro's own windows.
 - the highlighted entry of the Start menu (the taskbar is not GTK: it puts
   the entry into the root window's `_MY_READER_TEXT`)
+- (1.4.0) what programs write in a terminal, while it is the active window.
+  xterm knows nothing about the accessibility bus, so while the reader runs,
+  `/usr/bin/xterm` (a wrapper; the real one is `/usr/libexec/xterm`) runs
+  the program through `my-term` (`panel/my-term.c`): it passes everything
+  through unchanged and sends the output, without escape sequences, to the
+  reader (`my-reader.say` in `XDG_RUNTIME_DIR`). Typed letters come back as
+  the terminal's echo; a password prompt doesn't echo. Full-screen programs
+  (nano, htop, less: the terminal's alternate screen) are not read.
 
 Windows that run as root (Users and system, Disks, the Software app's
 installer) are read too (1.3.0): while the reader runs, `my-admin` lets
@@ -697,8 +711,13 @@ see only their own nodes and the sinks (PipeWire links two nodes only for a
 client that sees both, and activates a link only if a stream's owner sees
 the other end), removes any node of theirs that isn't a playback stream,
 and never links into one of their nodes (a link into one is removed). They play sound; they can't record the microphone, the speakers or
-another program. Programs that only speak PulseAudio (none in the image;
-Software app packages may) get no sound that way.
+another program. Programs that speak PulseAudio (none in the image;
+Software app packages may) get the same (1.4.0): pipewire-pulse listens on
+`pulse/native-play` too (`pipewire-pulse.conf.d/50-my-play.conf`), whose
+clients it marks `pipewire.client.access = "my-play"`, and `my-run` puts it
+into the sandbox as `pulse/native`. A PulseAudio client could overwrite that
+mark with its own property list; a patch to pipewire-pulse
+(`desktop/patches/pipewire`) keeps the server's value.
 
 ## IDE (LazyVim)
 
@@ -874,8 +893,15 @@ For that every user has 65536 subordinate IDs in `/etc/subuid` and
 `/etc/subgid` (`my-subids`, at every start and when a user is added in Users
 and system), and shadow's `newuidmap`/`newgidmap` come setuid with the
 package. There is no systemd: podman makes its control groups itself
-(cgroupfs; rootless containers can't use limits like `--memory`) and writes
-events and logs into files (`/etc/containers/containers.conf.d/`).
+(cgroupfs) and writes events and logs into files
+(`/etc/containers/containers.conf.d/`). Limits (`--memory`, `--cpus`,
+`--pids-limit`) work for rootless containers too (1.4.0): `my-subids` gives
+every user `/sys/fs/cgroup/my-users/UID` with `session` and `containers`,
+owned by the user (cgroup v2's delegation), the login screen puts the
+desktop session into `session`, and a podman patch
+(`desktop/patches/podman`) makes `containers` the default cgroup parent when
+podman runs inside the user's group (cgroup v2 moves a process only within
+a group its user owns, so not from a text console login).
 
 **Intel video driver (iHD):** with it, Intel graphics since Broadwell (2014)
 decode videos in the graphics chip, also the chips since ~2020 that the
@@ -978,6 +1004,10 @@ http.server`, and in the VM put `url = http://10.0.2.2:8000/` into
 | `settings/my-sound.c`, `desktop/overlay/usr/lib/my-distro/sound` | The Sound window and what it asks PipeWire |
 | `settings/my-sharing.c`, `desktop/overlay/usr/lib/my-distro/sharing`, `etc/init.d/S91sharing` | Sharing (Samba) |
 | `panel/my-reader.c` | Screen reader |
+| `panel/my-term.c` | Terminals for the screen reader (runs the program, hands its output to my-reader) |
+| `desktop/overlay/usr/lib/my-distro/xterm-wrapper` | `/usr/bin/xterm`: runs the program through my-term while the reader runs |
+| `desktop/overlay/usr/lib/my-distro/find-servers` | The file servers of the network (mDNS, WS-Discovery) for Network share |
+| `desktop/patches/pipewire`, `desktop/patches/podman` | Play-only PulseAudio clients keep their mark; rootless containers in the user's control group |
 | `desktop/overlay/usr/bin/my-run` | Starts programs with their permissions; `--sync` makes their starters in `~/.local/share/my-run/bin` |
 | `desktop/overlay/usr/share/wireplumber/scripts/client/my-play-only.lua` | Programs without the microphone may only play sound (clients of `pipewire-0-play`) |
 | `desktop/patches/pcmanfm/` | PCManFM: `smb://` in the address bar goes to `my-share` |
@@ -1068,6 +1098,7 @@ screenshots of the desktop:
 python3 tests/t_live.py /tmp/shots          # the live system: 0.9.6 and 0.9.7 features
 python3 tests/t_install.py plain            # install, boot (BIOS and UEFI), hibernate, resume
 python3 tests/t_install.py crypt            # the same, encrypted
+python3 tests/t_dualboot.py out/my-distro.iso   # install next to a (pretend) Windows, UEFI
 python3 tests/t_pkg.py out/packages         # Software app packages: tcc, Docker, Samba, ClamAV, Node.js
 python3 tests/t_secureboot.py out/my-distro.iso   # OVMF with Secure Boot on: enroll the key, boot
 python3 tests/t_twodisk.py plain out/my-distro.iso # installed disk + ISO: each GRUB starts its own system
@@ -1089,8 +1120,10 @@ make run    # boots in the terminal; quit with Ctrl-A, then X
 
 ## Limitations
 
-- The installer wipes the whole disk: no dual boot next to Windows or
-  another Linux.
+- Next to another system the installer needs a GPT disk, a PC started with
+  UEFI and 8 GB of free space: it doesn't shrink partitions itself (Windows
+  does that: Disk Management, Shrink Volume). Dual boot was tested in a VM
+  with a pretend Windows disk, not with a real Windows.
 - NetSurf has limited JavaScript; big web apps (YouTube, Google Docs) don't work.
 - Only x86-64. Tested in VirtualBox and QEMU; the drivers for real PCs are
   in, but not yet tried on one (see [On a real PC](#on-a-real-pc)).
@@ -1099,12 +1132,12 @@ make run    # boots in the terminal; quit with Ctrl-A, then X
 - The digital microphones of some new laptops (Intel SOF) don't work yet.
   Bluetooth headset microphones (HFP) and Bluetooth audio in general are
   untested on real hardware.
-- The screen reader is small (see [Screen reader](#screen-reader)): no
-  terminals, no web page contents; the login and lock screens only say
-  their fields and messages.
+- The screen reader is small (see [Screen reader](#screen-reader)): no web
+  page contents; in a terminal it says new output, but has no review keys
+  and doesn't read full-screen programs (nano, htop); the login and lock
+  screens only say their fields and messages.
 - App permissions don't apply to a program started by its full path
-  (`/usr/bin/mpv`). Without the microphone, a program that only speaks
-  PulseAudio gets no sound.
+  (`/usr/bin/mpv`).
 - Video decoding with the graphics chip on Intel chips since ~2020 needs
   the iHD driver from the Software app (big, so not in the image); it was
   only checked in a VM, without Intel graphics.
@@ -1114,10 +1147,12 @@ make run    # boots in the terminal; quit with Ctrl-A, then X
   firmware): listing devices and asking the LVFS work there; installing a
   UEFI capsule is untried.
 - Docker: for administrators (sudo). Rootless containers: with podman;
-  without systemd they can't have resource limits (`--memory`, `--cpus`).
+  their limits (`--memory`, `--cpus`) work in the desktop session (its
+  terminals), not from a text console login.
 - Shares are mounted with `mount.cifs` (Network share): `smb://` in the
   file manager mounts the whole share in `/media` instead of browsing it
-  the gvfs way (too big), and it can't list the servers of the network.
+  the gvfs way (too big). Its server list shows what announces itself
+  (mDNS, WS-Discovery), not old NetBIOS-only servers.
 
 ## License
 

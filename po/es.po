@@ -2024,3 +2024,12 @@ msgstr "Pantalla bloqueada"
 
 msgid "empty"
 msgstr "vacío"
+
+msgid "Servers on the network"
+msgstr "Servidores de la red"
+
+msgid "Looking for servers..."
+msgstr "Buscando servidores…"
+
+msgid "No servers found. Type the address of the share below."
+msgstr "No se han encontrado servidores. Escribe abajo la dirección de la carpeta compartida."

@@ -2025,3 +2025,12 @@ msgstr "Bildschirm gesperrt"
 
 msgid "empty"
 msgstr "leer"
+
+msgid "Servers on the network"
+msgstr "Server im Netzwerk"
+
+msgid "Looking for servers..."
+msgstr "Suche nach Servern …"
+
+msgid "No servers found. Type the address of the share below."
+msgstr "Keine Server gefunden. Gib unten die Adresse der Freigabe ein."
