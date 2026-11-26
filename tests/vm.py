@@ -30,7 +30,7 @@ class VM:
             '-monitor', 'unix:%s/mon,server,nowait' % self.dir,
             '-serial', 'unix:%s/ser,server,nowait' % self.dir]
         self.proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=open(self.dir + '/qemu.err', 'w'))
-        for _ in range(100):
+        for _ in range(600):                       # (up to 60 s: slow right after a build)
             if os.path.exists(self.dir + '/mon') and os.path.exists(self.dir + '/ser'):
                 break
             time.sleep(0.1)
