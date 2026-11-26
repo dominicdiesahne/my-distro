@@ -99,7 +99,8 @@ the taskbar, the login screen, the file history daemon and the search indexer.
   for you. A private key with a password asks for it once (kept root-only as
   `NAME.pass`, given to openvpn with `--askpass`), so reconnecting after a
   network change needs nothing. A certificate file `.p12` (`pkcs12
-  client.p12`) asks for its password once; `openssl pkcs12` takes the
+  client.p12`, or put inside the config as a `<pkcs12>` block) asks for its
+  password once; `openssl pkcs12` takes the
   certificate, the key and the CA out of it and they go in as blocks.
   Tunnels (`dev tun`) and bridges (`dev tap`) both work; a bridge whose
   server hands out no address gets one by DHCP over the VPN.
@@ -1094,7 +1095,7 @@ make run    # boots in the terminal; quit with Ctrl-A, then X
 - Only x86-64. Tested in VirtualBox and QEMU; the drivers for real PCs are
   in, but not yet tried on one (see [On a real PC](#on-a-real-pc)).
 - OpenVPN: scripts and plugins are not supported, on purpose (they would
-  run as root); neither is a `.p12` file put inside the `.ovpn` (`<pkcs12>`).
+  run as root).
 - The digital microphones of some new laptops (Intel SOF) don't work yet.
   Bluetooth headset microphones (HFP) and Bluetooth audio in general are
   untested on real hardware.

@@ -15,6 +15,7 @@
  * group netdev like the Wi-Fi window), which runs /usr/lib/my-distro/vpn.
  */
 #include <ctype.h>
+#include <fcntl.h>
 #include <gtk/gtk.h>
 
 #include "i18n.h"
@@ -690,6 +691,43 @@ static char *inline_files(const char *content, const char *dir, const char *name
 		int argc = 0, is_file;
 		gsize n;
 
+		if (!block && strcasecmp(l, "<pkcs12>") == 0) {
+			/* 1.4.0: a .p12 file put inside the config (base64), taken apart
+			 * like "pkcs12 FILE", through a file only the user can read */
+			GString *b64 = g_string_new(NULL);
+			guchar *raw;
+			char *tmp, *blocks;
+			int fd;
+
+			for (i++; lines[i] && strcasecmp(g_strstrip(lines[i]), "</pkcs12>") != 0; i++)
+				g_string_append(b64, lines[i]);
+			raw = g_base64_decode(b64->str, &n);
+			g_string_free(b64, TRUE);
+			tmp = g_build_filename(g_get_user_runtime_dir(), "my-vpn-XXXXXX.p12", NULL);
+			if (!lines[i] || n < 16 || (fd = g_mkstemp_full(tmp, O_RDWR, 0600)) < 0) {
+				*err = g_strdup_printf(_("%s could not be opened: the password is wrong, or it "
+				                         "is not a .p12 file."), "<pkcs12>");
+			} else {
+				int ok = write(fd, raw, n) == (ssize_t)n;
+
+				close(fd);
+				blocks = ok ? p12_blocks(tmp, "<pkcs12>", name, has_ca, err) : NULL;
+				unlink(tmp);
+				if (blocks) {
+					g_string_append(out, blocks);
+					wipe_free(blocks);
+				} else if (!*err) {
+					cancelled = 1;
+				}
+			}
+			if (raw)
+				memset(raw, 0, n);
+			g_free(raw);
+			g_free(tmp);
+			if (!lines[i])
+				break;
+			continue;
+		}
 		if (block || (l[0] == '<' && l[1] != '/')) {     /* already a block */
 			block = !g_str_has_prefix(l, "</");
 			g_string_append_printf(out, "%s\n", l);
@@ -704,7 +742,9 @@ static char *inline_files(const char *content, const char *dir, const char *name
 		is_file = 0;
 		for (int k = 0; file_keys[k]; k++)
 			is_file |= strcasecmp(argv[0], file_keys[k]) == 0;
-		if (strcasecmp(argv[0], "pkcs12") == 0 && strcmp(argv[1], "[inline]") != 0) {
+		if (strcasecmp(argv[0], "pkcs12") == 0 && strcmp(argv[1], "[inline]") == 0) {
+			/* "pkcs12 [inline]": the <pkcs12> block becomes <cert> and <key> */
+		} else if (strcasecmp(argv[0], "pkcs12") == 0) {
 			char *blocks;
 
 			path = g_path_is_absolute(argv[1]) ? g_strdup(argv[1]) :
